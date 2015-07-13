@@ -9,7 +9,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='badgecheck',
-    version='0.2.1-test7',
+    version='0.2.1-test8',
     packages=['badgecheck'],
     include_package_data=True,
     license='aGPL License',
