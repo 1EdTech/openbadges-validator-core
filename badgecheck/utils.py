@@ -18,7 +18,7 @@ def get_instance_url_from_assertion(assertion):
     return next(iter([item for item in options if item is not None]), None)
 
 
-def get_instance_url_from_jwt(signed_assertion):
+def get_instance_url_from_(signed_assertion):
     raise NotImplementedError("Parsing JWT tokens not implemented.")
 
 
