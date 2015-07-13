@@ -38,6 +38,9 @@ setup(
         'requests == 2.5.1',
         'responses == 0.3.0',
         'djangorestframework == 3.1.1',
-        'git+ssh://git@stash.concentricsky.com/bp/openbadges_bakery.git@v0.1'
+        'openbadges_bakery == 0.1'
     ],
+    dependency_links=[
+        'git+ssh://git@stash.concentricsky.com/bp/openbadges_bakery.git@v0.1#egg=openbadges_bakery-0.1'
+    ]
 )

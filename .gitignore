@@ -2,3 +2,4 @@ dist
 badgecheck.egg-info
 env-badgecheck-jul15
 env
+.DS_STORE
