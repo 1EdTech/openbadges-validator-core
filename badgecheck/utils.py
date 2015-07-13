@@ -2,6 +2,7 @@ import hashlib
 import json
 import re
 
+from openbadges_bakery import unbake
 
 def get_instance_url_from_assertion(assertion):
     """
@@ -19,6 +20,16 @@ def get_instance_url_from_assertion(assertion):
 
 def get_instance_url_from_jwt(signed_assertion):
     raise NotImplementedError("Parsing JWT tokens not implemented.")
+
+
+def get_instance_url_from_image(imageFile):
+    """ unbake an open file, and return the assertion URL contained within """
+    image_contents = unbake(imageFile)
+
+    if image_contents is None:
+        raise ValidationError("No assertion found in image")
+
+    return get_instance_url_from_unknown_string(image_contents)
 
 
 def get_instance_url_from_unknown_string(badge_input):
