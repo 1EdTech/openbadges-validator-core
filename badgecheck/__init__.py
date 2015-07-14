@@ -44,7 +44,7 @@ class RemoteBadgeInstance(object):
             else:
                 self.badge = self.badge_instance['badge'].copy()
                 self.issuer = self.badge['issuer'].copy()
-        except ConnectionError as e:
+        except (ConnectionError, ValueError) as e:
             raise ValidationError(e.message)
 
     def __getitem__(self, key):
