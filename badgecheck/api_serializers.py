@@ -3,8 +3,7 @@ import json
 from rest_framework import serializers
 
 from . import RemoteBadgeInstance, AnalyzedBadgeInstance
-from .utils import get_instance_url_from_assertion  # get_instance_url_from_image,
-# from .serializers import badge_class, badge_instance, issuer, fields
+from .utils import get_instance_url_from_assertion, get_instance_url_from_image
 
 
 class IntegritySerializer(serializers.Serializer):
@@ -27,6 +26,10 @@ class IntegritySerializer(serializers.Serializer):
     issuer_url = serializers.URLField(read_only=True)
 
     def validate(self, data):
+        # make sure empty {} assertion data doesn't exist.
+        if not data.get('assertion'):
+            data.pop('assertion')
+
         # Make sure there is only input of one type.
         valid_inputs = \
             dict(filter(lambda tuple: tuple[0] in ['url', 'image', 'assertion'],
@@ -43,10 +46,10 @@ class IntegritySerializer(serializers.Serializer):
     def create(self, validated_data):
         if validated_data.get('url'):
             url = validated_data.get('url')
-        # elif validated_data.get('image') is not None:
-        #     image = validated_data.get('image')
-        #     image.open()
-        #     url = get_instance_url_from_image(image)
+        elif validated_data.get('image') is not None:
+            image = validated_data.get('image')
+            image.open()
+            url = get_instance_url_from_image(image)
         elif validated_data.get('assertion'):
             url = get_instance_url_from_assertion(
                 validated_data.get('assertion')

@@ -4,7 +4,7 @@ import sys
 from urlparse import urlparse
 from UserDict import UserDict
 
-from django.core.exceptions import ValidationError
+from rest_framework.serializers import ValidationError
 
 import requests
 from requests.exceptions import ConnectionError
@@ -248,7 +248,7 @@ class AnalyzedBadgeInstance(RemoteBadgeInstance):
         """
         Return a canonical serialization
         """
-        if self.is_valid():
+        if self.serializer:
             serializer = self.serializer(self)
             return serializer.data
 
