@@ -9,7 +9,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='badgecheck',
-    version='0.2.3',
+    version='0.2.4',
     packages=['badgecheck'],
     include_package_data=True,
     license='aGPL License',
@@ -36,7 +36,6 @@ setup(
     install_requires=[
         'django >= 1.7',
         'requests >= 2.5',
-        'responses >= 0.3',
         'djangorestframework >= 3.1',
         'openbadges_bakery >= 0.1.4'
     ]
