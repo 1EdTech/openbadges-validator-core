@@ -31,13 +31,18 @@ class RemoteBadgeInstance(object):
             self.json = self.badge_instance.copy()
 
             # 0.x badges embedded badge and issuer information
-            if not isinstance(self.badge_instance['badge'], dict):
-                self.badge_url = self.badge_instance['badge']
+            self.badge_url = self.badge_instance.get('badge')
+            if self.badge_url is None:
+                raise ValidationError([
+                    "No badge information found in retrieved JSON from " + instance_url,
+                    self.badge_instance
+                ])
+            elif not isinstance(self.badge_url, dict):
                 self.badge = requests.get(
                     self.badge_url, headers=req_head).json()
                 self.json['badge'] = self.badge.copy()
 
-                self.issuer_url = self.badge['issuer']
+                self.issuer_url = self.badge.get('issuer')
                 self.issuer = requests.get(
                     self.issuer_url, headers=req_head).json()
                 self.json['badge']['issuer'] = self.issuer.copy()
