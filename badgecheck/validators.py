@@ -29,3 +29,19 @@ class URLOrDataURIValidator(object):
         except ValidationError as e:
             self.url_validator(value)
 
+
+class LDTypeValidator(object):
+    message = 'Type does not match.'
+
+    def __init__(self, type_name=None, message=None):
+        self.type_name = type_name
+        if message is not None:
+            self.message = message
+
+    def __call__(self, value):
+        if isinstance(value, basestring):
+            if self.type_name != value:
+                raise ValidationError(message=self.message)
+        else:
+            if self.type_name not in value:
+                raise ValidationError(message=self.message)

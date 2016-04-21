@@ -5,7 +5,7 @@ from rest_framework import serializers
 import badge_class
 from .fields import (BadgeDateTimeField, HashString,
                      RecipientSerializer, VerificationObjectSerializer,
-                     BadgeURLField, BadgeImageURLField, BadgeStringField)
+                     BadgeURLField, BadgeImageURLField, BadgeStringField, LDTypeField)
 from ..utils import ObjectView
 
 
@@ -98,9 +98,30 @@ class BadgeInstanceSerializerV1_0(serializers.Serializer):
 
         result = OrderedDict(header.items() + instance_props.items())
 
-        badge_class_serializer = badge_class.BadgeClassSerializerV1_0(
+        badge_class_serializer_class = self.get_badge_class_serializer_class()
+        badge_class_serializer = badge_class_serializer_class(
             instance.badge, context={'instance': instance, 'embedded': True}
         )
         result['badge'] = badge_class_serializer.data
 
         return result
+
+    def get_badge_class_serializer_class(self):
+        return badge_class.BadgeClassSerializerV1_0
+
+
+class BadgeInstanceSerializerV1_1(BadgeInstanceSerializerV1_0):
+    id = BadgeURLField(required=True)
+    type = LDTypeField(required=True, required_type='Assertion')
+
+    def get_badge_class_serializer_class(self):
+        return badge_class.BadgeClassSerializerV1_1
+
+    def get_fields(self):
+        fields = super(BadgeInstanceSerializerV1_1, self).get_fields()
+        fields.update({
+            ('@context', BadgeStringField(required=True, required_value='https://w3id.org/openbadges/v1'))
+        })
+        return fields
+
+

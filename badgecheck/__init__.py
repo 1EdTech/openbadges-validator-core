@@ -122,8 +122,7 @@ class AnalyzedBadgeInstance(RemoteBadgeInstance):
         classes = zip(*inspect.getmembers(sys.modules[module.__name__],
                                           inspect.isclass))[0]
 
-        component.versions = filter(
-            lambda class_: self.version_signature.search(class_), classes)
+        component.versions = sorted(filter(lambda cls: self.version_signature.search(cls), classes), reverse=True)
 
     def evaluate_version(self, component):
         component.version = None

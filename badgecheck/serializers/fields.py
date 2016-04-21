@@ -8,7 +8,7 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.fields import SkipField
 
-from validators import URLOrDataURIValidator
+from validators import URLOrDataURIValidator, LDTypeValidator
 
 
 class BadgePotentiallyEmptyField(serializers.Field):
@@ -75,8 +75,22 @@ class BadgeImageURLOrDataURIField(BadgePotentiallyEmptyField, BadgeCharField, UR
 
 
 class BadgeStringField(BadgePotentiallyEmptyField, BadgeCharField, serializers.CharField):
+
+    def __init__(self, **kwargs):
+        self.required_value = kwargs.pop('required_value', None)
+        super(BadgeStringField, self).__init__(**kwargs)
+        if self.required_value:
+            self.validators.append(RegexValidator(regex=self.required_value))
+
     def to_representation(self, value):
         return value
+
+
+class LDTypeField(BadgeCharField, serializers.CharField):
+    def __init__(self, **kwargs):
+        required_type = kwargs.pop('required_type', None)
+        super(LDTypeField, self).__init__(**kwargs)
+        self.validators.append(LDTypeValidator(type_name=required_type))
 
 
 class BadgeEmailField(BadgePotentiallyEmptyField, BadgeCharField, serializers.EmailField):

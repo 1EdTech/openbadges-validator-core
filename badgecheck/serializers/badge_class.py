@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 import issuer
 from .fields import (AlignmentObjectSerializer, BadgeStringField,
-                     BadgeURLField, BadgeImageURLField, BadgeImageURLOrDataURIField)
+                     BadgeURLField, BadgeImageURLField, BadgeImageURLOrDataURIField, LDTypeField)
 from ..utils import ObjectView
 
 
@@ -65,9 +65,28 @@ class BadgeClassSerializerV1_0(serializers.Serializer):
 
         result = OrderedDict(header.items() + badge_props.items())
 
-        issuer_serializer = issuer.IssuerSerializerV1_0(
+        issuer_serializer_class = self.get_issuer_serializer_class()
+        issuer_serializer = issuer_serializer_class(
             self.context.get('instance').issuer, context=self.context
         )
         result['issuer'] = issuer_serializer.data
 
         return result
+
+    def get_issuer_serializer_class(self):
+        return issuer.IssuerSerializerV1_0
+
+
+class BadgeClassSerializerV1_1(BadgeClassSerializerV1_0):
+    id = BadgeURLField(required=True)
+    type = LDTypeField(required=True, required_type='BadgeClass')
+
+    def get_issuer_serializer_class(self):
+        return issuer.IssuerSerializerV1_1
+
+    def get_fields(self):
+        fields = super(BadgeClassSerializerV1_1, self).get_fields()
+        fields.update({
+            ('@context', BadgeStringField(required=True, required_value='https://w3id.org/openbadges/v1'))
+        })
+        return fields
