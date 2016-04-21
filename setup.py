@@ -4,12 +4,17 @@ from setuptools import setup
 with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
     README = readme.read()
 
+# import VERSION
+execfile(os.path.join(os.path.dirname(__file__), 'badgecheck/version.py'))
+
 # allow setup.py to be run from any path
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
+
+
 setup(
     name='badgecheck',
-    version='0.2.5',
+    version=".".join(map(str, VERSION)),
     packages=['badgecheck'],
     include_package_data=True,
     license='aGPL License',
