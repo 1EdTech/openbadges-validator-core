@@ -3,7 +3,7 @@ from collections import OrderedDict
 from rest_framework import serializers
 
 from .fields import (BadgeStringField, BadgeURLField, BadgeImageURLField,
-                     BadgeEmailField)
+                     BadgeEmailField, BadgeImageURLOrDataURIField)
 from ..utils import ObjectView
 
 
@@ -42,7 +42,7 @@ class IssuerSerializerV1_0(serializers.Serializer):
     url = BadgeURLField(required=True)
     description = BadgeStringField(required=False)
     email = BadgeEmailField(required=False)
-    image = BadgeImageURLField(required=False)
+    image = BadgeImageURLOrDataURIField(required=False)
     revocationList = BadgeURLField(required=False)
 
     def to_representation(self, badge):

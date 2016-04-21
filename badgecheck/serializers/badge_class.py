@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 import issuer
 from .fields import (AlignmentObjectSerializer, BadgeStringField,
-                     BadgeURLField, BadgeImageURLField)
+                     BadgeURLField, BadgeImageURLField, BadgeImageURLOrDataURIField)
 from ..utils import ObjectView
 
 
@@ -43,7 +43,7 @@ class BadgeClassSerializerV0_5(serializers.Serializer):
 class BadgeClassSerializerV1_0(serializers.Serializer):
     name = BadgeStringField(required=True)
     description = BadgeStringField(required=True)
-    image = BadgeImageURLField(required=True)
+    image = BadgeImageURLOrDataURIField(required=True)
     criteria = BadgeURLField(required=True)
     issuer = serializers.URLField(write_only=True, required=True)
     alignment = serializers.ListField(

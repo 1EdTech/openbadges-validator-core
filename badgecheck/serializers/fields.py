@@ -1,10 +1,14 @@
-from datetime import datetime
 import re
+from datetime import datetime
 
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator, URLValidator
 from django.utils.dateparse import parse_datetime, parse_date
-
+from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.fields import SkipField
+
+from validators import URLOrDataURIValidator
 
 
 class BadgePotentiallyEmptyField(serializers.Field):
@@ -50,6 +54,22 @@ class BadgeURLField(BadgePotentiallyEmptyField, BadgeCharField, serializers.URLF
 
 
 class BadgeImageURLField(BadgePotentiallyEmptyField, BadgeCharField, serializers.URLField):
+    def to_representation(self, value):
+        return value
+
+
+class URLOrDataURIField(serializers.CharField):
+    default_error_messages = {
+        'invalid': _('Enter a valid URL or Data URI.')
+    }
+
+    def __init__(self, **kwargs):
+        super(URLOrDataURIField, self).__init__(**kwargs)
+        validator = URLOrDataURIValidator(message=self.error_messages['invalid'])
+        self.validators.append(validator)
+
+
+class BadgeImageURLOrDataURIField(BadgePotentiallyEmptyField, BadgeCharField, URLOrDataURIField):
     def to_representation(self, value):
         return value
 
