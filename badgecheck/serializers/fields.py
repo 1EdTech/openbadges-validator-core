@@ -206,6 +206,9 @@ class VerificationObjectSerializer(serializers.Serializer):
 
 
 class ExtensionsValidator(object):
+    def __init__(self, message="Invalid Extension"):
+        super(ExtensionsValidator, self).__init__()
+        self.message = message
 
     def __call__(self, value):
         return
@@ -217,16 +220,15 @@ class BadgeExtensionsField(DictField):
 
     def __init__(self, *args, **kwargs):
         super(BadgeExtensionsField, self).__init__(*args, **kwargs)
-        self.validators.append(ExtensionsValidator())
-        return
+        validator = ExtensionsValidator()
+        self.validators.append(validator)
+
+    def get_value(self, dictionary):
+        value = {k: dictionary.get(k) for k in filter(lambda k: k.startswith('extension:'), dictionary.keys())}
+        return value
 
 
 class ExtensionMixin(serializers.Serializer):
     extensions = BadgeExtensionsField(required=False)
-
-    def to_internal_value(self, data):
-        internal_value = super(ExtensionMixin, self).to_internal_value(data)
-        internal_value['extensions'] = {k: data.get(k) for k in filter(lambda k: k.startswith('extension:'), data.keys())}
-        return internal_value
 
 
