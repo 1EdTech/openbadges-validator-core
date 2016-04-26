@@ -6,12 +6,19 @@ from . import RemoteBadgeInstance, AnalyzedBadgeInstance
 from .utils import get_instance_url_from_assertion, get_instance_url_from_image
 
 
+class UndefinableImageField(serializers.ImageField):
+    def to_internal_value(self, data):
+        if data == "undefined":
+            return None
+        return super(UndefinableImageField, self).to_internal_value(data)
+
+
 class IntegritySerializer(serializers.Serializer):
     recipient = serializers.CharField(required=True, source='recipient_id')
 
     assertion = serializers.DictField(required=False, write_only=True)
     url = serializers.URLField(required=False, write_only=True)
-    image = serializers.ImageField(required=False, write_only=True)
+    image = UndefinableImageField(required=False, write_only=True)
 
     is_valid = serializers.BooleanField(read_only=True)
     version = serializers.CharField(read_only=True)
@@ -29,6 +36,10 @@ class IntegritySerializer(serializers.Serializer):
         # make sure empty {} assertion data doesn't exist.
         if not data.get('assertion'):
             data.pop('assertion')
+
+        # if django-rest-swagger sent us "undefined" strip it
+        if 'image' in data and not data.get('image', None):
+            data.pop('image')
 
         # Make sure there is only input of one type.
         valid_inputs = \
