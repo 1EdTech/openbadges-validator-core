@@ -6,7 +6,7 @@ from django.core.validators import RegexValidator, URLValidator
 from django.utils.dateparse import parse_datetime, parse_date
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
-from rest_framework.fields import SkipField
+from rest_framework.fields import SkipField, DictField
 
 from validators import URLOrDataURIValidator, LDTypeValidator
 
@@ -203,3 +203,30 @@ class VerificationObjectSerializer(serializers.Serializer):
     """
     type = serializers.ChoiceField(['hosted', 'signed'], required=True)
     url = serializers.URLField(required=True)
+
+
+class ExtensionsValidator(object):
+
+    def __call__(self, value):
+        return
+
+
+class BadgeExtensionsField(DictField):
+    def run_validation(self, *args, **kwargs):
+        return super(BadgeExtensionsField, self).run_validation(*args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super(BadgeExtensionsField, self).__init__(*args, **kwargs)
+        self.validators.append(ExtensionsValidator())
+        return
+
+
+class ExtensionMixin(serializers.Serializer):
+    extensions = BadgeExtensionsField(required=False)
+
+    def to_internal_value(self, data):
+        internal_value = super(ExtensionMixin, self).to_internal_value(data)
+        internal_value['extensions'] = {k: data.get(k) for k in filter(lambda k: k.startswith('extension:'), data.keys())}
+        return internal_value
+
+

@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 import issuer
 from .fields import (AlignmentObjectSerializer, BadgeStringField,
-                     BadgeURLField, BadgeImageURLField, BadgeImageURLOrDataURIField, LDTypeField)
+                     BadgeURLField, BadgeImageURLField, BadgeImageURLOrDataURIField, LDTypeField, ExtensionMixin)
 from ..utils import ObjectView
 
 
@@ -54,8 +54,7 @@ class BadgeClassSerializerV1_0(serializers.Serializer):
 
     def to_representation(self, badge):
         obj = ObjectView(dict(badge))
-        badge_props = super(
-            BadgeClassSerializerV1_0, self).to_representation(obj)
+        badge_props = super(BadgeClassSerializerV1_0, self).to_representation(obj)
 
         header = OrderedDict()
         if not self.context.get('embedded', False):
@@ -77,7 +76,7 @@ class BadgeClassSerializerV1_0(serializers.Serializer):
         return issuer.IssuerSerializerV1_0
 
 
-class BadgeClassSerializerV1_1(BadgeClassSerializerV1_0):
+class BadgeClassSerializerV1_1(ExtensionMixin, BadgeClassSerializerV1_0):
     id = BadgeURLField(required=True)
     type = LDTypeField(required=True, required_type='BadgeClass')
 
