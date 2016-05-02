@@ -1,4 +1,5 @@
 import json
+from collections import OrderedDict
 
 from rest_framework import serializers
 
@@ -73,3 +74,30 @@ class IntegritySerializer(serializers.Serializer):
 
         abi = AnalyzedBadgeInstance(rbi)
         return abi
+
+
+class IntegritySerializerV2(IntegritySerializer):
+    def to_representation(self, instance):
+        errors = [
+            {
+                "level": e[0].split(".")[0],
+                "source": e[0].split(".")[1],
+                "message": e[1],
+            } for e in instance.all_errors()
+        ]
+        ret = OrderedDict([
+            ("@context", "https://badgecheck.io/public/context"),
+            ("@type", "BadgeVerificationReport"),
+            ("request", dict(self.initial_data)),
+            ("results", OrderedDict([
+                ("is_valid", instance.is_valid()),
+                ("version", instance.badge_instance.version),
+                ("errors", errors),
+
+                ("instance", instance.badge_instance),
+                ("badge", instance.badge),
+                ("issuer", instance.issuer),
+            ])),
+            ("updated", {})
+        ])
+        return ret
