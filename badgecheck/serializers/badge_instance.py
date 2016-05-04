@@ -3,6 +3,7 @@ from collections import OrderedDict
 from rest_framework import serializers
 
 import badge_class
+from validators import JsonLdValidator
 from .fields import (BadgeDateTimeField, HashString,
                      RecipientSerializer, VerificationObjectSerializer,
                      BadgeURLField, BadgeImageURLField, BadgeStringField, LDTypeField)
@@ -114,6 +115,10 @@ class BadgeInstanceSerializerV1_1(BadgeInstanceSerializerV1_0):
     id = BadgeURLField(required=True)
     type = LDTypeField(required=True, required_type='Assertion')
 
+    def __init__(self, *args, **kwargs):
+        super(BadgeInstanceSerializerV1_1, self).__init__(*args, **kwargs)
+        self.validators.append(JsonLdValidator())
+
     def get_badge_class_serializer_class(self):
         return badge_class.BadgeClassSerializerV1_1
 
@@ -123,5 +128,3 @@ class BadgeInstanceSerializerV1_1(BadgeInstanceSerializerV1_0):
             ('@context', BadgeStringField(required=True, required_value='https://w3id.org/openbadges/v1'))
         })
         return fields
-
-

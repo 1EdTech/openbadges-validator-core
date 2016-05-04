@@ -3,6 +3,7 @@ from collections import OrderedDict
 from rest_framework import serializers
 
 import issuer
+from validators import JsonLdValidator
 from .fields import (AlignmentObjectSerializer, BadgeStringField,
                      BadgeURLField, BadgeImageURLField, BadgeImageURLOrDataURIField, LDTypeField, ExtensionMixin)
 from ..utils import ObjectView
@@ -79,6 +80,10 @@ class BadgeClassSerializerV1_0(serializers.Serializer):
 class BadgeClassSerializerV1_1(ExtensionMixin, BadgeClassSerializerV1_0):
     id = BadgeURLField(required=True)
     type = LDTypeField(required=True, required_type='BadgeClass')
+
+    def __init__(self, *args, **kwargs):
+        super(BadgeClassSerializerV1_1, self).__init__(*args, **kwargs)
+        self.validators.append(JsonLdValidator())
 
     def get_issuer_serializer_class(self):
         return issuer.IssuerSerializerV1_1
