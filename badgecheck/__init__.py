@@ -139,6 +139,7 @@ class AnalyzedBadgeInstance(RemoteBadgeInstance):
             else:
                 component.version = self.get_version(version)
                 component.serializer = SerializerClass
+                break
 
     def get_version(self, version):
         try:
