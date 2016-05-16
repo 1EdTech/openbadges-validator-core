@@ -1,14 +1,13 @@
 import re
 from datetime import datetime
 
-from django.core.exceptions import ValidationError
-from django.core.validators import RegexValidator, URLValidator
+from django.core.validators import RegexValidator
 from django.utils.dateparse import parse_datetime, parse_date
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.fields import SkipField, DictField
 
-from validators import URLOrDataURIValidator, LDTypeValidator
+from badgecheck.validators import URLOrDataURIValidator, LDTypeValidator
 
 
 class BadgePotentiallyEmptyField(serializers.Field):

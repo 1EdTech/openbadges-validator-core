@@ -2,12 +2,12 @@ from collections import OrderedDict
 
 from rest_framework import serializers
 
-import badge_class
-from validators import JsonLdValidator
-from .fields import (BadgeDateTimeField, HashString,
-                     RecipientSerializer, VerificationObjectSerializer,
-                     BadgeURLField, BadgeImageURLField, BadgeStringField, LDTypeField)
-from ..utils import ObjectView
+from badgecheck.serializers.badge_class import BadgeClassSerializerV0_5, BadgeClassSerializerV1_0, BadgeClassSerializerV1_1
+from badgecheck.serializers.fields import (BadgeDateTimeField, HashString,
+                                           RecipientSerializer, VerificationObjectSerializer,
+                                           BadgeURLField, BadgeImageURLField, BadgeStringField, LDTypeField)
+from badgecheck.utils import ObjectView
+from badgecheck.validators import JsonLdValidator
 
 
 class V0_5Base(serializers.Serializer):
@@ -15,7 +15,7 @@ class V0_5Base(serializers.Serializer):
     Shared requirements between both 0.5 versions of the Open Badges
     specification for badge assertions.
     """
-    badge = badge_class.BadgeClassSerializerV0_5(write_only=True, required=True)
+    badge = BadgeClassSerializerV0_5(write_only=True, required=True)
     issued_on = BadgeDateTimeField(required=False)
     expires = BadgeDateTimeField(required=False)
     evidence = BadgeURLField(required=False)
@@ -43,7 +43,7 @@ class V0_5Base(serializers.Serializer):
 
         result = OrderedDict(header.items() + props.items())
 
-        badge_class_serializer = badge_class.BadgeClassSerializerV0_5(
+        badge_class_serializer = BadgeClassSerializerV0_5(
             instance.json.get('badge'), context={'instance': instance, 'embedded': True}
         )
         result['badge'] = badge_class_serializer.data
@@ -108,7 +108,7 @@ class BadgeInstanceSerializerV1_0(serializers.Serializer):
         return result
 
     def get_badge_class_serializer_class(self):
-        return badge_class.BadgeClassSerializerV1_0
+        return BadgeClassSerializerV1_0
 
 
 class BadgeInstanceSerializerV1_1(BadgeInstanceSerializerV1_0):
@@ -120,7 +120,7 @@ class BadgeInstanceSerializerV1_1(BadgeInstanceSerializerV1_0):
         self.validators.append(JsonLdValidator())
 
     def get_badge_class_serializer_class(self):
-        return badge_class.BadgeClassSerializerV1_1
+        return BadgeClassSerializerV1_1
 
     def get_fields(self):
         fields = super(BadgeInstanceSerializerV1_1, self).get_fields()

@@ -2,11 +2,11 @@ from collections import OrderedDict
 
 from rest_framework import serializers
 
-import issuer
-from validators import JsonLdValidator
-from .fields import (AlignmentObjectSerializer, BadgeStringField,
-                     BadgeURLField, BadgeImageURLField, BadgeImageURLOrDataURIField, LDTypeField, ExtensionMixin)
-from ..utils import ObjectView
+from badgecheck.validators import JsonLdValidator
+from badgecheck.serializers.fields import (AlignmentObjectSerializer, BadgeStringField,
+                                           BadgeURLField, BadgeImageURLField, BadgeImageURLOrDataURIField, LDTypeField, ExtensionMixin)
+from badgecheck.utils import ObjectView
+from badgecheck.serializers.issuer import IssuerSerializerV1_1, IssuerSerializerV1_0, IssuerSerializerV0_5
 
 
 class BadgeClassSerializerV0_5(serializers.Serializer):
@@ -19,7 +19,7 @@ class BadgeClassSerializerV0_5(serializers.Serializer):
     description = BadgeStringField(required=True)
     image = BadgeImageURLField(required=True)
     criteria = BadgeURLField(required=True)
-    issuer = issuer.IssuerSerializerV0_5(write_only=True, required=True)
+    issuer = IssuerSerializerV0_5(write_only=True, required=True)
 
     def to_representation(self, badge):
         obj = ObjectView(dict(badge))
@@ -32,7 +32,7 @@ class BadgeClassSerializerV0_5(serializers.Serializer):
         header['type'] = 'BadgeClass'
 
         result = OrderedDict(header.items() + badge_props.items())
-        issuer_serializer = issuer.IssuerSerializerV0_5(
+        issuer_serializer = IssuerSerializerV0_5(
             badge.get('issuer'),
             context=self.context
         )
@@ -74,7 +74,7 @@ class BadgeClassSerializerV1_0(serializers.Serializer):
         return result
 
     def get_issuer_serializer_class(self):
-        return issuer.IssuerSerializerV1_0
+        return IssuerSerializerV1_0
 
 
 class BadgeClassSerializerV1_1(ExtensionMixin, BadgeClassSerializerV1_0):
@@ -86,7 +86,7 @@ class BadgeClassSerializerV1_1(ExtensionMixin, BadgeClassSerializerV1_0):
         self.validators.append(JsonLdValidator())
 
     def get_issuer_serializer_class(self):
-        return issuer.IssuerSerializerV1_1
+        return IssuerSerializerV1_1
 
     def get_fields(self):
         fields = super(BadgeClassSerializerV1_1, self).get_fields()

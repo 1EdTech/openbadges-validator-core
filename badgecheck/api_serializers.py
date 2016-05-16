@@ -3,8 +3,8 @@ from collections import OrderedDict
 
 from rest_framework import serializers
 
-from . import RemoteBadgeInstance, AnalyzedBadgeInstance
-from .utils import get_instance_url_from_assertion, get_instance_url_from_image
+from badgecheck import RemoteBadgeInstance, AnalyzedBadgeInstance
+from badgecheck.utils import get_instance_url_from_assertion, get_instance_url_from_image
 
 
 class UndefinableImageField(serializers.ImageField):

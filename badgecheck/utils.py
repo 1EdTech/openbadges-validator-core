@@ -2,8 +2,8 @@ import hashlib
 import json
 import re
 
-from openbadges_bakery import unbake
 from django.core.exceptions import ValidationError
+from openbadges_bakery import unbake
 
 
 def get_instance_url_from_assertion(assertion):

@@ -1,16 +1,15 @@
 import inspect
 import re
 import sys
-from urlparse import urlparse
 from UserDict import UserDict
-
-from rest_framework.serializers import ValidationError
+from urlparse import urlparse
 
 import requests
 from requests.exceptions import ConnectionError
+from rest_framework.serializers import ValidationError
 
-import serializers
-import utils
+import badgecheck.serializers as badgecheck_serializers
+from badgecheck.utils import verify_hash
 
 
 class RemoteBadgeInstance(object):
@@ -118,7 +117,7 @@ class AnalyzedBadgeInstance(RemoteBadgeInstance):
         self.check_version_continuity()
 
     def add_versions(self, component, module_name):
-        module = getattr(serializers, module_name)
+        module = getattr(badgecheck_serializers, module_name)
         classes = zip(*inspect.getmembers(sys.modules[module.__name__],
                                           inspect.isclass))[0]
 
@@ -128,7 +127,7 @@ class AnalyzedBadgeInstance(RemoteBadgeInstance):
         component.version = None
         for version in component.versions:
 
-            SerializerClass = getattr(serializers, version)
+            SerializerClass = getattr(badgecheck_serializers, version)
             serializer = SerializerClass(
                 data=component.data,
                 context={'recipient_id': self.recipient_id}
@@ -197,7 +196,7 @@ class AnalyzedBadgeInstance(RemoteBadgeInstance):
             recipient_ids = [self.recipient_id]
 
         for identifier in recipient_ids:
-            if utils.verify_hash(identifier, hash_string, salt) is True:
+            if verify_hash(identifier, hash_string, salt) is True:
                 self.recipient_id = identifier
                 break
         else:

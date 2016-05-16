@@ -2,10 +2,9 @@ from collections import OrderedDict
 
 from rest_framework import serializers
 
-from validators import JsonLdValidator
-from .fields import (BadgeStringField, BadgeURLField, BadgeImageURLField,
-                     BadgeEmailField, BadgeImageURLOrDataURIField, LDTypeField)
-from ..utils import ObjectView
+from badgecheck.serializers.fields import (BadgeStringField, BadgeURLField, BadgeEmailField, BadgeImageURLOrDataURIField, LDTypeField)
+from badgecheck.utils import ObjectView
+from badgecheck.validators import JsonLdValidator
 
 
 class IssuerSerializerV0_5(serializers.Serializer):

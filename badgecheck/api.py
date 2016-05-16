@@ -1,10 +1,8 @@
-from rest_framework import status, authentication, permissions
-from rest_framework.exceptions import ValidationError, PermissionDenied
+from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .api_serializers import IntegritySerializer
-# from . import RemoteBadgeInstance, AnalyzedBadgeInstance
+from badgecheck.api_serializers import IntegritySerializer
 
 
 class VerifyBadgeInstanceView(APIView):
