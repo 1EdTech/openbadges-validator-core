@@ -5,7 +5,7 @@ from rest_framework import serializers
 from badgecheck.validators import JsonLdValidator
 from badgecheck.serializers.fields import (AlignmentObjectSerializer, BadgeStringField,
                                            BadgeURLField, BadgeImageURLField, BadgeImageURLOrDataURIField, LDTypeField, ExtensionMixin)
-from badgecheck.utils import ObjectView
+from badgecheck.utils import ObjectView, jsonld_document_loader
 from badgecheck.serializers.issuer import IssuerSerializerV1_1, IssuerSerializerV1_0, IssuerSerializerV0_5
 
 
@@ -83,7 +83,9 @@ class BadgeClassSerializerV1_1(ExtensionMixin, BadgeClassSerializerV1_0):
 
     def __init__(self, *args, **kwargs):
         super(BadgeClassSerializerV1_1, self).__init__(*args, **kwargs)
-        self.validators.append(JsonLdValidator())
+        self.validators.append(
+            JsonLdValidator(**{'document_loader': self.context.get('document_loader', jsonld_document_loader)})
+        )
 
     def get_issuer_serializer_class(self):
         return IssuerSerializerV1_1

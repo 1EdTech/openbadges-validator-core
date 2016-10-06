@@ -9,7 +9,7 @@ from requests.exceptions import ConnectionError
 from rest_framework.serializers import ValidationError
 
 import badgecheck.serializers as badgecheck_serializers
-from badgecheck.utils import verify_hash
+from badgecheck.utils import verify_hash, jsonld_document_loader
 
 
 class RemoteBadgeInstance(object):
@@ -18,7 +18,13 @@ class RemoteBadgeInstance(object):
     a badge instance, containing its corresponding badge (class) and issuer.
     """
 
-    def __init__(self, instance_url, recipient_id=None):
+    def __init__(self, instance_url, recipient_id=None, **kwargs):
+        try:
+            self.document_loader = kwargs['document_loader']
+        except AttributeError:
+            self.document_loader = jsonld_document_loader
+
+
         req_head = {'Accept': 'application/json'}
 
         self.instance_url = instance_url
@@ -77,6 +83,7 @@ class AnalyzedBadgeInstance(RemoteBadgeInstance):
         self.non_component_errors = []
         self.json = badge_instance.json.copy()
         self.instance_url = badge_instance.instance_url
+        self.document_loader = badge_instance.document_loader
 
         # These properties are now dict-like adding metadata within properties
         self.badge_instance = \
@@ -130,7 +137,8 @@ class AnalyzedBadgeInstance(RemoteBadgeInstance):
             SerializerClass = getattr(badgecheck_serializers, version)
             serializer = SerializerClass(
                 data=component.data,
-                context={'recipient_id': self.recipient_id}
+                context={'recipient_id': self.recipient_id,
+                         'document_loader': self.document_loader}
             )
 
             if not serializer.is_valid():

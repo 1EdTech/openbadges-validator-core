@@ -6,7 +6,7 @@ from badgecheck.serializers.badge_class import BadgeClassSerializerV0_5, BadgeCl
 from badgecheck.serializers.fields import (BadgeDateTimeField, HashString,
                                            RecipientSerializer, VerificationObjectSerializer,
                                            BadgeURLField, BadgeImageURLField, BadgeStringField, LDTypeField)
-from badgecheck.utils import ObjectView
+from badgecheck.utils import ObjectView, jsonld_document_loader
 from badgecheck.validators import JsonLdValidator
 
 
@@ -117,7 +117,9 @@ class BadgeInstanceSerializerV1_1(BadgeInstanceSerializerV1_0):
 
     def __init__(self, *args, **kwargs):
         super(BadgeInstanceSerializerV1_1, self).__init__(*args, **kwargs)
-        self.validators.append(JsonLdValidator())
+        self.validators.append(
+            JsonLdValidator(**{'document_loader': self.context.get('document_loader', jsonld_document_loader)})
+        )
 
     def get_badge_class_serializer_class(self):
         return BadgeClassSerializerV1_1

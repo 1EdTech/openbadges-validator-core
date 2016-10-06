@@ -51,16 +51,25 @@ class LDTypeValidator(object):
 class JsonLdValidator(object):
     message = 'Invalid JSON LD document: {}'
 
-    def __call__(self, value):
+    def __init__(self, **kwargs):
+        super(JsonLdValidator, self).__init__()
+        self.document_loader = kwargs.get('document_loader')
+
+    def __call__(self, value, **kwargs):
+        options = {}
+
+        if self.document_loader:
+            options['documentLoader'] = self.document_loader
+
         context = value.get('@context', None)
         if context is None:
             raise ValidationError(message=self.message.format('@context is missing'))
         try:
-            expanded = jsonld.expand(value)
+            expanded = jsonld.expand(value, options)
         except Exception as e:
             raise ValidationError(message=self.message.format('error during expansion: {}'.format(e.message)))
 
         try:
-            compacted = jsonld.compact(expanded, context)
+            compacted = jsonld.compact(expanded, context, options)
         except Exception as e:
             raise ValidationError(message=self.message.format('error during compaction: {}'.format(e.message)))
