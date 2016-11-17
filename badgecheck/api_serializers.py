@@ -4,7 +4,7 @@ from collections import OrderedDict
 from rest_framework import serializers
 
 from badgecheck import RemoteBadgeInstance, AnalyzedBadgeInstance
-from badgecheck.utils import get_instance_url_from_assertion, get_instance_url_from_image, jsonld_document_loader
+from badgecheck.utils import get_instance_url_from_unknown_string, get_instance_url_from_image, jsonld_document_loader
 
 
 class UndefinableImageField(serializers.ImageField):
@@ -17,7 +17,7 @@ class UndefinableImageField(serializers.ImageField):
 class IntegritySerializer(serializers.Serializer):
     recipient = serializers.CharField(required=True, source='recipient_id')
 
-    assertion = serializers.DictField(required=False, write_only=True)
+    assertion = serializers.CharField(required=False, write_only=True)
     url = serializers.URLField(required=False, write_only=True)
     image = UndefinableImageField(required=False, write_only=True)
 
@@ -63,7 +63,7 @@ class IntegritySerializer(serializers.Serializer):
             image.open()
             url = get_instance_url_from_image(image)
         elif validated_data.get('assertion'):
-            url = get_instance_url_from_assertion(
+            url = get_instance_url_from_unknown_string(
                 validated_data.get('assertion')
             )
 
