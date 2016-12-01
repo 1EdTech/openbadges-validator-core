@@ -35,8 +35,16 @@ class IntegritySerializer(serializers.Serializer):
 
     def validate(self, data):
         # make sure empty {} assertion data doesn't exist.
-        if not data.get('assertion'):
-            data.pop('assertion')
+        try:
+            assertion = data['assertion']
+        except KeyError:
+            pass
+        else:
+            try:
+                json.loads(assertion)
+            except ValueError:
+                data.pop('assertion')
+
 
         # if django-rest-swagger sent us "undefined" strip it
         if 'image' in data and not data.get('image', None):
