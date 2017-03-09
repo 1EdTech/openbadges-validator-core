@@ -3,7 +3,7 @@
 Badgecheck
 =====
 
-BadgeCheck is a python package designed to verify the validity Open Badges
+BadgeCheck is a python package designed to verify the validity of Open Badges
 based on a variety of input sources and present a useful interface for
 accessing their properties and validation information.
 
