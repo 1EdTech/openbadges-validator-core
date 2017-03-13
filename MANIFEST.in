@@ -1,5 +1,4 @@
 include LICENSE
 include README.rst
 recursive-include docs *
-recursive-include badgecheck/serializers *
-recursive-include badgecheck/testfiles *
+recursive-include tests *
