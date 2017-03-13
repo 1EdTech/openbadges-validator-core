@@ -39,9 +39,7 @@ setup(
         'Intended Audience :: Developers'
     ],
     install_requires=[
-        'django >= 1.7',
         'requests >= 2.5',
-        'djangorestframework >= 3.1',
         'openbadges_bakery >= 0.1.4'
     ]
 )
