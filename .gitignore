@@ -5,3 +5,4 @@ badgecheck.egg-info
 *.pyc
 .idea/
 .tox/
+.cache/
