@@ -38,6 +38,7 @@ setup(
         'Intended Audience :: Developers'
     ],
     install_requires=[
+        'pydux==0.2.1',
         'PyLD==0.7.1',
         'requests >= 2.5',
         # 'openbadges_bakery >= 0.1.4'  # Removing until openbadges_bakery does not require Django.
