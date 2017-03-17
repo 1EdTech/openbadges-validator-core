@@ -1,8 +1,10 @@
 from pydux import combine_reducers
 
-from .input import store_input
+from .input import input_reducer
+from .tasks import task_reducer
 
 
 main_reducer = combine_reducers({
-    'input': store_input
+    'input': input_reducer,
+    'tasks': task_reducer
 })
