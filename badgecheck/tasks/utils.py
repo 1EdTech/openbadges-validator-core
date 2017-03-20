@@ -6,4 +6,4 @@ def task_result(success=True, message='', actions=[]):
     :param actions: list(dict)
     :return:
     """
-    return (success, message, actions)
+    return (success, message, actions,)

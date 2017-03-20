@@ -1,4 +1,5 @@
 import json
+import re
 import validators
 
 from ..actions.input import set_input_type
@@ -8,17 +9,22 @@ from utils import task_result
 """
 Helpful utils
 """
-def input_is_url(input):
+def input_is_url(user_input):
     return validators.url(input)
 
 
-def input_is_json(input):
+def input_is_json(user_input):
     try:
         value = json.loads(input)
         return True
     except ValueError:
         return False
 
+
+def input_is_jws(user_input):
+    jws_regex = re.compile(r'^[A-z0-9-]+.[A-z0-9-]+.[A-z0-9-_]+$')
+    return bool(jws_regex.match(user_input))
+        
 
 """
 Input-processing tasks
