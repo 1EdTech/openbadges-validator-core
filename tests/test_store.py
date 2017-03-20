@@ -4,7 +4,7 @@ from pydux import create_store
 
 from badgecheck import verify
 from badgecheck.reducers import main_reducer
-from badgecheck.store import INITIAL_STATE
+from badgecheck.state import INITIAL_STATE
 
 
 class InitializationTests(unittest.TestCase):
@@ -17,4 +17,7 @@ class InitializationTests(unittest.TestCase):
     def test_verify_function(self):
         url = 'https://example.org/beths-robotics-badge.json'
         results = verify(url)
-        self.assertEqual(results.get('input').get('url'), url)
+        self.assertEqual(results.get('input').get('value'), url)
+        self.assertEqual(results.get('input').get('input_type'), 'url')
+
+        self.assertEqual(len(results.get('tasks')), 1)
