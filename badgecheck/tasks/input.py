@@ -24,7 +24,7 @@ def input_is_json(user_input):
 def input_is_jws(user_input):
     jws_regex = re.compile(r'^[A-z0-9-]+.[A-z0-9-]+.[A-z0-9-_]+$')
     return bool(jws_regex.match(user_input))
-        
+
 
 """
 Input-processing tasks
@@ -39,6 +39,8 @@ def detect_input_type(state):
         action = set_input_type('url')
     elif input_is_json(input_value):
         action = set_input_type('json')
+    elif input_is_json(input_value):
+        action = set_input_type('jwt')
     else:
         raise NotImplementedError("only URL or JSON input implemented so far")
 
