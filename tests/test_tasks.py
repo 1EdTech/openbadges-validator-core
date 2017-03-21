@@ -26,7 +26,7 @@ class TaskActionTests(unittest.TestCase):
         self.assertEqual(tasks[1]['id'], 2)
 
     def test_cannot_add_unknown_task(self):
-        with self.assertRaises(KeyError):
+        with self.assertRaises(AssertionError):
             self.store.dispatch(add_task('UNKNOWN_SOLDIER'))
 
     def test_resolve_task(self):
