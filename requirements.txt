@@ -2,6 +2,7 @@
 'pydux==0.2.1',
 'PyLD==0.7.1',
 'requests >= 2.5',
+'validators==0.11.2',
 
 # Development dependencies
 responses==0.5.1

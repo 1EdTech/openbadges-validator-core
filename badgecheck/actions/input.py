@@ -1,4 +1,4 @@
-from ..action_types import STORE_INPUT
+from action_types import SET_INPUT_TYPE, STORE_INPUT
 
 
 def store_input(badge_input):
@@ -11,4 +11,20 @@ def store_input(badge_input):
     return {
         'type': STORE_INPUT,
         'input': badge_input
+    }
+
+
+def set_input_type(type_string):
+    """
+    Emits an action that indicates the type of input provided.
+    Options: "url", "json", "jws"
+    :param input_type: string
+    :return: dict
+    """
+    if type_string not in ['url', 'json', 'jws']:
+        raise TypeError("Only 'url', 'json', or 'jws' input types supported.")
+
+    return {
+        'type': SET_INPUT_TYPE,
+        'input_type': type_string
     }
