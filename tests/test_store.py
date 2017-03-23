@@ -20,4 +20,4 @@ class InitializationTests(unittest.TestCase):
         self.assertEqual(results.get('input').get('value'), url)
         self.assertEqual(results.get('input').get('input_type'), 'url')
 
-        self.assertEqual(len(results.get('tasks')), 1)
+        self.assertEqual(len(results.get('tasks')), 2)

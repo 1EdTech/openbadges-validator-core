@@ -17,13 +17,15 @@ def call_task(task_func, task_meta, store):
     :param store: pydux store
     :return:
     """
+    actions = []
     try:
-        success, message, actions = task_func(store.get_state())
+        success, message, actions = task_func(store.get_state(), task_meta)
     except SkipTask:
         # TODO: Implement skip handling.
         pass
     except Exception as e:
-        store.dispatch(resolve_task(task_meta.get('id'), success=False, result=e.message))
+        message = "{}{}".format(e.__name__, e.message)
+        store.dispatch(resolve_task(task_meta.get('id'), success=False, result=message))
     else:
         store.dispatch(resolve_task(task_meta.get('id'), success=success, result=message))
 

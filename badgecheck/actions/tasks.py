@@ -1,10 +1,10 @@
 from action_types import ADD_TASK, DELETE_TASK, RESOLVE_TASK, UPDATE_TASK
-from ..tasks import task_named
 
 
 def add_task(task_name, **kwargs):
-    # Raises KeyError if unknown task name used.
-    task_named(task_name)
+    # Ensure task is of a known type
+    from ..tasks import task_types
+    assert task_name in dir(task_types), '{} is not a known task'.format(task_name)
 
     task = {
         'type': ADD_TASK,
@@ -31,8 +31,9 @@ def delete_task(task_id):
 
 
 def update_task(task_id, task_name, **kwargs):
-    # Raises KeyError if unknown task name used.
-    task_named(task_name)
+    # Ensure task is of a known type
+    from ..tasks import task_types
+    assert task_name in dir(task_types), '{} is not a known task'.format(task_name)
 
     task = {
         'type': UPDATE_TASK,
