@@ -1,8 +1,9 @@
 # Duplicates from setup.py
-'pydux==0.2.1',
-'PyLD==0.7.1',
-'requests >= 2.5',
-'validators==0.11.2',
+pydux==0.2.1
+PyLD==0.7.1
+requests >= 2.13
+validators==0.11.2
 
 # Development dependencies
+pytest
 responses==0.5.1
