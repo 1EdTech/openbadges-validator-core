@@ -1,4 +1,4 @@
-from actions.action_types import ADD_TASK, RESOLVE_TASK, UPDATE_TASK
+from ..actions.action_types import ADD_TASK, RESOLVE_TASK, UPDATE_TASK
 
 
 def task_reducer(state=None, action=None):

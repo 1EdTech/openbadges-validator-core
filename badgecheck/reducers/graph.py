@@ -1,4 +1,4 @@
-from actions.action_types import ADD_NODE, UPDATE_NODE
+from ..actions.action_types import ADD_NODE, UPDATE_NODE
 
 
 def input_reducer(state=None, action=None):

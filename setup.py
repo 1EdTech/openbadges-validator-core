@@ -5,7 +5,10 @@ with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
     README = readme.read()
 
 # import VERSION
-execfile(os.path.join(os.path.dirname(__file__), 'badgecheck/version.py'))
+try:
+    execfile(os.path.join(os.path.dirname(__file__), 'badgecheck/version.py'))
+except NameError:
+    exec(open(os.path.join(os.path.dirname(__file__), 'badgecheck/version.py')).read())
 
 # allow setup.py to be run from any path
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
@@ -40,7 +43,7 @@ setup(
     install_requires=[
         'pydux==0.2.1',
         'PyLD==0.7.1',
-        'requests >= 2.5',
+        'requests >= 2.13',
         'validators==0.11.2',
         # 'openbadges_bakery >= 0.1.4'  # Removing until openbadges_bakery does not require Django.
     ]
