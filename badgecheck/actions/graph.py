@@ -1,7 +1,10 @@
 from action_types import ADD_NODE, UPDATE_NODE
 
 
-def add_node(node_id, data):
+def add_node(node_id=None, data=None):
+    if data is None:
+        data = {}
+
     return {
         'type': ADD_NODE,
         'node_id': node_id,
