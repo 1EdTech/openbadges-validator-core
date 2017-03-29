@@ -1,4 +1,4 @@
-from actions.action_types import STORE_INPUT, SET_INPUT_TYPE
+from ..actions.action_types import STORE_INPUT, SET_INPUT_TYPE
 
 
 def input_reducer(state=None, action=None):
