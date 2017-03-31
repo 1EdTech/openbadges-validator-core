@@ -4,6 +4,7 @@ import unittest
 from badgecheck.actions.graph import add_node
 from badgecheck.actions.tasks import add_task
 from badgecheck.reducers.graph import graph_reducer
+from badgecheck.state import get_node_by_id
 from badgecheck.tasks.graph import fetch_http_node
 from badgecheck.tasks.task_types import FETCH_HTTP_NODE, JSONLD_COMPACT_DATA
 
@@ -38,3 +39,58 @@ class NodeStorageTests(unittest.TestCase):
         self.assertEqual(len(state), 1)
         self.assertEqual(state[0]['id'], 'http://example.com/node1')
         self.assertEqual(state[0]['key1'], 1)
+
+    def new_node_successfully_appends_to_state(self):
+        new_node = {
+            "key1": 1
+        }
+        state = graph_reducer([{"id": "_:b9000"}], add_node('http://example.com/node1', new_node))
+        self.assertEqual(len(state), 2)
+
+    def test_store_nested(self):
+        new_node = {
+            "key1": 1,
+            "nested1": {"key2": 2}
+        }
+        state = graph_reducer([], add_node('http://example.com/node1', new_node))
+        self.assertEqual(len(state), 2)
+        first_node = [node for node in state if node['id'] == 'http://example.com/node1'][0]
+        self.assertEqual(first_node['key1'], 1)
+        self.assertEqual(first_node['nested1'], '_:b0')
+        second_node = [node for node in state if node['id'] == '_:b0'][0]
+        self.assertEqual(second_node['key2'], 2)
+
+    def test_store_node_inaccurate_id_value(self):
+        """
+        Due to redirects, we may not have the canonical id for a node.
+        If there's a conflict due to the id and the node[id] in add_node(id, node), 
+        what should we do?
+        """
+        pass
+
+    def test_store_with_included_blank_node_ids_in_input(self):
+        """
+        Make sure the graph reducer can handle assigning node ids when we include
+        some collisions in the input that use the blank node identifier scheme _:
+        """
+        pass
+
+    def test_store_flattened_lists(self):
+        new_node = {
+            "key1": 1,
+            "b_list": [
+                "b",
+                {"c": 3}
+            ]
+        }
+
+        state = graph_reducer([], add_node('http://example.com/node1', new_node))
+        self.assertEqual(len(state), 2)
+        root_node = get_node_by_id({'graph': state}, 'http://example.com/node1')
+        self.assertEqual(root_node['id'], 'http://example.com/node1')
+        self.assertEqual(root_node['key1'], 1)
+
+        # the new_node's b_list's second value will now be a blank node id
+        nested_id = root_node['b_list'][1]
+        second_node = get_node_by_id({'graph': state}, nested_id)
+        self.assertEqual(second_node['c'], 3)
