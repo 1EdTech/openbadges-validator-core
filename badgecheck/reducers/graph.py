@@ -2,11 +2,11 @@ import copy
 
 from ..actions.action_types import ADD_NODE, UPDATE_NODE
 
-current_node_id = -1
+current_node_number = -1
 def _get_next_blank_node_id():
-    global current_node_id
-    current_node_id += 1
-    return "_:b{}".format(current_node_id)
+    global current_node_number
+    current_node_number += 1
+    return "_:b{}".format(current_node_number)
     # TODO: Handle case where current blank node id is already in the node list
 
 

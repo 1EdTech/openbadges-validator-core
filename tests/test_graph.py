@@ -56,9 +56,10 @@ class NodeStorageTests(unittest.TestCase):
         self.assertEqual(len(state), 2)
         first_node = [node for node in state if node['id'] == 'http://example.com/node1'][0]
         self.assertEqual(first_node['key1'], 1)
-        self.assertEqual(first_node['nested1'], '_:b0')
-        second_node = [node for node in state if node['id'] == '_:b0'][0]
+        nested_node_id = first_node['nested1']
+        second_node = [node for node in state if node['id'] == nested_node_id][0]
         self.assertEqual(second_node['key2'], 2)
+        self.assertEqual(first_node['nested1'], second_node['id'])
 
     def test_store_node_inaccurate_id_value(self):
         """
