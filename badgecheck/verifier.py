@@ -4,7 +4,7 @@ from actions.input import store_input
 from actions.tasks import add_task, resolve_task
 from exceptions import SkipTask
 from reducers import main_reducer
-import state
+from state import filter_active_tasks, INITIAL_STATE
 import tasks
 
 
@@ -40,14 +40,14 @@ def verify(badge_input):
     :param badge_input: str (url or json)
     :return: dict
     """
-    store = create_store(main_reducer, state.INITIAL_STATE)
+    store = create_store(main_reducer, INITIAL_STATE)
 
     store.dispatch(store_input(badge_input))
     store.dispatch(add_task(tasks.DETECT_INPUT_TYPE))
 
     last_task_id = 0
-    while len(state.filter_active_tasks(store.get_state())):
-        active_tasks = state.filter_active_tasks(store.get_state())
+    while len(filter_active_tasks(store.get_state())):
+        active_tasks = filter_active_tasks(store.get_state())
         task_meta = active_tasks[0]
         task_func = tasks.task_named(task_meta['name'])
 
