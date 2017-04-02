@@ -142,6 +142,6 @@ class JsonLdCompactTests(unittest.TestCase):
         result, message, actions = jsonld_compact_data({}, task)
 
         state = graph_reducer([], actions[0])
-        self.assertEqual(len(state), 1)
+        self.assertEqual(len(state), 1, "Node should be added to graph")
         self.assertEqual(state[0]['name'], data['thing_we_call_you_by'])
-        self.assertIsNotNone(state[0].get('id'))
+        self.assertIsNotNone(state[0].get('id'), "Node should have a blank id assigned")
