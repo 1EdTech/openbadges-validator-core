@@ -166,8 +166,8 @@ class PropertyValidationTaskTests(unittest.TestCase):
 
         state = store.get_state()
         self.assertEqual(len(state['tasks']), 5)
-        self.assertTrue(state['tasks'][0]['success'], )
-        self.assertTrue(state['tasks'][1]['success'])
-        self.assertTrue(state['tasks'][2]['success'])
-        self.assertFalse(state['tasks'][3]['success'])
-        self.assertFalse(state['tasks'][4]['success'])
+        self.assertTrue(state['tasks'][0]['success'], "Valid required text property is present.")
+        self.assertTrue(state['tasks'][1]['success'], "Missing optional text property is OK.")
+        self.assertTrue(state['tasks'][2]['success'], "Valid optional boolean property is present.")
+        self.assertFalse(state['tasks'][3]['success'], "Invalid required text property is present.")
+        self.assertFalse(state['tasks'][4]['success'], "Required boolean property is missing.")
