@@ -6,6 +6,9 @@ import requests
 import requests_cache
 
 
+OPENBADGES_CONTEXT_URI_V2 = "https://w3id.org/openbadges/v2"
+
+
 class CachableDocumentLoader(object):
     def __init__(self, cachable=False):
         self.cachable = cachable

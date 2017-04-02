@@ -5,8 +5,9 @@ from badgecheck.actions.graph import add_node
 from badgecheck.actions.tasks import add_task
 from badgecheck.reducers.graph import graph_reducer
 from badgecheck.state import get_node_by_id
-from badgecheck.tasks.graph import fetch_http_node
+from badgecheck.tasks.graph import fetch_http_node, jsonld_compact_data
 from badgecheck.tasks.task_types import FETCH_HTTP_NODE, JSONLD_COMPACT_DATA
+from badgecheck.util import OPENBADGES_CONTEXT_URI_V2
 
 from testfiles.test_components import test_components
 
@@ -95,3 +96,32 @@ class NodeStorageTests(unittest.TestCase):
         nested_id = root_node['b_list'][1]
         second_node = get_node_by_id({'graph': state}, nested_id)
         self.assertEqual(second_node['c'], 3)
+
+
+class JsonLdCompactTests(unittest.TestCase):
+    def setUpContextCache(self):
+        data = test_components['openbadges_context']
+        responses.add(
+            responses.GET, OPENBADGES_CONTEXT_URI_V2,
+            body=data, status=200, content_type='application/ld+json'
+        )
+
+    @responses.activate
+    def test_compact_node(self):
+        self.setUpContextCache()
+
+        data = """{
+            "@context": {"thing_we_call_you_by": "http://schema.org/name"},
+            "thing_we_call_you_by": "Test Data"
+        }"""
+
+        task = add_task(JSONLD_COMPACT_DATA, data=data)
+        task['id'] = 1
+
+        result, message, actions = jsonld_compact_data({}, task)
+        self.assertTrue(result, "JSON-LD Compaction should be successful.")
+        self.assertEqual(message, "Successfully compacted node with unknown id")
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(
+            actions[0]['data']['name'], "Test Data",
+            "Node should be compacted into OB Context and use OB property names.")
