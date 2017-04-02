@@ -1,3 +1,4 @@
+import json
 import responses
 import unittest
 
@@ -125,3 +126,22 @@ class JsonLdCompactTests(unittest.TestCase):
         self.assertEqual(
             actions[0]['data']['name'], "Test Data",
             "Node should be compacted into OB Context and use OB property names.")
+
+    @responses.activate
+    def test_reduce_compacted_output(self):
+        self.setUpContextCache()
+
+        data = {
+            "@context": {"thing_we_call_you_by": "http://schema.org/name"},
+            "thing_we_call_you_by": "Test Data"
+        }
+
+        task = add_task(JSONLD_COMPACT_DATA, data=json.dumps(data))
+        task['id'] = 1
+
+        result, message, actions = jsonld_compact_data({}, task)
+
+        state = graph_reducer([], actions[0])
+        self.assertEqual(len(state), 1)
+        self.assertEqual(state[0]['name'], data['thing_we_call_you_by'])
+        self.assertIsNotNone(state[0].get('id'))
