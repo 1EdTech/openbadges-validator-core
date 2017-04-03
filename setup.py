@@ -44,6 +44,7 @@ setup(
         'pydux==0.2.1',
         'PyLD==0.7.1',
         'requests >= 2.13',
+        'rfc3987>= 1.3.7',
         'validators==0.11.2',
         # 'openbadges_bakery >= 0.1.4'  # Removing until openbadges_bakery does not require Django.
     ]
