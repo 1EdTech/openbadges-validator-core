@@ -122,7 +122,7 @@ class JsonLdCompactTests(unittest.TestCase):
         result, message, actions = jsonld_compact_data({}, task)
         self.assertTrue(result, "JSON-LD Compaction should be successful.")
         self.assertEqual(message, "Successfully compacted node with unknown id")
-        self.assertEqual(len(actions), 1)
+        self.assertEqual(len(actions), 2, "Should queue up add_node and add_task for type detection")
         self.assertEqual(
             actions[0]['data']['name'], "Test Data",
             "Node should be compacted into OB Context and use OB property names.")

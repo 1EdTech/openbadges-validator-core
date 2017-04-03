@@ -1,3 +1,4 @@
+import json
 from pydux import create_store
 import unittest
 
@@ -6,9 +7,12 @@ from badgecheck.actions.tasks import add_task
 from badgecheck.reducers import main_reducer
 from badgecheck.state import filter_active_tasks, INITIAL_STATE
 from badgecheck.tasks import task_named
-from badgecheck.tasks.validation import validate_primitive_property, ValueTypes
-from badgecheck.tasks.task_types import VALIDATE_PRIMITIVE_PROPERTY
+from badgecheck.tasks.validation import (detect_and_validate_node_class,
+                                         validate_primitive_property, ValueTypes,)
+from badgecheck.tasks.task_types import VALIDATE_PRIMITIVE_PROPERTY, DETECT_AND_VALIDATE_NODE_CLASS
 from badgecheck.verifier import call_task
+
+from testfiles.test_components import test_components
 
 
 class PropertyValidationTaskTests(unittest.TestCase):
@@ -171,3 +175,16 @@ class PropertyValidationTaskTests(unittest.TestCase):
         self.assertTrue(state['tasks'][2]['success'], "Valid optional boolean property is present.")
         self.assertFalse(state['tasks'][3]['success'], "Invalid required text property is present.")
         self.assertFalse(state['tasks'][4]['success'], "Required boolean property is missing.")
+
+class NodeTypeDetectionTasksTests(unittest.TestCase):
+    def detect_assertion_type_from_node(self):
+        node_data = json.loads(test_components['2_0_basic_assertion'])
+        state = {'graph': [node_data]}
+        task = add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=node_data['id'])
+
+        result, message, actions = detect_and_validate_node_class(state, task)
+        self.assertTrue(result, "Type detection task should complete successfully.")
+        self.assertEqual(len(actions), 5)
+
+        issuedOn_task = [t for t in actions if t['prop_name'] == 'issuedOn'][0]
+        self.assertEqual(issuedOn_task['prop_type'], ValueTypes.DATETIME)

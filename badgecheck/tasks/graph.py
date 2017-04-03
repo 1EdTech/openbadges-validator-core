@@ -5,7 +5,7 @@ import requests
 from ..actions.graph import add_node
 from ..actions.tasks import add_task
 from ..util import CachableDocumentLoader, OPENBADGES_CONTEXT_URI_V2
-from task_types import JSONLD_COMPACT_DATA
+from task_types import DETECT_AND_VALIDATE_NODE_CLASS, JSONLD_COMPACT_DATA
 from utils import task_result
 
 
@@ -28,14 +28,17 @@ def fetch_http_node(state, task_meta):
 
 
 def jsonld_compact_data(state, task_meta):
-    # TODO: Cache-friendly JSON-LD compaction into the Open Badges context
     input_data = json.loads(task_meta.get('data'))
 
-    node_id = task_meta.get('node_id')
     options = {'documentLoader': CachableDocumentLoader(cachable=task_meta.get('use_cache', True))}
-
     result = jsonld.compact(input_data, OPENBADGES_CONTEXT_URI_V2, options=options)
-    actions = [add_node(node_id, data=result)]
+    # TODO: We should not necessarily trust this ID over the source URL
+    node_id = result.get('id', task_meta.get('node_id'))
+
+    actions = [
+        add_node(node_id, data=result),
+        add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=node_id)
+    ]
 
     return task_result(
         True,
