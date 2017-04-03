@@ -24,7 +24,7 @@ class ValueTypes(object):
     # TODO: EMAIL = 'EMAIL'
     # TODO: TELEPHONE = 'TELEPHONE'
 
-    PRIMITIVES = (BOOLEAN, DATETIME, IDENTITY_HASH, IRI, MARKDOWN_TEXT, URL)
+    PRIMITIVES = (BOOLEAN, DATETIME, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TEXT, URL)
 
 
 class PrimitiveValueValidator(object):
@@ -154,7 +154,7 @@ class ClassValidators(OBClasses):
                 # TODO: {'prop_name': 'recipient', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.IdentityObject, 'required': True},
                 {'prop_name': 'badge', 'prop_type': ValueTypes.ID,
-                    'expected_class': OBClasses.BadgeClass, 'required': True},
+                    'expected_class': OBClasses.BadgeClass, 'fetch': True, 'required': True},
                 # TODO: {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.VerificationObject, 'required': True},
                 {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
@@ -168,8 +168,8 @@ class ClassValidators(OBClasses):
             self.validators = (
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
                 # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
-                # TODO: {'prop_name': 'issuer', 'prop_type': ValueTypes.ID,
-                #   'expected_class': OBClasses.Profile, 'required': True},
+                {'prop_name': 'issuer', 'prop_type': ValueTypes.ID,
+                    'expected_class': OBClasses.Profile, 'fetch': True, 'required': True},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': True},  # TODO: ValueTypes.DATA_URI_OR_URL
@@ -235,6 +235,7 @@ def detect_and_validate_node_class(state, task_meta):
     for ob_class in OBClasses.ALL_CLASSES:
         if declared_node_type == ob_class:
             node_class = ob_class
+            break
 
     actions = _get_validation_actions(task_meta.get('node_id'), node_class)
 
@@ -260,9 +261,10 @@ def validate_id_property(state, task_meta):
     node_id = task_meta.get('node_id')
     node = get_node_by_id(state, node_id)
     node_class = task_meta.get('node_class')
+    expected_class = task_meta.get('expected_class')
 
     prop_name = task_meta.get('prop_name')
-    required = bool(task_meta.get('prop_required'))
+    required = bool(task_meta.get('required'))
     prop_value = node.get(prop_name)
     actions = []
 
@@ -275,10 +277,10 @@ def validate_id_property(state, task_meta):
     if not task_meta.get('fetch', False):
         target = get_node_by_id(state, prop_value)
         message = 'Node {} has {} relation stored as node {}'.format(node_id, prop_name, prop_value)
-        actions.append(add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=prop_value, expected_class=node_class))
+        actions.append(add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=prop_value, expected_class=expected_class))
     else:
         message = 'Node {} has {} relation identified as URL {}'.format(node, prop_name, prop_value)
-        actions.append(add_task(FETCH_HTTP_NODE, url=prop_value, expected_class=node_class))
+        actions.append(add_task(FETCH_HTTP_NODE, url=prop_value, expected_class=expected_class))
 
     return task_result(True, message, actions)
 

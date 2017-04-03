@@ -88,7 +88,7 @@ test_components = {
   "description": "For doing awesome things with robots that people think is pretty great.",
   "image": "https://example.org/robotics-badge.png",
   "criteria": "https://example.org/robotics-badge.html",
-  "issuer": "https://example.org/organization.json",
+  "issuer": "https://example.org/organization.json"
 }""",
 '2_0_basic_issuer': """{
   "@context": "https://w3id.org/openbadges/v2",
