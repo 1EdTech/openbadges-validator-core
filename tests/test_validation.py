@@ -176,6 +176,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
         self.assertFalse(state['tasks'][3]['success'], "Invalid required text property is present.")
         self.assertFalse(state['tasks'][4]['success'], "Required boolean property is missing.")
 
+
 class NodeTypeDetectionTasksTests(unittest.TestCase):
     def detect_assertion_type_from_node(self):
         node_data = json.loads(test_components['2_0_basic_assertion'])
