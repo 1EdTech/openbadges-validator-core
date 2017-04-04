@@ -98,6 +98,56 @@ class PropertyValidationTaskTests(unittest.TestCase):
             message, "BOOLEAN property bool_prop valid in unknown type node {}".format(first_node['id'])
         )
 
+    def test_basic_id_validation(self):
+        ## test assumes that a node's ID must be an IRI
+        first_node = {'id': 'http://example.com/1'}
+        state = {
+            'graph': [first_node]
+        }
+        task = add_task(
+            VALIDATE_PRIMITIVE_PROPERTY,
+            node_id=first_node['id'],
+            prop_name='id',
+            prop_required=True,
+            prop_type=ValueTypes.IRI
+        )
+        task['id']=1
+
+        # IRI validation not yet implemented
+        with self.assertRaises(NotImplementedError):
+            validate_primitive_property(state, task)
+
+    def test_basic_url_prop_validation(self):
+        _VALID_URL = 'http://example.com/2'
+        _INVALID_URL = 'notanurl'
+        first_node = {'id': 'http://example.com/1',
+                      'url_prop': _VALID_URL}
+        state = {
+            'graph': [first_node]
+        }
+
+        task = add_task(
+            VALIDATE_PRIMITIVE_PROPERTY,
+            node_id=first_node['id'],
+            prop_name='url_prop',
+            prop_required=False,
+            prop_type=ValueTypes.URL
+        )
+        task['id']=1
+
+        result, message, actions = validate_primitive_property(state, task)
+        self.assertTrue(result, "Optional URL prop is present and well-formed; validation should pass.")
+        self.assertEqual(
+            message, "URL property url_prop valid in unknown type node {}".format(first_node['id'])
+        )
+
+        first_node['url_prop'] = _INVALID_URL
+        result, message, actions = validate_primitive_property(state, task)
+        self.assertFalse(result, "Optional URL prop is present and mal-formed; validation should fail.")
+        self.assertEqual(
+             message, "URL property url_prop not valid in unknown type node {}".format(first_node['id'])
+        )
+
     def test_validation_action(self):
         store = create_store(main_reducer, INITIAL_STATE)
         first_node = {

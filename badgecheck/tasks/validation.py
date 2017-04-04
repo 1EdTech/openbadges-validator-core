@@ -1,4 +1,5 @@
 import six
+import rfc3986
 
 from ..state import get_node_by_id
 
@@ -66,8 +67,15 @@ class PrimitiveValueValidator(object):
 
     @staticmethod
     def _validate_url(value):
-        raise NotImplementedError("TODO: Add validator")
-
+        ret = False
+        try:
+            if ((value and isinstance(value, six.string_types))
+                and rfc3986.is_valid_uri(value, require_scheme=True)
+                and rfc3986.uri_reference(value).scheme.lower() in ['http', 'https']):
+                ret = True
+        except ValueError as e:
+            pass
+        return ret
 
 def validate_primitive_property(state, task_meta):
     node_id = task_meta.get('node_id')
