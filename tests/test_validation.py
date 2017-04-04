@@ -1,3 +1,4 @@
+# coding=utf-8
 import json
 from pydux import create_store
 import unittest
@@ -7,7 +8,7 @@ from badgecheck.actions.tasks import add_task
 from badgecheck.reducers import main_reducer
 from badgecheck.state import filter_active_tasks, INITIAL_STATE
 from badgecheck.tasks import task_named
-from badgecheck.tasks.validation import (detect_and_validate_node_class, OBClasses,
+from badgecheck.tasks.validation import (detect_and_validate_node_class, OBClasses, PrimitiveValueValidator,
                                          validate_id_property, validate_primitive_property, ValueTypes,)
 from badgecheck.tasks.task_types import (VALIDATE_ID_PROPERTY,
                                          VALIDATE_PRIMITIVE_PROPERTY,
@@ -15,6 +16,46 @@ from badgecheck.tasks.task_types import (VALIDATE_ID_PROPERTY,
 from badgecheck.verifier import call_task
 
 from testfiles.test_components import test_components
+
+
+class PropertyValidationTests(unittest.TestCase):
+    def test_url_validation(self):
+        validator = PrimitiveValueValidator(ValueTypes.URL)
+        # Thanks to Mathias Bynens for fun URL examples: http://mathiasbynens.be/demo/url-regex
+        good_urls = ('http://www.example.com:8080/', 'http://www.example.com:8080/foo/bar',
+                     'http://www.example.com/foo%20bar', 'http://www.example.com/foo/bar?a=b&c=d',
+                     'http://www.example.com/foO/BaR', 'HTTPS://www.EXAMPLE.cOm/',
+                     'http://142.42.1.1:8080/', 'http://142.42.1.1/',
+                     'http://foo.com/blah_(wikipedia)#cite-1', 'http://a.b-c.de',
+                     'http://userid:password@example.com/', "http://-.~:%40:80%2f:password@example.com",
+                     'http://code.google.com/events/#&product=browser')
+        good_urls_that_fail = (u'http://✪df.ws/123', u'http://عمان.icom.museum/',)  # TODO: Discuss support for these
+        bad_urls = ('data:image/gif;base64,R0lGODlhyAAiALM...DfD0QAADs=', '///', '///f', '//',
+                    'rdar://12345', 'h://test', 'http:// shouldfail.com', ':// should fail', '', 'a')
+        bad_urls_that_pass = ('http://', 'http://../', 'http://foo.bar?q=Spaces should be encoded',
+                                          'http://f', 'http://-error-.invalid/', 'http://.www.foo.bar./',)
+
+        for url in good_urls:
+            self.assertTrue(validator(url), u"`{}` should pass URL validation but failed.".format(url))
+        for url in bad_urls:
+            self.assertFalse(validator(url), u"`{}` should fail URL validation but passed.".format(url))
+
+    def test_iri_validation(self):
+        validator = PrimitiveValueValidator(ValueTypes.IRI)
+        # Thanks to Mathias Bynens for fun URL examples: http://mathiasbynens.be/demo/url-regex
+        good_iris = ('http://www.example.com:8080/', '_:b0', '_:b12', '_:b107', '_:b100000001232',
+                     'urn:uuid:9d278beb-36cf-4bc8-888d-674ff9843d72',
+                     'urn:uuid:9D278beb-36cf-4bc8-888d-674ff9843d72'
+                     )
+        good_iris_that_fail = ()  # TODO: Discuss support for these
+        bad_iris = ('data:image/gif;base64,R0lGODlhyAAiALM...DfD0QAADs=', 'urn:uuid', 'urn:uuid:123',
+                    '', 'urn:uuid:', 'urn:uuid:zz278beb-36cf-4bc8-888d-674ff9843d72',)
+        bad_iris_that_pass = ()
+
+        for url in good_iris:
+            self.assertTrue(validator(url), u"`{}` should pass IRI validation but failed.".format(url))
+        for url in bad_iris:
+            self.assertFalse(validator(url), u"`{}` should fail IRI validation but passed.".format(url))
 
 
 class PropertyValidationTaskTests(unittest.TestCase):
@@ -102,6 +143,56 @@ class PropertyValidationTaskTests(unittest.TestCase):
         self.assertTrue(result, "Required boolean property matches expectation")
         self.assertEqual(
             message, "BOOLEAN property bool_prop valid in unknown type node {}".format(first_node['id'])
+        )
+
+    def test_basic_id_validation(self):
+        ## test assumes that a node's ID must be an IRI
+        first_node = {'id': 'http://example.com/1'}
+        state = {
+            'graph': [first_node]
+        }
+        task = add_task(
+            VALIDATE_PRIMITIVE_PROPERTY,
+            node_id=first_node['id'],
+            prop_name='id',
+            prop_required=True,
+            prop_type=ValueTypes.IRI
+        )
+        task['id']=1
+
+        result, message, actions = validate_primitive_property(state, task)
+        self.assertTrue(result)
+        self.assertEqual(len(actions), 0)
+
+    def test_basic_url_prop_validation(self):
+        _VALID_URL = 'http://example.com/2'
+        _INVALID_URL = 'notanurl'
+        first_node = {'id': 'http://example.com/1',
+                      'url_prop': _VALID_URL}
+        state = {
+            'graph': [first_node]
+        }
+
+        task = add_task(
+            VALIDATE_PRIMITIVE_PROPERTY,
+            node_id=first_node['id'],
+            prop_name='url_prop',
+            prop_required=False,
+            prop_type=ValueTypes.URL
+        )
+        task['id']=1
+
+        result, message, actions = validate_primitive_property(state, task)
+        self.assertTrue(result, "Optional URL prop is present and well-formed; validation should pass.")
+        self.assertEqual(
+            message, "URL property url_prop valid in unknown type node {}".format(first_node['id'])
+        )
+
+        first_node['url_prop'] = _INVALID_URL
+        result, message, actions = validate_primitive_property(state, task)
+        self.assertFalse(result, "Optional URL prop is present and mal-formed; validation should fail.")
+        self.assertEqual(
+             message, "URL property url_prop not valid in unknown type node {}".format(first_node['id'])
         )
 
     def test_validation_action(self):
@@ -199,7 +290,7 @@ class AdvancedPropertyValidationTests(unittest.TestCase):
             prop_name="recipient",
             prop_required=True,
             prop_type=ValueTypes.ID,
-            node_class=OBClasses.IdentityObject
+            expected_class=OBClasses.IdentityObject
         )
 
         result, message, actions = validate_id_property(state, task)
@@ -220,7 +311,7 @@ class AdvancedPropertyValidationTests(unittest.TestCase):
             prop_name="badge",
             prop_required=True,
             prop_type=ValueTypes.ID,
-            node_class=OBClasses.BadgeClass,
+            expected_class=OBClasses.BadgeClass,
             fetch=True
         )
 
