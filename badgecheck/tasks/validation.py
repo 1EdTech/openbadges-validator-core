@@ -1,5 +1,6 @@
+import aniso8601
 import re
-import rfc3987
+import rfc3986
 import six
 
 from ..actions.tasks import add_task
@@ -57,16 +58,36 @@ class PrimitiveValueValidator(object):
 
     @staticmethod
     def _validate_datetime(value):
-        raise NotImplementedError("TODO: Add validator")
+        try:
+            # aniso at least needs to think it can get a datetime from value
+            aniso8601.parse_datetime(value)
+        except Exception as e:
+            return False
+        # we also require tzinfo specification on our datetime strings
+        # NOTE -- does not catch minus-sign (non-ascii char) tzinfo delimiter
+        return (isinstance(value, six.string_types) and
+                (value[-1:]=='Z' or
+                 bool(re.match(r'.*[+-](?:\d{4}|\d{2}|\d{2}:\d{2})$', value))))
 
     @staticmethod
     def _validate_identity_hash(value):
         raise NotImplementedError("TODO: Add validator")
 
-    @staticmethod
-    def _validate_iri(value):
-        # Ensures value is IRI format or matches our blank node identification scheme.
-        return bool(re.match(r'_:b[\d+]$', value) or rfc3987.match(value))
+    @classmethod
+    def _validate_iri(cls, value):
+        """
+        Checks if a string matches an acceptable IRI format and scheme. For now, only accepts a few schemes,
+        'http', 'https', blank node identifiers, and 'urn:uuid'
+        :param value: six.string_types 
+        :return: bool
+        """
+        # TODO: Accept other IRI schemes in the future for certain classes.
+        urn_regex = r'^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+        return bool(
+            cls._validate_url(value) or
+            re.match(r'_:b\d+$', value) or
+            re.match(urn_regex, value, re.IGNORECASE)
+        )
 
     @staticmethod
     def _validate_markdown_text(value):
@@ -78,8 +99,15 @@ class PrimitiveValueValidator(object):
 
     @staticmethod
     def _validate_url(value):
-        raise NotImplementedError("TODO: Add validator")
-
+        ret = False
+        try:
+            if ((value and isinstance(value, six.string_types))
+                and rfc3986.is_valid_uri(value, require_scheme=True)
+                and rfc3986.uri_reference(value).scheme.lower() in ['http', 'https']):
+                ret = True
+        except ValueError as e:
+            pass
+        return ret
 
 def validate_primitive_property(state, task_meta):
     """
