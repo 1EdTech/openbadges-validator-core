@@ -1,5 +1,5 @@
-import six
 import rfc3986
+import six
 
 from ..state import get_node_by_id
 
