@@ -24,7 +24,7 @@ def call_task(task_func, task_meta, store):
         # TODO: Implement skip handling.
         pass
     except Exception as e:
-        message = "{}{}".format(e.__name__, e.message)
+        message = "{} {}".format(e.__class__, e.message)
         store.dispatch(resolve_task(task_meta.get('id'), success=False, result=message))
     else:
         store.dispatch(resolve_task(task_meta.get('id'), success=success, result=message))

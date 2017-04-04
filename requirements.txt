@@ -3,6 +3,7 @@ pydux==0.2.1
 PyLD==0.7.1
 requests >= 2.13
 requests_cache >= 0.4.13
+rfc3987 >= 1.3.7
 validators==0.11.2
 
 # Development dependencies

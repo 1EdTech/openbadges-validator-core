@@ -1,9 +1,13 @@
+import re
+import rfc3987
 import six
 
 from ..actions.tasks import add_task
 from ..state import get_node_by_id
 
-from .task_types import VALIDATE_PRIMITIVE_PROPERTY
+from .task_types import (FETCH_HTTP_NODE, VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_ID_PROPERTY,
+                         VALIDATE_PRIMITIVE_PROPERTY,)
+
 from .utils import task_result
 
 
@@ -16,6 +20,11 @@ class ValueTypes(object):
     MARKDOWN_TEXT = 'MARKDOWN_TEXT'
     TEXT = 'TEXT'
     URL = 'URL'
+    # TODO: RDF_TYPE = 'RDF_TYPE'
+    # TODO: EMAIL = 'EMAIL'
+    # TODO: TELEPHONE = 'TELEPHONE'
+
+    PRIMITIVES = (BOOLEAN, DATETIME, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TEXT, URL)
 
 
 class PrimitiveValueValidator(object):
@@ -56,7 +65,8 @@ class PrimitiveValueValidator(object):
 
     @staticmethod
     def _validate_iri(value):
-        raise NotImplementedError("TODO: Add validator")
+        # Ensures value is IRI format or matches our blank node identification scheme.
+        return bool(re.match(r'_:b[\d+]$', value) or rfc3987.match(value))
 
     @staticmethod
     def _validate_markdown_text(value):
@@ -72,6 +82,10 @@ class PrimitiveValueValidator(object):
 
 
 def validate_primitive_property(state, task_meta):
+    """
+    Validates presence and data type of a single property that is
+    expected to be one of the Open Badges Primitive data types.
+    """
     node_id = task_meta.get('node_id')
     node = get_node_by_id(state, node_id)
     node_class = task_meta.get('node_class', 'unknown type node')
@@ -108,47 +122,165 @@ def validate_primitive_property(state, task_meta):
     )
 
 
-ASSERTION_VALIDATORS = (
-    {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
-    # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
-    # TODO: {'prop_name': 'recipient', 'prop_type': ValueTypes.ID,
-    #   'expected_class': 'IdentityObject', 'required': True},
-    # TODO: {'prop_name': 'badge', 'prop_type': ValueTypes.ID,
-    #   'expected_class': 'BadgeClass', 'required': True},
-    # TODO: {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
-    #   'expected_class': 'VerificationObject', 'required': True},
-    {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
-    {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
-    {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},  # Todo: ValueTypes.DATA_URI_OR_URL
-    {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
-    # TODO: {'prop_name': 'evidence', 'prop_type': ValueTypes.ID,
-    #   'expected_class': 'Evidence', many=True, 'fetch': False, required': True},
-)
-BADGECLASS_VALIDATORS = ()
-ISSUER_PROFILE_VALIDATORS = ()
+
+
+class OBClasses(object):
+    AlignmentObject = 'AlignmentObject'
+    Assertion = 'Assertion'
+    BadgeClass = 'BadgeClass'
+    Criteria = 'Criteria'
+    CryptographicKey = 'CryptographicKey'
+    Extension = 'Extension'
+    Evidence = 'Evidence'
+    IdentityObject = 'IdentityObject'
+    Image = 'Image'
+    Profile = 'Profile'
+    RevocationList = 'RevocationList'
+    VerificationObject = 'VerificationObject'
+
+    ALL_CLASSES = (AlignmentObject, Assertion, BadgeClass, Criteria, CryptographicKey,
+                   Extension, Evidence, IdentityObject, Image, Profile, RevocationList,
+                   VerificationObject)
+
+
+class ClassValidators(OBClasses):
+    def __init__(self, class_name):
+        self.class_name = class_name
+
+        if class_name == OBClasses.Assertion:
+            self.validators = (
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
+                # TODO: {'prop_name': 'recipient', 'prop_type': ValueTypes.ID,
+                #   'expected_class': OBClasses.IdentityObject, 'required': True},
+                {'prop_name': 'badge', 'prop_type': ValueTypes.ID,
+                    'expected_class': OBClasses.BadgeClass, 'fetch': True, 'required': True},
+                # TODO: {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
+                #   'expected_class': OBClasses.VerificationObject, 'required': True},
+                {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
+                {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
+                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},  # TODO: ValueTypes.DATA_URI_OR_URL
+                {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
+                # TODO: {'prop_name': 'evidence', 'prop_type': ValueTypes.ID,
+                #   'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, required': True},
+            )
+        elif class_name == OBClasses.BadgeClass:
+            self.validators = (
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
+                {'prop_name': 'issuer', 'prop_type': ValueTypes.ID,
+                    'expected_class': OBClasses.Profile, 'fetch': True, 'required': True},
+                {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
+                {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': True},
+                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': True},  # TODO: ValueTypes.DATA_URI_OR_URL
+                # TODO: {'prop_name': 'criteria', 'prop_type': ValueTypes.ID,
+                #   'expected_class': OBClasses.Criteria, 'fetch': False, 'required': True},
+                # TODO: {'prop_name': 'alignment', 'prop_type': ValueTypes.ID,
+                #   'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, required': False},
+                # TODO: {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
+            )
+        elif class_name == OBClasses.Profile:
+            # To start, required values will assume the Profile class is used as BadgeClass.issuer
+            self.validators = (
+                # TODO: "Most platforms to date can only handle HTTP-based IRIs."
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
+                {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
+                {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},  # TODO: ValueTypes.DATA_URI_OR_URL
+                {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': True},
+                {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': True},  # TODO: Add ValueTypes.EMAIL
+                {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},  # TODO: Add ValueTypes.TELEPHONE
+                # TODO: {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID,
+                #   'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
+                # TODO: {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
+                #   'expected_class': OBClasses.VerificationObject, 'fetch': False, 'required': False},
+                # TODO: {'prop_name': 'revocationList', 'prop_type': ValueTypes.ID,
+                #   'expected_class': OBClasses.Revocationlist, 'fetch': True, 'required': False},  # TODO: Fetch only for relevant assertions?
+            )
+        elif class_name == OBClasses.IdentityObject:
+            self.validators = (
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
+                {'prop_name': 'identity', 'prop_type': ValueTypes.IDENTITY_HASH, 'required': True},
+                {'prop_name': 'hashed', 'prop_type': ValueTypes.BOOLEAN, 'required': True},
+                {'prop_name': 'salt', 'prop_type': ValueTypes.TEXT, 'required': False},
+            )
+        else:
+            raise NotImplementedError("Chosen OBClass not implemented yet.")
+
+
+def _get_validation_actions(node_id, node_class):
+    validators = ClassValidators(node_class).validators
+    actions = []
+    for validator in validators:
+        if validator['prop_type'] in ValueTypes.PRIMITIVES:
+            actions.append(add_task(
+                VALIDATE_PRIMITIVE_PROPERTY, node_id=node_id,
+                node_class=node_class, **validator
+            ))
+        elif validator['prop_type'] == ValueTypes.ID:
+            actions.append(add_task(
+                VALIDATE_ID_PROPERTY, node_id=node_id,
+                node_class=node_class, **validator
+            ))
+    return actions
 
 
 def detect_and_validate_node_class(state, task_meta):
     node_id = task_meta.get('node_id')
     node = get_node_by_id(state, node_id)
     declared_node_type = node.get('type')
+    node_class = None
 
-    if declared_node_type == 'Assertion':
-        validators = ASSERTION_VALIDATORS
-    elif declared_node_type == 'BadgeClass':
-        validators = BADGECLASS_VALIDATORS
-    elif declared_node_type in ('Issuer', 'Profile',):
-        validators = ISSUER_PROFILE_VALIDATORS
-    else:
-        raise NotImplementedError("Only Assertion, BadgeClass, and Profile supported so far")
+    for ob_class in OBClasses.ALL_CLASSES:
+        if declared_node_type == ob_class:
+            node_class = ob_class
+            break
 
-    actions = []
-    for validator in validators:
-        actions.append(add_task(
-            VALIDATE_PRIMITIVE_PROPERTY, node_id=task_meta.get('node_id'), **validator
-        ))
+    actions = _get_validation_actions(task_meta.get('node_id'), node_class)
 
     return task_result(
         True, "Declared type on node {} is {}".format(node_id, declared_node_type),
         actions
     )
+
+
+def validate_expected_node_class(state, task_meta):
+    node_id = task_meta.get('node_id')
+    node = get_node_by_id(state, node_id)  # Raises if not exists
+    node_class = task_meta.get('expected_class')
+    actions = _get_validation_actions(node_id, node_class)
+
+    return task_result(
+        True, "Queued property validations for node {} of class {}".format(node_id, node_class),
+        actions
+    )
+
+
+def validate_id_property(state, task_meta):
+    node_id = task_meta.get('node_id')
+    node = get_node_by_id(state, node_id)
+    node_class = task_meta.get('node_class')
+    expected_class = task_meta.get('expected_class')
+
+    prop_name = task_meta.get('prop_name')
+    required = bool(task_meta.get('required'))
+    prop_value = node.get(prop_name)
+    actions = []
+
+    if not PrimitiveValueValidator(ValueTypes.IRI)(prop_value):
+        return task_result(
+            False,
+            "ID-type property {} was not found in IRI format in {}.".format(prop_name, node_id)
+        )
+
+    if not task_meta.get('fetch', False):
+        target = get_node_by_id(state, prop_value)
+        message = 'Node {} has {} relation stored as node {}'.format(node_id, prop_name, prop_value)
+        actions.append(add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=prop_value, expected_class=expected_class))
+    else:
+        message = 'Node {} has {} relation identified as URL {}'.format(node, prop_name, prop_value)
+        actions.append(add_task(FETCH_HTTP_NODE, url=prop_value, expected_class=expected_class))
+
+    return task_result(True, message, actions)
+

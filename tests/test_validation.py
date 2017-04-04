@@ -7,9 +7,11 @@ from badgecheck.actions.tasks import add_task
 from badgecheck.reducers import main_reducer
 from badgecheck.state import filter_active_tasks, INITIAL_STATE
 from badgecheck.tasks import task_named
-from badgecheck.tasks.validation import (detect_and_validate_node_class,
-                                         validate_primitive_property, ValueTypes,)
-from badgecheck.tasks.task_types import VALIDATE_PRIMITIVE_PROPERTY, DETECT_AND_VALIDATE_NODE_CLASS
+from badgecheck.tasks.validation import (detect_and_validate_node_class, OBClasses,
+                                         validate_id_property, validate_primitive_property, ValueTypes,)
+from badgecheck.tasks.task_types import (VALIDATE_ID_PROPERTY,
+                                         VALIDATE_PRIMITIVE_PROPERTY,
+                                         DETECT_AND_VALIDATE_NODE_CLASS,)
 from badgecheck.verifier import call_task
 
 from testfiles.test_components import test_components
@@ -150,7 +152,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
         store.dispatch(add_task(
             VALIDATE_PRIMITIVE_PROPERTY,
             node_id="http://example.com/1",
-            prop_name="nonexistent_ bool_prop",
+            prop_name="nonexistent_bool_prop",
             prop_required=True,
             prop_type=ValueTypes.BOOLEAN
         ))
@@ -175,6 +177,57 @@ class PropertyValidationTaskTests(unittest.TestCase):
         self.assertTrue(state['tasks'][2]['success'], "Valid optional boolean property is present.")
         self.assertFalse(state['tasks'][3]['success'], "Invalid required text property is present.")
         self.assertFalse(state['tasks'][4]['success'], "Required boolean property is missing.")
+
+
+class AdvancedPropertyValidationTests(unittest.TestCase):
+    def test_validate_nested_identity_object(self):
+        first_node = {
+            'id': 'http://example.com/1',
+            'recipient': '_:b0'
+        }
+        second_node = {
+            'id': '_:b0',
+            'identity': 'two@example.com',
+            'type': 'email',
+            'hashed': False
+        }
+        state = {'graph': [first_node, second_node]}
+
+        task = add_task(
+            VALIDATE_ID_PROPERTY,
+            node_id="http://example.com/1",
+            prop_name="recipient",
+            prop_required=True,
+            prop_type=ValueTypes.ID,
+            node_class=OBClasses.IdentityObject
+        )
+
+        result, message, actions = validate_id_property(state, task)
+        self.assertTrue(result, "Property validation task should succeed.")
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(actions[0]['expected_class'], OBClasses.IdentityObject)
+
+    def test_validate_linked_related_resource(self):
+        first_node = {
+            'id': 'http://example.com/1',
+            'badge': 'http://example.com/2'
+        }
+        state = {'graph': [first_node]}
+
+        task = add_task(
+            VALIDATE_ID_PROPERTY,
+            node_id="http://example.com/1",
+            prop_name="badge",
+            prop_required=True,
+            prop_type=ValueTypes.ID,
+            node_class=OBClasses.BadgeClass,
+            fetch=True
+        )
+
+        result, message, actions = validate_id_property(state, task)
+        self.assertTrue(result, "Property validation task should succeed.")
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(actions[0]['expected_class'], OBClasses.BadgeClass)
 
 
 class NodeTypeDetectionTasksTests(unittest.TestCase):
