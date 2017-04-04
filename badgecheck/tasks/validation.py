@@ -1,6 +1,6 @@
 import re
-import six
 import rfc3986
+import six
 
 from ..actions.tasks import add_task
 from ..state import get_node_by_id
