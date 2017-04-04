@@ -195,6 +195,60 @@ class PropertyValidationTaskTests(unittest.TestCase):
              message, "URL property url_prop not valid in unknown type node {}".format(first_node['id'])
         )
 
+    def test_basic_datetime_property_validation(self):
+        _VALID_DATETIMES = ['1977-06-10T12:00:00+0800',
+                            '1977-06-10T12:00:00-0800',
+                            '1977-06-10T12:00:00+08',
+                            '1977-06-10T12:00:00+08:00']
+        _INVALID_NOTZ_DATETIMES = ['1977-06-10T12:00:00']
+        _INVALID_DATETIMES = ['notadatetime']
+
+        first_node = {'id': 'http://example.com/1', 'date_prop': '1977-06-10T12:00:00Z'}
+        state = {
+            'graph': [first_node]
+        }
+        task = add_task(
+            VALIDATE_PRIMITIVE_PROPERTY,
+            node_id=first_node['id'],
+            prop_name='date_prop',
+            prop_required=False,
+            prop_type=ValueTypes.DATETIME
+        )
+        task['id'] = 1
+
+        result, message, actions = validate_primitive_property(state, task)
+        self.assertTrue(result, "Optional date prop is present and well-formed; validation should pass.")
+        self.assertEqual(
+            message, "DATETIME property date_prop valid in unknown type node {}".format(first_node['id'])
+        )
+
+        for date in _VALID_DATETIMES:
+            first_node['date_prop'] = date
+            result, message, actions = validate_primitive_property(state, task)
+            self.assertTrue(result,
+                            "Optional date prop {} is well-formed; validation should pass.".format(date))
+            self.assertEqual(
+                message, "DATETIME property date_prop valid in unknown type node {}".format(first_node['id'])
+            )
+
+        for date in _INVALID_NOTZ_DATETIMES:
+            first_node['date_prop'] = date
+            result, message, actions = validate_primitive_property(state, task)
+            self.assertFalse(result, "Optional date prop has no tzinfo particle; validation should fail.")
+            self.assertEqual(
+                message,
+                "DATETIME property date_prop not valid in unknown type node {}".format(first_node['id'])
+            )
+
+        for date in _INVALID_DATETIMES:
+            first_node['date_prop'] = date
+            result, message, actions = validate_primitive_property(state, task)
+            self.assertFalse(result, "Optional date prop has malformed datetime; validation should fail.")
+            self.assertEqual(
+                message,
+                "DATETIME property date_prop not valid in unknown type node {}".format(first_node['id'])
+            )
+
     def test_validation_action(self):
         store = create_store(main_reducer, INITIAL_STATE)
         first_node = {

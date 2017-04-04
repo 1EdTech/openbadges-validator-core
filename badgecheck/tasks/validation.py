@@ -1,3 +1,4 @@
+import aniso8601
 import re
 import rfc3986
 import six
@@ -57,7 +58,16 @@ class PrimitiveValueValidator(object):
 
     @staticmethod
     def _validate_datetime(value):
-        raise NotImplementedError("TODO: Add validator")
+        try:
+            # aniso at least needs to think it can get a datetime from value
+            aniso8601.parse_datetime(value)
+        except Exception as e:
+            return False
+        # we also require tzinfo specification on our datetime strings
+        # NOTE -- does not catch minus-sign (non-ascii char) tzinfo delimiter
+        return (isinstance(value, six.string_types) and
+                (value[-1:]=='Z' or
+                 bool(re.match(r'.*[+-](?:\d{4}|\d{2}|\d{2}:\d{2})$', value))))
 
     @staticmethod
     def _validate_identity_hash(value):
