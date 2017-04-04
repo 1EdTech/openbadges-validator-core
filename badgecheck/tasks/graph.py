@@ -30,7 +30,10 @@ def fetch_http_node(state, task_meta):
 
 
 def jsonld_compact_data(state, task_meta):
-    input_data = json.loads(task_meta.get('data'))
+    try:
+        input_data = json.loads(task_meta.get('data'))
+    except TypeError:
+        return task_result(False, "Could not load data")
 
     options = {'documentLoader': CachableDocumentLoader(cachable=task_meta.get('use_cache', True))}
     result = jsonld.compact(input_data, OPENBADGES_CONTEXT_URI_V2, options=options)
