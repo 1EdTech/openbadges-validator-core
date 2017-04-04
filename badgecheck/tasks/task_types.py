@@ -18,4 +18,5 @@ VALIDATION Tasks:
 Ensure data is in good shape for relevant Open Badges objects and links between
 objects are sound.
 """
+DETECT_AND_VALIDATE_NODE_CLASS = 'DETECT_AND_VALIDATE_NODE_CLASS'
 VALIDATE_PRIMITIVE_PROPERTY = 'VALIDATE_PRIMITIVE_PROPERTY'

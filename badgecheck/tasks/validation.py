@@ -1,7 +1,9 @@
 import six
 
+from ..actions.tasks import add_task
 from ..state import get_node_by_id
 
+from .task_types import VALIDATE_PRIMITIVE_PROPERTY
 from .utils import task_result
 
 
@@ -103,4 +105,50 @@ def validate_primitive_property(state, task_meta):
         False, "{} property {} not valid in {} {}".format(
             prop_type, prop_name, node_class, node_id
         )
+    )
+
+
+ASSERTION_VALIDATORS = (
+    {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
+    # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
+    # TODO: {'prop_name': 'recipient', 'prop_type': ValueTypes.ID,
+    #   'expected_class': 'IdentityObject', 'required': True},
+    # TODO: {'prop_name': 'badge', 'prop_type': ValueTypes.ID,
+    #   'expected_class': 'BadgeClass', 'required': True},
+    # TODO: {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
+    #   'expected_class': 'VerificationObject', 'required': True},
+    {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
+    {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
+    {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},  # Todo: ValueTypes.DATA_URI_OR_URL
+    {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
+    # TODO: {'prop_name': 'evidence', 'prop_type': ValueTypes.ID,
+    #   'expected_class': 'Evidence', many=True, 'fetch': False, required': True},
+)
+BADGECLASS_VALIDATORS = ()
+ISSUER_PROFILE_VALIDATORS = ()
+
+
+def detect_and_validate_node_class(state, task_meta):
+    node_id = task_meta.get('node_id')
+    node = get_node_by_id(state, node_id)
+    declared_node_type = node.get('type')
+
+    if declared_node_type == 'Assertion':
+        validators = ASSERTION_VALIDATORS
+    elif declared_node_type == 'BadgeClass':
+        validators = BADGECLASS_VALIDATORS
+    elif declared_node_type in ('Issuer', 'Profile',):
+        validators = ISSUER_PROFILE_VALIDATORS
+    else:
+        raise NotImplementedError("Only Assertion, BadgeClass, and Profile supported so far")
+
+    actions = []
+    for validator in validators:
+        actions.append(add_task(
+            VALIDATE_PRIMITIVE_PROPERTY, node_id=task_meta.get('node_id'), **validator
+        ))
+
+    return task_result(
+        True, "Declared type on node {} is {}".format(node_id, declared_node_type),
+        actions
     )
