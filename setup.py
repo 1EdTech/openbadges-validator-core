@@ -41,6 +41,7 @@ setup(
         'Intended Audience :: Developers'
     ],
     install_requires=[
+        'aniso8601>=1.2.0',
         'pydux==0.2.1',
         'PyLD==0.7.1',
         'requests >= 2.13',
