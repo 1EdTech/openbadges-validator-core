@@ -6,6 +6,10 @@ based on a variety of input sources and present a useful interface for
 accessing their properties and validation information. Python and command line
 APIs are provided.
 
+**Note - Badgecheck is in early alpha stage is *not* ready to verify the 
+validity of Open Badges.** If you want to validate 1.0 or 1.1 badges in the 
+meanwhile, please use [badgecheck.io](https://badgecheck.io).
+
 Badgecheck was originated by Concentric Sky. https://concentricsky.com
 This version of badgecheck is released by IMS Global Learning Consortium.
 
