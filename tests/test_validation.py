@@ -3,6 +3,7 @@ import json
 from pydux import create_store
 import unittest
 
+from actions.action_types import ADD_TASK
 from badgecheck.actions.graph import add_node
 from badgecheck.actions.tasks import add_task
 from badgecheck.reducers import main_reducer
@@ -12,7 +13,7 @@ from badgecheck.tasks.validation import (detect_and_validate_node_class, OBClass
                                          validate_id_property, validate_primitive_property, ValueTypes,)
 from badgecheck.tasks.task_types import (VALIDATE_ID_PROPERTY,
                                          VALIDATE_PRIMITIVE_PROPERTY,
-                                         DETECT_AND_VALIDATE_NODE_CLASS,)
+                                         DETECT_AND_VALIDATE_NODE_CLASS, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES)
 from badgecheck.verifier import call_task
 
 from testfiles.test_components import test_components
@@ -31,7 +32,8 @@ class PropertyValidationTests(unittest.TestCase):
                      'http://code.google.com/events/#&product=browser')
         good_urls_that_fail = (u'http://✪df.ws/123', u'http://عمان.icom.museum/',)  # TODO: Discuss support for these
         bad_urls = ('data:image/gif;base64,R0lGODlhyAAiALM...DfD0QAADs=', '///', '///f', '//',
-                    'rdar://12345', 'h://test', 'http:// shouldfail.com', ':// should fail', '', 'a')
+                    'rdar://12345', 'h://test', 'http:// shouldfail.com', ':// should fail', '', 'a',
+                    'urn:uuid:129487129874982374', 'urn:uuid:9d278beb-36cf-4bc8-888d-674ff9843d72')
         bad_urls_that_pass = ('http://', 'http://../', 'http://foo.bar?q=Spaces should be encoded',
                                           'http://f', 'http://-error-.invalid/', 'http://.www.foo.bar./',)
 
@@ -387,3 +389,60 @@ class NodeTypeDetectionTasksTests(unittest.TestCase):
 
         issuedOn_task = [t for t in actions if t['prop_name'] == 'issuedOn'][0]
         self.assertEqual(issuedOn_task['prop_type'], ValueTypes.DATETIME)
+
+
+class ClassValidationTaskTests(unittest.TestCase):
+    def test_validate_identity_object_property_dependencies(self):
+        first_node = {
+            'id': 'http://example.com/1',
+            'recipient': '_:b0'
+        }
+        second_node = {
+            'id': '_:b0',
+            'identity': 'sha256$c7ef86405ba71b85acd8e2e95166c4b111448089f2e1599f42fe1bba46e865c5',
+            'type': 'email',
+            'hashed': True,
+            'salt': 'deadsea'
+        }
+        state = {'graph': [first_node, second_node]}
+
+        task = add_task(
+            VALIDATE_ID_PROPERTY,
+            node_id="http://example.com/1",
+            prop_name="recipient",
+            prop_required=True,
+            prop_type=ValueTypes.ID,
+            expected_class=OBClasses.IdentityObject
+        )
+
+        def run(cur_state, cur_task, expected_result, msg=''):
+            result, message, actions = validate_id_property(cur_state, cur_task)
+            self.assertTrue(result, "Property validation task should succeed.")
+            self.assertEqual(len(actions), 1)
+            self.assertEqual(actions[0]['expected_class'], OBClasses.IdentityObject)
+
+            cur_task = actions[0]
+            result, message, actions = task_named(cur_task['name'])(cur_state, cur_task)
+            self.assertTrue(result, "IdentityObject validation task discovery should succeed.")
+
+            for cur_task in [a for a in actions if a.get('type') == ADD_TASK]:
+                val_result, val_message, val_actions = task_named(cur_task['name'])(cur_state, cur_task)
+                if not cur_task['name'] == IDENTITY_OBJECT_PROPERTY_DEPENDENCIES:
+                    self.assertTrue(val_result, "Test {} should pass".format(cur_task['name']))
+                else:
+                    self.assertEqual(val_result, expected_result,
+                                     "{} should be {}: {}".format(cur_task['name'], expected_result, msg))
+
+        # Hashed and salted
+        run(state, task, True, "Good working hashed identity")
+
+        # Identity shouldn't look hashed if it says it isn't!
+        second_node['hashed'] = False
+        run(state, task, False, "Identity looks hashed and smells fishy")
+
+        # Hash doesn't match known types.
+        second_node['hashed'] = True
+        second_node['identity'] = "sha1billiion$abc123"
+        run(state, task, False, "Hash doesn't match known types")
+        second_node['identity'] = "plaintextjane@example.com"
+        run(state, task, False, "Identity shouldn't look like email if hashed is true")
