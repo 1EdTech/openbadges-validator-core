@@ -7,10 +7,30 @@ from ..actions.tasks import add_task
 from ..exceptions import ValidationError
 from ..state import get_node_by_id
 
-from .task_types import (FETCH_HTTP_NODE, VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_ID_PROPERTY,
-                         VALIDATE_PRIMITIVE_PROPERTY,)
+from .task_types import (CLASS_VALIDATION_TASKS, FETCH_HTTP_NODE,
+                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
+                         VALIDATE_ID_PROPERTY, VALIDATE_PRIMITIVE_PROPERTY, )
 
-from .utils import task_result
+from .utils import is_empty_list, task_result
+
+
+class OBClasses(object):
+    AlignmentObject = 'AlignmentObject'
+    Assertion = 'Assertion'
+    BadgeClass = 'BadgeClass'
+    Criteria = 'Criteria'
+    CryptographicKey = 'CryptographicKey'
+    Extension = 'Extension'
+    Evidence = 'Evidence'
+    IdentityObject = 'IdentityObject'
+    Image = 'Image'
+    Profile = 'Profile'
+    RevocationList = 'RevocationList'
+    VerificationObject = 'VerificationObject'
+
+    ALL_CLASSES = (AlignmentObject, Assertion, BadgeClass, Criteria, CryptographicKey,
+                   Extension, Evidence, IdentityObject, Image, Profile, RevocationList,
+                   VerificationObject)
 
 
 class ValueTypes(object):
@@ -70,9 +90,19 @@ class PrimitiveValueValidator(object):
                 (value[-1:]=='Z' or
                  bool(re.match(r'.*[+-](?:\d{4}|\d{2}|\d{2}:\d{2})$', value))))
 
+
     @staticmethod
-    def _validate_identity_hash(value):
-        raise NotImplementedError("TODO: Add validator")
+    def _validate_email(value):
+        return bool(re.match(r'(^[^@]+@[^@]+$)', value))
+
+    @staticmethod
+    def is_hashed_identity_hash(value):
+        return bool(re.match(r'md5\$[\da-fA-F]{32}$', value) or re.match(r'sha256\$[\da-fA-F]{64}$', value))
+
+    @classmethod
+    def _validate_identity_hash(cls, value):
+        # Validates that identity is a string. More specific rules may only be enforced at the class instance level.
+        return isinstance(value, six.string_types)
 
     @classmethod
     def _validate_iri(cls, value):
@@ -110,6 +140,7 @@ class PrimitiveValueValidator(object):
             pass
         return ret
 
+
 def validate_primitive_property(state, task_meta):
     """
     Validates presence and data type of a single property that is
@@ -124,9 +155,14 @@ def validate_primitive_property(state, task_meta):
     prop_value = node.get(prop_name)
     required = bool(task_meta.get('required'))
 
-    if not prop_value and required:
+    if prop_value is None and required:
         return task_result(
             False, "Required property {} not present in {} {}".format(
+                prop_name, node_class, node_id)
+        )
+    elif task_meta.get('many') and required and is_empty_list(prop_value):
+        return task_result(
+            False, "Required property {} contains no values in {} {}".format(
                 prop_name, node_class, node_id)
         )
 
@@ -163,27 +199,6 @@ def validate_primitive_property(state, task_meta):
     )
 
 
-
-
-class OBClasses(object):
-    AlignmentObject = 'AlignmentObject'
-    Assertion = 'Assertion'
-    BadgeClass = 'BadgeClass'
-    Criteria = 'Criteria'
-    CryptographicKey = 'CryptographicKey'
-    Extension = 'Extension'
-    Evidence = 'Evidence'
-    IdentityObject = 'IdentityObject'
-    Image = 'Image'
-    Profile = 'Profile'
-    RevocationList = 'RevocationList'
-    VerificationObject = 'VerificationObject'
-
-    ALL_CLASSES = (AlignmentObject, Assertion, BadgeClass, Criteria, CryptographicKey,
-                   Extension, Evidence, IdentityObject, Image, Profile, RevocationList,
-                   VerificationObject)
-
-
 class ClassValidators(OBClasses):
     def __init__(self, class_name):
         self.class_name = class_name
@@ -192,8 +207,8 @@ class ClassValidators(OBClasses):
             self.validators = (
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
                 # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
-                # TODO: {'prop_name': 'recipient', 'prop_type': ValueTypes.ID,
-                #   'expected_class': OBClasses.IdentityObject, 'required': True},
+                {'prop_name': 'recipient', 'prop_type': ValueTypes.ID,
+                    'expected_class': OBClasses.IdentityObject, 'required': True},
                 {'prop_name': 'badge', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.BadgeClass, 'fetch': True, 'required': True},
                 # TODO: {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
@@ -245,6 +260,7 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'identity', 'prop_type': ValueTypes.IDENTITY_HASH, 'required': True},
                 {'prop_name': 'hashed', 'prop_type': ValueTypes.BOOLEAN, 'required': True},
                 {'prop_name': 'salt', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'task_type': IDENTITY_OBJECT_PROPERTY_DEPENDENCIES}
             )
         else:
             raise NotImplementedError("Chosen OBClass not implemented yet.")
@@ -254,16 +270,22 @@ def _get_validation_actions(node_id, node_class):
     validators = ClassValidators(node_class).validators
     actions = []
     for validator in validators:
-        if validator['prop_type'] in ValueTypes.PRIMITIVES:
+        if validator.get('prop_type') in ValueTypes.PRIMITIVES:
             actions.append(add_task(
                 VALIDATE_PRIMITIVE_PROPERTY, node_id=node_id,
                 node_class=node_class, **validator
             ))
-        elif validator['prop_type'] == ValueTypes.ID:
+        elif validator.get('prop_type') == ValueTypes.ID:
             actions.append(add_task(
                 VALIDATE_ID_PROPERTY, node_id=node_id,
                 node_class=node_class, **validator
             ))
+        elif validator.get('task_type') in CLASS_VALIDATION_TASKS:
+            actions.append(add_task(
+                validator['task_type'], node_id=node_id,
+                node_class=node_class, **validator
+            ))
+
     return actions
 
 
@@ -325,3 +347,28 @@ def validate_id_property(state, task_meta):
 
     return task_result(True, message, actions)
 
+
+"""
+Class Validation Tasks
+"""
+def identity_object_property_dependencies(state, task_meta):
+    node_id = task_meta.get('node_id')
+    node = get_node_by_id(state, node_id)
+    node_class = task_meta.get('node_class')
+    identity = node.get('identity')
+    is_hashed = PrimitiveValueValidator.is_hashed_identity_hash(identity)
+    is_email = bool(re.match(r'[^@]+@[^@]+$', identity))
+
+    if node.get('hashed') and not is_hashed:
+        return task_result(
+            False,
+            "Identity {} must match known hash style if hashed is true".format(identity))
+    elif is_hashed and not node.get('hashed'):
+        return task_result(
+            False,
+            "Identity {} must not be hashed if hashed is false".format(identity)
+        )
+    if not node.get('hashed') and 'email' in node.get('type') and not is_email:
+        return task_result(False, "Email type identity must match email format.")
+
+    return task_result(True, "IdentityObject passes validation rules.")

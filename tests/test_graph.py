@@ -128,6 +128,16 @@ class JsonLdCompactTests(unittest.TestCase):
             "Node should be compacted into OB Context and use OB property names.")
 
     @responses.activate
+    def test_no_task_data(self):
+        task = add_task(JSONLD_COMPACT_DATA)
+        task['id'] = 1
+
+        result, message, actions = jsonld_compact_data({}, task)
+        self.assertFalse(result)
+        self.assertEqual(message, 'Could not load data')
+
+
+    @responses.activate
     def test_reduce_compacted_output(self):
         self.setUpContextCache()
 

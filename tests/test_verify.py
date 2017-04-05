@@ -44,4 +44,6 @@ class InitializationTests(unittest.TestCase):
         self.assertEqual(results.get('input').get('value'), url)
         self.assertEqual(results.get('input').get('input_type'), 'url')
 
-        self.assertEqual(len(results.get('tasks')), 28)
+        self.assertEqual(
+            len([t for t in results['tasks'] if not t['success']]), 0,
+            "There should be no failing tasks.")

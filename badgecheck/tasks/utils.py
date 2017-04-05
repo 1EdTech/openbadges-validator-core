@@ -10,3 +10,7 @@ def task_result(success=True, message='', actions=None):
         actions = []
 
     return (success, message, actions,)
+
+
+def is_empty_list(prop_value):
+    return isinstance(prop_value, (tuple, list,)) and len(prop_value) == 0
