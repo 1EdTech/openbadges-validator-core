@@ -4,6 +4,7 @@ import rfc3986
 import six
 
 from ..actions.tasks import add_task
+from ..exceptions import ValidationError
 from ..state import get_node_by_id
 
 from .task_types import (FETCH_HTTP_NODE, VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_ID_PROPERTY,
@@ -121,7 +122,7 @@ def validate_primitive_property(state, task_meta):
     prop_name = task_meta.get('prop_name')
     prop_type = task_meta.get('prop_type')
     prop_value = node.get(prop_name)
-    required = bool(task_meta.get('prop_required'))
+    required = bool(task_meta.get('required'))
 
     if not prop_value and required:
         return task_result(
@@ -129,22 +130,34 @@ def validate_primitive_property(state, task_meta):
                 prop_name, node_class, node_id)
         )
 
-    if not prop_value and not required:
+    if prop_value is None and not required:
         return task_result(
             True, "Optional property {} not present in {} {}".format(
                 prop_name, node_class, node_id)
         )
 
-    value_check_function = PrimitiveValueValidator(prop_type)
-    if value_check_function(prop_value):
-        return task_result(
-            True, "{} property {} valid in {} {}".format(
-                prop_type, prop_name, node_class, node_id
-            )
-        )
+    if not isinstance(prop_value, (list, tuple,)):
+        values_to_test = [prop_value]
+    else:
+        values_to_test = prop_value
 
+    try:
+        for val in values_to_test:
+            value_check_function = PrimitiveValueValidator(prop_type)
+            if len(str(val)) < 48:
+                abbrev_val = str(val)
+            else:
+                abbrev_val = str(val)[:48] + '...'
+            if not required and not val:
+                continue
+            if not value_check_function(val):
+                raise ValidationError("{} property {} value {} not valid in {} {}".format(
+                    prop_type, prop_name, abbrev_val, node_class, node_id))
+
+    except ValidationError as e:
+        return task_result(False, e.message)
     return task_result(
-        False, "{} property {} not valid in {} {}".format(
+        True, "{} property {} valid in {} {}".format(
             prop_type, prop_name, node_class, node_id
         )
     )
