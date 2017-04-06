@@ -337,7 +337,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
 
     def test_many_validation(self):
         """
-        When detect_and_validatade_node_class (through _get_validation_actions)
+        When detect_and_validate_node_class (through _get_validation_actions)
         queue up actions, some configs may have many=True. This means single or multiple
         values should be accepted. If optional, empty lists should also be accepted.
         """
@@ -511,3 +511,53 @@ class ClassValidationTaskTests(unittest.TestCase):
         run(state, task, False, "Hash doesn't match known types")
         second_node['identity'] = "plaintextjane@example.com"
         run(state, task, False, "Identity shouldn't look like email if hashed is true")
+
+    def test_many_validation_for_id_property(self):
+        """
+        When detect_and_validate_node_class (through _get_validation_actions)
+        queue up actions, some configs may have many=True. This means single or multiple
+        values should be accepted. If optional, empty lists should also be accepted.
+        """
+        first_node = {
+            'id': '_:b0',
+            'type': 'Assertion'
+        }
+        second_node = {
+            'id': '_:b1',
+            'narrative': 'Did cool stuff'
+        }
+        third_node = {
+            'id': '_:b2',
+            'narrative': 'Did more cool stuff'
+        }
+        state = {'graph': [first_node, second_node, third_node]}
+        required = True
+
+        task = add_task(
+            VALIDATE_ID_PROPERTY, node_id=first_node['id'], node_class=OBClasses.Assertion,
+            prop_name='evidence', prop_type=ValueTypes.ID, required=required, many=True, fetch=False,
+            expected_class=OBClasses.Evidence, allow_remote_url=True
+        )
+        result, message, actions = validate_id_property(state, task)
+        self.assertFalse(result)
+        self.assertTrue('Required property evidence not present' in message)
+
+        first_node['evidence'] = 'http://youtube.com/avideoofmedoingthething'
+        result, message, actions = validate_id_property(state, task)
+        self.assertTrue(result, "A single string URL value should be acceptable for evidence")
+        self.assertTrue('reference is' in message, "Message should properly report single property entry")
+
+        first_node['evidence'] = 'notanurl'
+        result, message, actions = validate_id_property(state, task)
+        self.assertFalse(result, "A single string value that doesn't look like a URL is not acceptable as evidence")
+
+        first_node['evidence'] = ['http://example.com/1', 'http://example.com/2']
+        result, message, actions = validate_id_property(state, task)
+        self.assertTrue(result, "Multiple string URLs should be acceptable for evidence")
+        self.assertTrue('references are' in message, "Message should properly report plural references.")
+
+        first_node['evidence'] = ['_:b1', 'http://example.com/2']
+        result, message, actions = validate_id_property(state, task)
+        self.assertTrue(result, "An embedded node and a URL should be acceptable evidence references")
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(actions[0]['node_id'], '_:b1')

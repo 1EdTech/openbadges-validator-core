@@ -11,7 +11,7 @@ from .task_types import (CLASS_VALIDATION_TASKS, FETCH_HTTP_NODE,
                          IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
                          VALIDATE_ID_PROPERTY, VALIDATE_PRIMITIVE_PROPERTY, )
 
-from .utils import is_empty_list, task_result
+from .utils import abbreviate_value, is_empty_list, task_result
 
 
 class OBClasses(object):
@@ -180,15 +180,11 @@ def validate_primitive_property(state, task_meta):
     try:
         for val in values_to_test:
             value_check_function = PrimitiveValueValidator(prop_type)
-            if len(str(val)) < 48:
-                abbrev_val = str(val)
-            else:
-                abbrev_val = str(val)[:48] + '...'
             if not required and not val:
                 continue
             if not value_check_function(val):
                 raise ValidationError("{} property {} value {} not valid in {} {}".format(
-                    prop_type, prop_name, abbrev_val, node_class, node_id))
+                    prop_type, prop_name, abbreviate_value(val), node_class, node_id))
 
     except ValidationError as e:
         return task_result(False, e.message)
@@ -262,6 +258,13 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'salt', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'task_type': IDENTITY_OBJECT_PROPERTY_DEPENDENCIES}
             )
+        elif class_name == OBClasses.Evidence:
+            self.validators = (
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False},
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
+                {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
+                #  TODO {'task_type': EVIDENCE_PROPERTY_DEPENDENCIES}
+            )
         else:
             raise NotImplementedError("Chosen OBClass not implemented yet.")
 
@@ -331,21 +334,45 @@ def validate_id_property(state, task_meta):
     prop_value = node.get(prop_name)
     actions = []
 
-    if not PrimitiveValueValidator(ValueTypes.IRI)(prop_value):
+    if prop_value is None and required:
         return task_result(
-            False,
-            "ID-type property {} was not found in IRI format in {}.".format(prop_name, node_id)
+            False, "Required property {} not present in {} {}".format(
+                prop_name, node_class, node_id)
         )
 
-    if not task_meta.get('fetch', False):
-        target = get_node_by_id(state, prop_value)
-        message = 'Node {} has {} relation stored as node {}'.format(node_id, prop_name, prop_value)
-        actions.append(add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=prop_value, expected_class=expected_class))
+    if not isinstance(prop_value, (list, tuple,)):
+        values_to_test = [prop_value]
     else:
-        message = 'Node {} has {} relation identified as URL {}'.format(node, prop_name, prop_value)
-        actions.append(add_task(FETCH_HTTP_NODE, url=prop_value, expected_class=expected_class))
+        values_to_test = prop_value
 
-    return task_result(True, message, actions)
+    try:
+        for val in values_to_test:
+            if not PrimitiveValueValidator(ValueTypes.IRI)(val):
+                raise ValidationError(
+                    "ID-type property {} had value `{}` not in IRI format in {}.".format(
+                        prop_name, abbreviate_value(val), node_id)
+                )
+
+            if not task_meta.get('fetch', False):
+                try:
+                    target = get_node_by_id(state, val)
+                except IndexError:
+                    if task_meta.get('allow_remote_url') and PrimitiveValueValidator(ValueTypes.URL)(val):
+                        continue
+                    raise ValidationError(
+                        'Node {} has {} property value `{}` that appears not to be in URI format'.format(
+                          node_id, prop_name, abbreviate_value(val)
+                        ))
+                actions.append(
+                    add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=val, expected_class=expected_class))
+            else:
+                actions.append(add_task(FETCH_HTTP_NODE, url=val, expected_class=expected_class))
+    except ValidationError as e:
+        return task_result(False, e.message)
+
+    label = 'references are' if len(values_to_test) > 1 else 'reference is'
+    return task_result(True, "{} property {} {} valid in {} {}".format(
+        ValueTypes.ID, prop_name, label, node_class, node_id), actions)
 
 
 """
