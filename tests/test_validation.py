@@ -9,12 +9,12 @@ from badgecheck.actions.tasks import add_task
 from badgecheck.reducers import main_reducer
 from badgecheck.state import filter_active_tasks, INITIAL_STATE
 from badgecheck.tasks import task_named
-from badgecheck.tasks.validation import (detect_and_validate_node_class, evidence_property_dependencies, OBClasses,
-                                         PrimitiveValueValidator, validate_id_property, validate_primitive_property,
-                                         ValueTypes,)
-from badgecheck.tasks.task_types import (DETECT_AND_VALIDATE_NODE_CLASS, EVIDENCE_PROPERTY_DEPENDENCIES,
-                                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_ID_PROPERTY,
-                                         VALIDATE_PRIMITIVE_PROPERTY,)
+from badgecheck.tasks.validation import (criteria_property_dependencies, detect_and_validate_node_class,
+                                         evidence_property_dependencies, OBClasses, PrimitiveValueValidator,
+                                         validate_id_property, validate_primitive_property, ValueTypes,)
+from badgecheck.tasks.task_types import (CRITERIA_PROPERTY_DEPENDENCIES, DETECT_AND_VALIDATE_NODE_CLASS,
+                                         EVIDENCE_PROPERTY_DEPENDENCIES, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
+                                         VALIDATE_ID_PROPERTY, VALIDATE_PRIMITIVE_PROPERTY,)
 from badgecheck.verifier import call_task
 
 from testfiles.test_components import test_components
@@ -562,6 +562,69 @@ class ClassValidationTaskTests(unittest.TestCase):
         second_node['identity'] = "plaintextjane@example.com"
         run(state, task, False, "Identity shouldn't look like email if hashed is true")
 
+    def test_criteria_property_dependency_validation(self):
+        state = {
+            'graph': [
+                {'id': '_:b0'},
+                {'id': '_:b1', 'narrative': 'Do cool stuff'},
+                {'id': 'http://example.com/a', 'narrative': 'Do cool stuff'},
+                {'id': 'http://example.com/b', 'name': 'Another property outside of Criteria class scope'},
+            ]
+        }
+        task = add_task(CRITERIA_PROPERTY_DEPENDENCIES, node_id="_:b1")
+        result, message, actions = criteria_property_dependencies(state, task)
+        self.assertTrue(result)
+
+        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b1")
+        result, message, actions = evidence_property_dependencies(state, task)
+        self.assertTrue(result, "Evidence with blank node ID and narrative passes.")
+
+        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b0")
+        result, message, actions = evidence_property_dependencies(state, task)
+        self.assertFalse(result, "Evidence with just a blank node id fails.")
+
+        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b1")
+        result, message, actions = evidence_property_dependencies(state, task)
+        self.assertTrue(result, "Evidence with blank node ID and narrative passes.")
+
+        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="http://example.com/b")
+        result, message, actions = evidence_property_dependencies(state, task)
+        self.assertTrue(result, "External URL with unknown properties passes.")
+
+        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="http://example.com/a")
+        result, message, actions = evidence_property_dependencies(state, task)
+        self.assertTrue(result, "External URL and narrative passes")
+
+    def test_run_criteria_task_discovery_and_validation(self):
+        badgeclass_node = {'id': 'http://example.com/badgeclass', 'type': 'BadgeClass'}
+        state = {
+            'graph': [
+                badgeclass_node,
+                {'id': '_:b0'},
+                {'id': '_:b1', 'narrative': 'Do cool stuff'},
+                {'id': 'http://example.com/a', 'narrative': 'Do cool stuff'},
+                {'id': 'http://example.com/b', 'name': 'Another property outside of Criteria class scope'},
+            ]
+        }
+        actions = [add_task(
+            VALIDATE_ID_PROPERTY,
+            node_id=badgeclass_node['id'],
+            prop_name="criteria",
+            prop_required=False,
+            prop_type=ValueTypes.ID,
+            expected_class=OBClasses.Criteria
+        )]
+        badgeclass_node['criteria'] = 'http://example.com/a'
+
+        for task in actions:
+            result, message, new_actions = task_named(task['name'])(state, task)
+            if new_actions:
+                actions.extend(new_actions)
+            self.assertTrue(result)
+
+        self.assertEqual(len(actions), 5)
+        self.assertTrue(CRITERIA_PROPERTY_DEPENDENCIES in [a['name'] for a in actions])
+
     def _setUpEvidenceState(self):
         self.first_node = {
             'id': '_:b0',
@@ -637,7 +700,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             ]
         }
 
-        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id = "_:b1")
+        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b1")
         result, message, actions = evidence_property_dependencies(state, task)
         self.assertTrue(result, "Evidence with blank node ID and narrative passes.")
 

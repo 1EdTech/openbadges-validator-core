@@ -7,7 +7,8 @@ from ..actions.tasks import add_task
 from ..exceptions import ValidationError
 from ..state import get_node_by_id
 
-from .task_types import (CLASS_VALIDATION_TASKS, EVIDENCE_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
+from .task_types import (CLASS_VALIDATION_TASKS, CRITERIA_PROPERTY_DEPENDENCIES,
+                         EVIDENCE_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
                          IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
                          VALIDATE_ID_PROPERTY, VALIDATE_PRIMITIVE_PROPERTY, )
 
@@ -184,14 +185,14 @@ def validate_primitive_property(state, task_meta):
             if not required and not val:
                 continue
             if not value_check_function(val):
-                raise ValidationError("{} property {} value {} not valid in {} {}".format(
+                raise ValidationError("{} property {} value {} not valid in {} node {}".format(
                     prop_type, prop_name, abbreviate_value(val), node_class, node_id))
 
     except ValidationError as e:
         return task_result(False, e.message)
     return task_result(
-        True, "{} property {} valid in {} {}".format(
-            prop_type, prop_name, node_class, node_id
+        True, "{} property {} value {} valid in {} node {}".format(
+            prop_type, prop_name, abbreviate_value(prop_value), node_class, node_id
         )
     )
 
@@ -212,7 +213,7 @@ class ClassValidators(OBClasses):
                 #   'expected_class': OBClasses.VerificationObject, 'required': True},
                 {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
                 {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},  # TODO: ValueTypes.DATA_URI_OR_URL
+                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 # TODO: {'prop_name': 'evidence', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, required': True},
@@ -226,8 +227,8 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': True},  # TODO: ValueTypes.DATA_URI_OR_URL
-                # TODO: {'prop_name': 'criteria', 'prop_type': ValueTypes.ID,
-                #   'expected_class': OBClasses.Criteria, 'fetch': False, 'required': True},
+                {'prop_name': 'criteria', 'prop_type': ValueTypes.ID,
+                    'expected_class': OBClasses.Criteria, 'fetch': False, 'required': True},
                 # TODO: {'prop_name': 'alignment', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, required': False},
                 # TODO: {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
@@ -250,6 +251,14 @@ class ClassValidators(OBClasses):
                 #   'expected_class': OBClasses.VerificationObject, 'fetch': False, 'required': False},
                 # TODO: {'prop_name': 'revocationList', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.Revocationlist, 'fetch': True, 'required': False},  # TODO: Fetch only for relevant assertions?
+            )
+        elif class_name == OBClasses.Criteria:
+            self.validators = (
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
+                #   'required': False, 'default': OBClasses.Criteria},
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
+                {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
+                {'task_type': CRITERIA_PROPERTY_DEPENDENCIES}
             )
         elif class_name == OBClasses.IdentityObject:
             self.validators = (
@@ -400,6 +409,28 @@ def identity_object_property_dependencies(state, task_meta):
         return task_result(False, "Email type identity must match email format.")
 
     return task_result(True, "IdentityObject passes validation rules.")
+
+
+def criteria_property_dependencies(state, task_meta):
+    node_id = task_meta.get('node_id')
+    node = get_node_by_id(state, node_id)
+    is_blank_id_node = bool(re.match(r'_:b\d+$', node_id))
+
+    if is_blank_id_node and not node.get('narrative'):
+        return task_result(False,
+            "Criteria node {} has no narrative. Either external id or narrative is required.".format(node_id)
+        )
+    elif is_blank_id_node:
+        return task_result(
+            True, "Criteria node {} is a narrative-based piece of evidence.".format(node_id)
+        )
+    elif not is_blank_id_node and node.get('narrative'):
+        return task_result(
+            True, "Criteria node {} has a URL and narrative."
+        )
+    # Case to handle no narrative but other props preventing compaction down to simple id string:
+    # {'id': 'http://example.com/1', 'name': 'Criteria Name'}
+    return task_result(True, "Criteria node {} has a URL.")
 
 
 def evidence_property_dependencies(state, task_meta):
