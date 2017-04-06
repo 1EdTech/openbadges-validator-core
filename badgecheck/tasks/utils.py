@@ -10,3 +10,14 @@ def task_result(success=True, message='', actions=None):
         actions = []
 
     return (success, message, actions,)
+
+
+def is_empty_list(value):
+    return isinstance(value, (tuple, list,)) and len(value) == 0
+
+
+def abbreviate_value(value):
+    if len(str(value)) < 48:
+        return str(value)
+    else:
+        return str(value)[:48] + '...'

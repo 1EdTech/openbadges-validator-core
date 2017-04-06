@@ -9,8 +9,9 @@ from badgecheck.actions.tasks import add_task
 from badgecheck.reducers import main_reducer
 from badgecheck.state import filter_active_tasks, INITIAL_STATE
 from badgecheck.tasks import task_named
-from badgecheck.tasks.validation import (detect_and_validate_node_class, OBClasses, PrimitiveValueValidator,
-                                         validate_id_property, validate_primitive_property, ValueTypes,)
+from badgecheck.tasks.validation import (_get_validation_actions, detect_and_validate_node_class, OBClasses,
+                                         PrimitiveValueValidator, validate_id_property, validate_primitive_property,
+                                         ValueTypes,)
 from badgecheck.tasks.task_types import (VALIDATE_ID_PROPERTY,
                                          VALIDATE_PRIMITIVE_PROPERTY,
                                          DETECT_AND_VALIDATE_NODE_CLASS, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES)
@@ -72,7 +73,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
             node_id=first_node['id'],
             prop_name='string_prop',
             prop_type=ValueTypes.TEXT,
-            prop_required=False
+            required=False
         )
         task['id'] = 1
 
@@ -82,7 +83,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
             message, "TEXT property string_prop valid in unknown type node {}".format(first_node['id'])
         )
 
-        task['prop_required'] = True
+        task['required'] = True
         result, message, actions = validate_primitive_property(state, task)
         self.assertTrue(result, "Required property is present and correct; validation should pass.")
         self.assertEqual(
@@ -93,14 +94,14 @@ class PropertyValidationTaskTests(unittest.TestCase):
         result, message, actions = validate_primitive_property(state, task)
         self.assertFalse(result, "Required string property is an int; validation should fail")
         self.assertEqual(
-            message, "TEXT property string_prop not valid in unknown type node {}".format(first_node['id'])
+            message, "TEXT property string_prop value 1 not valid in unknown type node {}".format(first_node['id'])
         )
 
-        task['prop_required'] = False
+        task['required'] = False
         result, message, actions = validate_primitive_property(state, task)
         self.assertFalse(result, "Optional string property is an int; validation should fail")
         self.assertEqual(
-            message, "TEXT property string_prop not valid in unknown type node {}".format(first_node['id'])
+            message, "TEXT property string_prop value 1 not valid in unknown type node {}".format(first_node['id'])
         )
 
         # When property isn't present
@@ -109,7 +110,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
         result, message, actions = validate_primitive_property(state, task)
         self.assertTrue(result, "Optional property is not present; validation should pass.")
 
-        task['prop_required'] = True
+        task['required'] = True
         result, message, actions = validate_primitive_property(state, task)
         self.assertFalse(result, "Required property is not present; validation should fail.")
 
@@ -122,7 +123,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
             VALIDATE_PRIMITIVE_PROPERTY,
             node_id=first_node['id'],
             prop_name='bool_prop',
-            prop_required=False,
+            required=False,
             prop_type=ValueTypes.BOOLEAN
         )
         task['id'] = 1
@@ -133,7 +134,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
             message, "Optional property bool_prop not present in unknown type node {}".format(first_node['id'])
         )
 
-        task['prop_required'] = True
+        task['required'] = True
         result, message, actions = validate_primitive_property(state, task)
         self.assertFalse(result, "Required property is not present; validation should fail.")
         self.assertEqual(
@@ -157,10 +158,10 @@ class PropertyValidationTaskTests(unittest.TestCase):
             VALIDATE_PRIMITIVE_PROPERTY,
             node_id=first_node['id'],
             prop_name='id',
-            prop_required=True,
+            required=True,
             prop_type=ValueTypes.IRI
         )
-        task['id']=1
+        task['id'] = 1
 
         result, message, actions = validate_primitive_property(state, task)
         self.assertTrue(result)
@@ -179,10 +180,10 @@ class PropertyValidationTaskTests(unittest.TestCase):
             VALIDATE_PRIMITIVE_PROPERTY,
             node_id=first_node['id'],
             prop_name='url_prop',
-            prop_required=False,
+            required=False,
             prop_type=ValueTypes.URL
         )
-        task['id']=1
+        task['id'] = 1
 
         result, message, actions = validate_primitive_property(state, task)
         self.assertTrue(result, "Optional URL prop is present and well-formed; validation should pass.")
@@ -194,7 +195,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
         result, message, actions = validate_primitive_property(state, task)
         self.assertFalse(result, "Optional URL prop is present and mal-formed; validation should fail.")
         self.assertEqual(
-             message, "URL property url_prop not valid in unknown type node {}".format(first_node['id'])
+             message, "URL property url_prop value notanurl not valid in unknown type node {}".format(first_node['id'])
         )
 
     def test_basic_datetime_property_validation(self):
@@ -213,7 +214,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
             VALIDATE_PRIMITIVE_PROPERTY,
             node_id=first_node['id'],
             prop_name='date_prop',
-            prop_required=False,
+            required=False,
             prop_type=ValueTypes.DATETIME
         )
         task['id'] = 1
@@ -239,7 +240,8 @@ class PropertyValidationTaskTests(unittest.TestCase):
             self.assertFalse(result, "Optional date prop has no tzinfo particle; validation should fail.")
             self.assertEqual(
                 message,
-                "DATETIME property date_prop not valid in unknown type node {}".format(first_node['id'])
+                "DATETIME property date_prop value {} not valid in unknown type node {}".format(
+                    str(date), first_node['id'])
             )
 
         for date in _INVALID_DATETIMES:
@@ -248,7 +250,8 @@ class PropertyValidationTaskTests(unittest.TestCase):
             self.assertFalse(result, "Optional date prop has malformed datetime; validation should fail.")
             self.assertEqual(
                 message,
-                "DATETIME property date_prop not valid in unknown type node {}".format(first_node['id'])
+                "DATETIME property date_prop value {} not valid in unknown type node {}".format(
+                    str(date), first_node['id'])
             )
 
     def test_validation_action(self):
@@ -264,7 +267,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
             VALIDATE_PRIMITIVE_PROPERTY,
             node_id="http://example.com/1",
             prop_name="text_prop",
-            prop_required=True,
+            required=True,
             prop_type=ValueTypes.TEXT
         ))
 
@@ -273,7 +276,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
             VALIDATE_PRIMITIVE_PROPERTY,
             node_id="http://example.com/1",
             prop_name="nonexistent_text_prop",
-            prop_required=False,
+            required=False,
             prop_type=ValueTypes.TEXT
         ))
 
@@ -282,7 +285,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
             VALIDATE_PRIMITIVE_PROPERTY,
             node_id="http://example.com/1",
             prop_name="bool_prop",
-            prop_required=False,
+            required=False,
             prop_type=ValueTypes.BOOLEAN
         ))
 
@@ -291,7 +294,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
             VALIDATE_PRIMITIVE_PROPERTY,
             node_id="http://example.com/1",
             prop_name="bool_prop",
-            prop_required=True,
+            required=True,
             prop_type=ValueTypes.TEXT
         ))
 
@@ -300,7 +303,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
             VALIDATE_PRIMITIVE_PROPERTY,
             node_id="http://example.com/1",
             prop_name="nonexistent_bool_prop",
-            prop_required=True,
+            required=True,
             prop_type=ValueTypes.BOOLEAN
         ))
 
@@ -325,8 +328,70 @@ class PropertyValidationTaskTests(unittest.TestCase):
         self.assertFalse(state['tasks'][3]['success'], "Invalid required text property is present.")
         self.assertFalse(state['tasks'][4]['success'], "Required boolean property is missing.")
 
+    def optional_accepts_null_values(self):
+        """
+        If a simple or id-type property is optional, null values should not be rejected.
+        """
+        pass
+        # TODO: they should be filtered from the node reported at output.
 
-class AdvancedPropertyValidationTests(unittest.TestCase):
+    def test_many_validation(self):
+        """
+        When detect_and_validate_node_class (through _get_validation_actions)
+        queue up actions, some configs may have many=True. This means single or multiple
+        values should be accepted. If optional, empty lists should also be accepted.
+        """
+        first_node = {
+            'id': '_:b0',
+            'type': 'BadgeClass'
+        }
+        state = {'graph': [first_node]}
+        required = True
+
+        good_values = (
+            (['one', 'two', 'three'], "Multiple text values should be acceptable"),
+            ('one', "Single text value should be acceptable"),
+        )
+        optional_prop_good_values = (
+            ([], "For Optional many=True props, empty lists should {}"),
+            (None, "For optional many=True props, single null value should {}"),
+            ([None], "For optional many=True props, list with an empty value should {}"),
+            ([None, None], "For optional many=True props, list with only empty values should {}"),
+            ([None, "one"], "For optional many=True props, list with an empty value should {}"),
+        )
+        bad_values = (
+            (1, "Single non-text value should fail"),
+            (["one", 2, "three"], "Non-text value in a list should fail"),
+        )
+
+        def run(expect_success, msg):
+            task = add_task(
+                VALIDATE_PRIMITIVE_PROPERTY, node_id=first_node['id'], node_class=OBClasses.BadgeClass,
+                prop_name='tags', prop_type=ValueTypes.TEXT, required=required, many=True
+            )
+            result, message, actions = validate_primitive_property(state, task)
+            self.assertEqual(result, expect_success, msg)
+
+        for val, error_message in good_values:
+            first_node['tags'] = val
+            run(True, error_message)
+
+        for val, error_message in bad_values:
+            first_node['tags'] = val
+            run(False, error_message)
+
+        required = True
+        for val, error_message in optional_prop_good_values:
+            first_node['tags'] = val
+            run(False, error_message.format('fail when prop is required'))
+
+        required = False
+        for val, error_message in optional_prop_good_values:
+            first_node['tags'] = val
+            run(True, error_message.format('pass when prop is not required'))
+
+
+class IDPropertyValidationTests(unittest.TestCase):
     def test_validate_nested_identity_object(self):
         first_node = {
             'id': 'http://example.com/1',
@@ -344,7 +409,7 @@ class AdvancedPropertyValidationTests(unittest.TestCase):
             VALIDATE_ID_PROPERTY,
             node_id="http://example.com/1",
             prop_name="recipient",
-            prop_required=True,
+            required=True,
             prop_type=ValueTypes.ID,
             expected_class=OBClasses.IdentityObject
         )
@@ -365,7 +430,7 @@ class AdvancedPropertyValidationTests(unittest.TestCase):
             VALIDATE_ID_PROPERTY,
             node_id="http://example.com/1",
             prop_name="badge",
-            prop_required=True,
+            required=True,
             prop_type=ValueTypes.ID,
             expected_class=OBClasses.BadgeClass,
             fetch=True
@@ -375,6 +440,56 @@ class AdvancedPropertyValidationTests(unittest.TestCase):
         self.assertTrue(result, "Property validation task should succeed.")
         self.assertEqual(len(actions), 1)
         self.assertEqual(actions[0]['expected_class'], OBClasses.BadgeClass)
+
+    def test_many_validation_for_id_property(self):
+        """
+        When detect_and_validate_node_class (through _get_validation_actions)
+        queue up actions, some configs may have many=True. This means single or multiple
+        values should be accepted. If optional, empty lists should also be accepted.
+        """
+        first_node = {
+            'id': '_:b0',
+            'type': 'Assertion'
+        }
+        second_node = {
+            'id': '_:b1',
+            'narrative': 'Did cool stuff'
+        }
+        third_node = {
+            'id': '_:b2',
+            'narrative': 'Did more cool stuff'
+        }
+        state = {'graph': [first_node, second_node, third_node]}
+        required = True
+
+        task = add_task(
+            VALIDATE_ID_PROPERTY, node_id=first_node['id'], node_class=OBClasses.Assertion,
+            prop_name='evidence', prop_type=ValueTypes.ID, required=required, many=True, fetch=False,
+            expected_class=OBClasses.Evidence, allow_remote_url=True
+        )
+        result, message, actions = validate_id_property(state, task)
+        self.assertFalse(result)
+        self.assertTrue('Required property evidence not present' in message)
+
+        first_node['evidence'] = 'http://youtube.com/avideoofmedoingthething'
+        result, message, actions = validate_id_property(state, task)
+        self.assertTrue(result, "A single string URL value should be acceptable for evidence")
+        self.assertTrue('reference is' in message, "Message should properly report single property entry")
+
+        first_node['evidence'] = 'notanurl'
+        result, message, actions = validate_id_property(state, task)
+        self.assertFalse(result, "A single string value that doesn't look like a URL is not acceptable as evidence")
+
+        first_node['evidence'] = ['http://example.com/1', 'http://example.com/2']
+        result, message, actions = validate_id_property(state, task)
+        self.assertTrue(result, "Multiple string URLs should be acceptable for evidence")
+        self.assertTrue('references are' in message, "Message should properly report plural references.")
+
+        first_node['evidence'] = ['_:b1', 'http://example.com/2']
+        result, message, actions = validate_id_property(state, task)
+        self.assertTrue(result, "An embedded node and a URL should be acceptable evidence references")
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(actions[0]['node_id'], '_:b1')
 
 
 class NodeTypeDetectionTasksTests(unittest.TestCase):

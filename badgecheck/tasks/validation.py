@@ -4,13 +4,14 @@ import rfc3986
 import six
 
 from ..actions.tasks import add_task
+from ..exceptions import ValidationError
 from ..state import get_node_by_id
 
 from .task_types import (CLASS_VALIDATION_TASKS, FETCH_HTTP_NODE,
                          IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
                          VALIDATE_ID_PROPERTY, VALIDATE_PRIMITIVE_PROPERTY, )
 
-from .utils import task_result
+from .utils import abbreviate_value, is_empty_list, task_result
 
 
 class OBClasses(object):
@@ -152,30 +153,43 @@ def validate_primitive_property(state, task_meta):
     prop_name = task_meta.get('prop_name')
     prop_type = task_meta.get('prop_type')
     prop_value = node.get(prop_name)
-    required = bool(task_meta.get('prop_required'))
+    required = bool(task_meta.get('required'))
 
-    if not prop_value and required:
+    if prop_value is None and required:
         return task_result(
             False, "Required property {} not present in {} {}".format(
                 prop_name, node_class, node_id)
         )
+    elif task_meta.get('many') and required and is_empty_list(prop_value):
+        return task_result(
+            False, "Required property {} contains no values in {} {}".format(
+                prop_name, node_class, node_id)
+        )
 
-    if not prop_value and not required:
+    if prop_value is None and not required:
         return task_result(
             True, "Optional property {} not present in {} {}".format(
                 prop_name, node_class, node_id)
         )
 
-    value_check_function = PrimitiveValueValidator(prop_type)
-    if value_check_function(prop_value):
-        return task_result(
-            True, "{} property {} valid in {} {}".format(
-                prop_type, prop_name, node_class, node_id
-            )
-        )
+    if not isinstance(prop_value, (list, tuple,)):
+        values_to_test = [prop_value]
+    else:
+        values_to_test = prop_value
 
+    try:
+        for val in values_to_test:
+            value_check_function = PrimitiveValueValidator(prop_type)
+            if not required and not val:
+                continue
+            if not value_check_function(val):
+                raise ValidationError("{} property {} value {} not valid in {} {}".format(
+                    prop_type, prop_name, abbreviate_value(val), node_class, node_id))
+
+    except ValidationError as e:
+        return task_result(False, e.message)
     return task_result(
-        False, "{} property {} not valid in {} {}".format(
+        True, "{} property {} valid in {} {}".format(
             prop_type, prop_name, node_class, node_id
         )
     )
@@ -243,6 +257,13 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'hashed', 'prop_type': ValueTypes.BOOLEAN, 'required': True},
                 {'prop_name': 'salt', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'task_type': IDENTITY_OBJECT_PROPERTY_DEPENDENCIES}
+            )
+        elif class_name == OBClasses.Evidence:
+            self.validators = (
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False},
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
+                {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
+                #  TODO {'task_type': EVIDENCE_PROPERTY_DEPENDENCIES}
             )
         else:
             raise NotImplementedError("Chosen OBClass not implemented yet.")
@@ -313,21 +334,45 @@ def validate_id_property(state, task_meta):
     prop_value = node.get(prop_name)
     actions = []
 
-    if not PrimitiveValueValidator(ValueTypes.IRI)(prop_value):
+    if prop_value is None and required:
         return task_result(
-            False,
-            "ID-type property {} was not found in IRI format in {}.".format(prop_name, node_id)
+            False, "Required property {} not present in {} {}".format(
+                prop_name, node_class, node_id)
         )
 
-    if not task_meta.get('fetch', False):
-        target = get_node_by_id(state, prop_value)
-        message = 'Node {} has {} relation stored as node {}'.format(node_id, prop_name, prop_value)
-        actions.append(add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=prop_value, expected_class=expected_class))
+    if not isinstance(prop_value, (list, tuple,)):
+        values_to_test = [prop_value]
     else:
-        message = 'Node {} has {} relation identified as URL {}'.format(node, prop_name, prop_value)
-        actions.append(add_task(FETCH_HTTP_NODE, url=prop_value, expected_class=expected_class))
+        values_to_test = prop_value
 
-    return task_result(True, message, actions)
+    try:
+        for val in values_to_test:
+            if not PrimitiveValueValidator(ValueTypes.IRI)(val):
+                raise ValidationError(
+                    "ID-type property {} had value `{}` not in IRI format in {}.".format(
+                        prop_name, abbreviate_value(val), node_id)
+                )
+
+            if not task_meta.get('fetch', False):
+                try:
+                    target = get_node_by_id(state, val)
+                except IndexError:
+                    if task_meta.get('allow_remote_url') and PrimitiveValueValidator(ValueTypes.URL)(val):
+                        continue
+                    raise ValidationError(
+                        'Node {} has {} property value `{}` that appears not to be in URI format'.format(
+                          node_id, prop_name, abbreviate_value(val)
+                        ))
+                actions.append(
+                    add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=val, expected_class=expected_class))
+            else:
+                actions.append(add_task(FETCH_HTTP_NODE, url=val, expected_class=expected_class))
+    except ValidationError as e:
+        return task_result(False, e.message)
+
+    label = 'references are' if len(values_to_test) > 1 else 'reference is'
+    return task_result(True, "{} property {} {} valid in {} {}".format(
+        ValueTypes.ID, prop_name, label, node_class, node_id), actions)
 
 
 """

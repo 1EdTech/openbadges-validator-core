@@ -8,3 +8,10 @@ class SkipTask(Exception):
     and should be shuffled to the back of the stack.
     """
     pass
+
+
+class ValidationError(Exception):
+    """
+    This exception is used in tasks to indicate that a requirement has not been met.
+    """
+    pass
