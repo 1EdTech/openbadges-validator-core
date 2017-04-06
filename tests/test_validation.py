@@ -575,12 +575,17 @@ class ClassValidationTaskTests(unittest.TestCase):
             'id': '_:b2',
             'narrative': 'Did more cool stuff'
         }
+        self.fourth_node = {
+            'id': 'http://example.com/myblog/1',
+            'narrative': 'Did more cool stuff'
+        }
         self.empty_narrative = {
             'id': '_:b3'
         }
         self.state = {'graph': [
             self.first_node, self.second_node,
-            self.third_node, self.empty_narrative
+            self.third_node, self.empty_narrative,
+            self.fourth_node
         ]}
 
     def _run(self, task_meta, expected_result, msg=''):
@@ -619,6 +624,8 @@ class ClassValidationTaskTests(unittest.TestCase):
         self._run(task, True, 'Single embedded complete evidence node passes')
         self.first_node['evidence'] = ['_:b3']
         self._run(task, False, 'Evidence list containing truly blank blank node should fail')
+        self.first_node['evidence'] = 'http://example.com/myblog/1'
+        self._run(task, True, 'Checks run even when the Evidence node ID is an external URL')
 
     def test_evidence_cross_property_validation(self):
         state = {
