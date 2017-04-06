@@ -9,12 +9,12 @@ from badgecheck.actions.tasks import add_task
 from badgecheck.reducers import main_reducer
 from badgecheck.state import filter_active_tasks, INITIAL_STATE
 from badgecheck.tasks import task_named
-from badgecheck.tasks.validation import (_get_validation_actions, detect_and_validate_node_class, OBClasses,
+from badgecheck.tasks.validation import (detect_and_validate_node_class, evidence_property_dependencies, OBClasses,
                                          PrimitiveValueValidator, validate_id_property, validate_primitive_property,
                                          ValueTypes,)
-from badgecheck.tasks.task_types import (VALIDATE_ID_PROPERTY,
-                                         VALIDATE_PRIMITIVE_PROPERTY,
-                                         DETECT_AND_VALIDATE_NODE_CLASS, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES)
+from badgecheck.tasks.task_types import (DETECT_AND_VALIDATE_NODE_CLASS, EVIDENCE_PROPERTY_DEPENDENCIES,
+                                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_ID_PROPERTY,
+                                         VALIDATE_PRIMITIVE_PROPERTY,)
 from badgecheck.verifier import call_task
 
 from testfiles.test_components import test_components
@@ -561,3 +561,91 @@ class ClassValidationTaskTests(unittest.TestCase):
         run(state, task, False, "Hash doesn't match known types")
         second_node['identity'] = "plaintextjane@example.com"
         run(state, task, False, "Identity shouldn't look like email if hashed is true")
+
+    def _setUpEvidenceState(self):
+        self.first_node = {
+            'id': '_:b0',
+            'type': 'Assertion'
+        }
+        self.second_node = {
+            'id': '_:b1',
+            'narrative': 'Did cool stuff'
+        }
+        self.third_node = {
+            'id': '_:b2',
+            'narrative': 'Did more cool stuff'
+        }
+        self.empty_narrative = {
+            'id': '_:b3'
+        }
+        self.state = {'graph': [
+            self.first_node, self.second_node,
+            self.third_node, self.empty_narrative
+        ]}
+
+    def _run(self, task_meta, expected_result, msg=''):
+        result, message, actions = validate_id_property(self.state, task_meta)
+        self.assertTrue(result, "Property validation task should succeed.")
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(actions[0]['expected_class'], OBClasses.Evidence)
+
+        task_meta = actions[0]
+        result, message, actions = task_named(task_meta['name'])(self.state, task_meta)
+        self.assertTrue(result, "IdentityObject validation task discovery should succeed.")
+
+        for task_meta in [a for a in actions if a.get('type') == ADD_TASK]:
+            val_result, val_message, val_actions = task_named(task_meta['name'])(self.state, task_meta)
+            if not task_meta['name'] == EVIDENCE_PROPERTY_DEPENDENCIES:
+                self.assertTrue(val_result, "Test {} should pass".format(task_meta['name']))
+            else:
+                self.assertEqual(
+                    val_result, expected_result,
+                    "{} should be {}: {}".format(task_meta['name'], expected_result, msg)
+                )
+
+    def test_evidence_class_validation(self):
+        self._setUpEvidenceState()
+        self.first_node['evidence'] = '_:b1'
+
+        task = add_task(
+            VALIDATE_ID_PROPERTY,
+            node_id="_:b0",
+            prop_name="evidence",
+            prop_required=False,
+            prop_type=ValueTypes.ID,
+            expected_class=OBClasses.Evidence
+        )
+
+        self._run(task, True, 'Single embedded complete evidence node passes')
+        self.first_node['evidence'] = ['_:b3']
+        self._run(task, False, 'Evidence list containing truly blank blank node should fail')
+
+    def test_evidence_cross_property_validation(self):
+        state = {
+            'graph': [
+                {'id': '_:b0'},
+                {'id': '_:b1', 'narrative': 'Did cool stuff'},
+                {'id': 'http://example.com/a', 'narrative': 'Did cool stuff'},
+                {'id': 'http://example.com/b', 'name': 'Another property outside of Evidence class scope'},
+            ]
+        }
+
+        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id = "_:b1")
+        result, message, actions = evidence_property_dependencies(state, task)
+        self.assertTrue(result, "Evidence with blank node ID and narrative passes.")
+
+        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b0")
+        result, message, actions = evidence_property_dependencies(state, task)
+        self.assertFalse(result, "Evidence with just a blank node id fails.")
+
+        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b1")
+        result, message, actions = evidence_property_dependencies(state, task)
+        self.assertTrue(result, "Evidence with blank node ID and narrative passes.")
+
+        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="http://example.com/b")
+        result, message, actions = evidence_property_dependencies(state, task)
+        self.assertTrue(result, "External URL with unknown properties passes.")
+
+        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="http://example.com/a")
+        result, message, actions = evidence_property_dependencies(state, task)
+        self.assertTrue(result, "External URL and narrative passes")

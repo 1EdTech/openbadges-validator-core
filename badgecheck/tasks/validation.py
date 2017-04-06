@@ -7,7 +7,7 @@ from ..actions.tasks import add_task
 from ..exceptions import ValidationError
 from ..state import get_node_by_id
 
-from .task_types import (CLASS_VALIDATION_TASKS, FETCH_HTTP_NODE,
+from .task_types import (CLASS_VALIDATION_TASKS, EVIDENCE_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
                          IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
                          VALIDATE_ID_PROPERTY, VALIDATE_PRIMITIVE_PROPERTY, )
 
@@ -120,9 +120,10 @@ class PrimitiveValueValidator(object):
             re.match(urn_regex, value, re.IGNORECASE)
         )
 
-    @staticmethod
-    def _validate_markdown_text(value):
-        raise NotImplementedError("TODO: Add validator")
+    @classmethod
+    def _validate_markdown_text(cls, value):
+        # TODO Assert no render errors if relevant?
+        return cls._validate_text
 
     @staticmethod
     def _validate_text(value):
@@ -263,7 +264,7 @@ class ClassValidators(OBClasses):
                 # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False},
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
-                #  TODO {'task_type': EVIDENCE_PROPERTY_DEPENDENCIES}
+                {'task_type': EVIDENCE_PROPERTY_DEPENDENCIES}
             )
         else:
             raise NotImplementedError("Chosen OBClass not implemented yet.")
@@ -399,3 +400,25 @@ def identity_object_property_dependencies(state, task_meta):
         return task_result(False, "Email type identity must match email format.")
 
     return task_result(True, "IdentityObject passes validation rules.")
+
+
+def evidence_property_dependencies(state, task_meta):
+    node_id = task_meta.get('node_id')
+    node = get_node_by_id(state, node_id)
+    is_blank_id_node = bool(re.match(r'_:b\d+$', node_id))
+
+    if is_blank_id_node and not node.get('narrative'):
+        return task_result(False,
+            "Evidence node {} has no narrative. Either external id or narrative is required.".format(node_id)
+        )
+    elif is_blank_id_node:
+        return task_result(
+            True, "Evidence node {} is a narrative-based piece of evidence.".format(node_id)
+        )
+    elif not is_blank_id_node and node.get('narrative'):
+        return task_result(
+            True, "Evidence node {} has a URL and narrative."
+        )
+    # Case to handle no narrative but other props preventing compaction down to simple id string:
+    # {'id': 'http://example.com/1', 'name': 'Evidence Name'}
+    return task_result(True, "Evidence node {} has a URL.")
