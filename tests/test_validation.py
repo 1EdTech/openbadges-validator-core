@@ -204,6 +204,41 @@ class PropertyValidationTaskTests(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(len(actions), 0)
 
+    def test_basic_image_prop_validation(self):
+        _VALID_DATA_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=='
+        _VALID_IMAGE_URL = 'http://example.com/images/foo.png'
+        _INVALID_URI = 'notanurl'
+        first_node = {'id': 'http://example.com/1',
+                      'image_prop': _VALID_DATA_URI}
+
+        state = {
+            'graph': [first_node]
+        }
+
+        task = add_task(
+            VALIDATE_PRIMITIVE_PROPERTY,
+            node_id=first_node['id'],
+            prop_name='image_prop',
+            required=False,
+            prop_type=ValueTypes.DATA_URI_OR_URL
+        )
+        task['id'] = 1
+
+        result, message, actions = validate_primitive_property(state, task)
+        self.assertTrue(result, "Optional image_prop URI is present and well-formed; validation should pass.")
+        self.assertEqual(
+            message, "DATA_URI_OR_URL property image_prop valid in unknown type node {}".format(first_node['id'])
+        )
+
+        first_node['image_prop'] = _INVALID_URI
+        result, message, actions = validate_primitive_property(state, task)
+        self.assertFalse(result, "Optional image prop is present and mal-formed; validation should fail.")
+        self.assertEqual(
+            message, "DATA_URI_OR_URL property image_prop value {} not valid in unknown type node {}".format(
+                _INVALID_URI,
+                first_node['id'])
+        )
+
     def test_basic_url_prop_validation(self):
         _VALID_URL = 'http://example.com/2'
         _INVALID_URL = 'notanurl'
@@ -232,7 +267,9 @@ class PropertyValidationTaskTests(unittest.TestCase):
         result, message, actions = validate_primitive_property(state, task)
         self.assertFalse(result, "Optional URL prop is present and mal-formed; validation should fail.")
         self.assertEqual(
-             message, "URL property url_prop value notanurl not valid in unknown type node {}".format(first_node['id'])
+            message, "URL property url_prop value {} not valid in unknown type node {}".format(
+                _INVALID_URL,
+                first_node['id'])
         )
 
     def test_basic_datetime_property_validation(self):
