@@ -233,7 +233,7 @@ class ClassValidators(OBClasses):
                 #   'expected_class': OBClasses.VerificationObject, 'required': True},
                 {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
                 {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},  # TODO: ValueTypes.DATA_URI_OR_URL
+                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 # TODO: {'prop_name': 'evidence', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, required': True},
@@ -246,7 +246,7 @@ class ClassValidators(OBClasses):
                     'expected_class': OBClasses.Profile, 'fetch': True, 'required': True},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': True},
-                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': True},  # TODO: ValueTypes.DATA_URI_OR_URL
+                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
                 # TODO: {'prop_name': 'criteria', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.Criteria, 'fetch': False, 'required': True},
                 # TODO: {'prop_name': 'alignment', 'prop_type': ValueTypes.ID,
@@ -261,7 +261,7 @@ class ClassValidators(OBClasses):
                 # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},  # TODO: ValueTypes.DATA_URI_OR_URL
+                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': True},
                 {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': True},  # TODO: Add ValueTypes.EMAIL
                 {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},  # TODO: Add ValueTypes.TELEPHONE
