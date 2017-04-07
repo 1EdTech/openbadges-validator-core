@@ -16,6 +16,10 @@ def is_empty_list(value):
     return isinstance(value, (tuple, list,)) and len(value) == 0
 
 
+def is_null_list(value):
+    return isinstance(value, (tuple, list,)) and all(val is None for val in value)
+
+
 def abbreviate_value(value):
     if len(str(value)) < 48:
         return str(value)
