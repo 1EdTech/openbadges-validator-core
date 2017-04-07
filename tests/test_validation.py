@@ -19,8 +19,45 @@ from badgecheck.verifier import call_task
 
 from testfiles.test_components import test_components
 
-
 class PropertyValidationTests(unittest.TestCase):
+
+    def test_data_uri_validation(self):
+        validator = PrimitiveValueValidator(ValueTypes.DATA_URI)
+        good_uris = ('data:image/gif;base64,R0lGODlhyAAiALM...DfD0QAADs=',
+                     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==',
+                     'data:text/plain;charset=UTF-8;page=21,the%20data:1234,5678',
+                     'data:text/vnd-example+xyz;foo=bar;base64,R0lGODdh',
+                     'data:,actually%20a%20valid%20data%20URI',
+                     'data:,')
+        bad_uris = ('data:image/gif',
+                    'http://someexample.org',
+                    'data:bad:path')
+        for uri in good_uris:
+            self.assertTrue(validator(uri), u"`{}` should pass data URI validation but failed.".format(uri))
+        for uri in bad_uris:
+            self.assertFalse(validator(uri), u"`{}` should fail data URI/URL validation but passed.".format(uri))
+
+    def test_data_uri_or_url_validation(self):
+        validator = PrimitiveValueValidator(ValueTypes.DATA_URI_OR_URL)
+        good_uris = ('data:image/gif;base64,R0lGODlhyAAiALM...DfD0QAADs=',
+                     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==',
+                     'data:text/plain;charset=UTF-8;page=21,the%20data:1234,5678',
+                     'data:text/vnd-example+xyz;foo=bar;base64,R0lGODdh',
+                     'http://www.example.com:8080/', 'http://www.example.com:8080/foo/bar',
+                     'http://www.example.com/foo%20bar', 'http://www.example.com/foo/bar?a=b&c=d',
+                     'http://www.example.com/foO/BaR', 'HTTPS://www.EXAMPLE.cOm/',
+                     'http://142.42.1.1:8080/', 'http://142.42.1.1/',
+                     'http://foo.com/blah_(wikipedia)#cite-1', 'http://a.b-c.de',
+                     'http://userid:password@example.com/', "http://-.~:%40:80%2f:password@example.com",
+                     'http://code.google.com/events/#&product=browser')
+        bad_uris = ('///', '///f', '//',
+                    'rdar://12345', 'h://test', 'http:// shouldfail.com', ':// should fail', '', 'a',
+                    'urn:uuid:129487129874982374', 'urn:uuid:9d278beb-36cf-4bc8-888d-674ff9843d72')
+        for uri in good_uris:
+            self.assertTrue(validator(uri), u"`{}` should pass data URI/URL validation but failed.".format(uri))
+        for uri in bad_uris:
+            self.assertFalse(validator(uri), u"`{}` should fail data URI/URL validation but passed.".format(uri))
+
     def test_url_validation(self):
         validator = PrimitiveValueValidator(ValueTypes.URL)
         # Thanks to Mathias Bynens for fun URL examples: http://mathiasbynens.be/demo/url-regex
@@ -167,6 +204,41 @@ class PropertyValidationTaskTests(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(len(actions), 0)
 
+    def test_basic_image_prop_validation(self):
+        _VALID_DATA_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=='
+        _VALID_IMAGE_URL = 'http://example.com/images/foo.png'
+        _INVALID_URI = 'notanurl'
+        first_node = {'id': 'http://example.com/1',
+                      'image_prop': _VALID_DATA_URI}
+
+        state = {
+            'graph': [first_node]
+        }
+
+        task = add_task(
+            VALIDATE_PRIMITIVE_PROPERTY,
+            node_id=first_node['id'],
+            prop_name='image_prop',
+            required=False,
+            prop_type=ValueTypes.DATA_URI_OR_URL
+        )
+        task['id'] = 1
+
+        result, message, actions = validate_primitive_property(state, task)
+        self.assertTrue(result, "Optional image_prop URI is present and well-formed; validation should pass.")
+        self.assertEqual(
+            message, "DATA_URI_OR_URL property image_prop valid in unknown type node {}".format(first_node['id'])
+        )
+
+        first_node['image_prop'] = _INVALID_URI
+        result, message, actions = validate_primitive_property(state, task)
+        self.assertFalse(result, "Optional image prop is present and mal-formed; validation should fail.")
+        self.assertEqual(
+            message, "DATA_URI_OR_URL property image_prop value {} not valid in unknown type node {}".format(
+                _INVALID_URI,
+                first_node['id'])
+        )
+
     def test_basic_url_prop_validation(self):
         _VALID_URL = 'http://example.com/2'
         _INVALID_URL = 'notanurl'
@@ -195,7 +267,9 @@ class PropertyValidationTaskTests(unittest.TestCase):
         result, message, actions = validate_primitive_property(state, task)
         self.assertFalse(result, "Optional URL prop is present and mal-formed; validation should fail.")
         self.assertEqual(
-             message, "URL property url_prop value notanurl not valid in unknown type node {}".format(first_node['id'])
+            message, "URL property url_prop value {} not valid in unknown type node {}".format(
+                _INVALID_URL,
+                first_node['id'])
         )
 
     def test_basic_datetime_property_validation(self):

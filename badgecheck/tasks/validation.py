@@ -35,6 +35,8 @@ class OBClasses(object):
 
 class ValueTypes(object):
     BOOLEAN = 'BOOLEAN'
+    DATA_URI = 'DATA_URI'
+    DATA_URI_OR_URL = 'DATA_URI_OR_URL'
     DATETIME = 'DATETIME'
     ID = 'ID'
     IDENTITY_HASH = 'IDENTITY_HASH'
@@ -60,6 +62,8 @@ class PrimitiveValueValidator(object):
     def __init__(self, value_type):
         value_check_functions = {
             ValueTypes.BOOLEAN: self._validate_boolean,
+            ValueTypes.DATA_URI: self._validate_data_uri,
+            ValueTypes.DATA_URI_OR_URL: self._validate_data_uri_or_url,
             ValueTypes.DATETIME: self._validate_datetime,
             ValueTypes.IDENTITY_HASH: self._validate_identity_hash,
             ValueTypes.IRI: self._validate_iri,
@@ -76,6 +80,24 @@ class PrimitiveValueValidator(object):
     @staticmethod
     def _validate_boolean(value):
         return isinstance(value, bool)
+
+    @staticmethod
+    def _validate_data_uri(value):
+        data_uri_regex=r'(?P<scheme>^data):(?P<mimetypes>[^,]{0,}?)?(?P<encoding>base64)?,(?P<data>.*$)'
+        ret = False
+        try:
+            if ((value and isinstance(value, six.string_types))
+                and rfc3986.is_valid_uri(value, require_scheme=True)
+                and re.match(data_uri_regex, value, re.IGNORECASE)
+                and re.match(data_uri_regex, value, re.IGNORECASE).group('scheme').lower() == 'data'):
+                ret = True
+        except ValueError as e:
+            pass
+        return ret
+
+    @classmethod
+    def _validate_data_uri_or_url(cls, value):
+        return bool(cls._validate_url(value) or cls._validate_data_uri(value))
 
     @staticmethod
     def _validate_datetime(value):
@@ -211,7 +233,7 @@ class ClassValidators(OBClasses):
                 #   'expected_class': OBClasses.VerificationObject, 'required': True},
                 {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
                 {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},  # TODO: ValueTypes.DATA_URI_OR_URL
+                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 # TODO: {'prop_name': 'evidence', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, required': True},
@@ -224,7 +246,7 @@ class ClassValidators(OBClasses):
                     'expected_class': OBClasses.Profile, 'fetch': True, 'required': True},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': True},
-                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': True},  # TODO: ValueTypes.DATA_URI_OR_URL
+                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
                 # TODO: {'prop_name': 'criteria', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.Criteria, 'fetch': False, 'required': True},
                 # TODO: {'prop_name': 'alignment', 'prop_type': ValueTypes.ID,
@@ -239,7 +261,7 @@ class ClassValidators(OBClasses):
                 # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},  # TODO: ValueTypes.DATA_URI_OR_URL
+                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': True},
                 {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': True},  # TODO: Add ValueTypes.EMAIL
                 {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},  # TODO: Add ValueTypes.TELEPHONE
