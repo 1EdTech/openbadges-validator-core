@@ -313,6 +313,10 @@ class ClassValidators(OBClasses):
                 # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False},
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
+                {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'genre', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'audience', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'task_type': EVIDENCE_PROPERTY_DEPENDENCIES}
             )
         else:

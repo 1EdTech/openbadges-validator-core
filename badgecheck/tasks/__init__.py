@@ -2,7 +2,7 @@ from input import detect_input_type
 from graph import fetch_http_node, jsonld_compact_data
 from validation import (criteria_property_dependencies, detect_and_validate_node_class,
                         evidence_property_dependencies, identity_object_property_dependencies,
-                        validate_expected_node_class, validate_id_property, validate_property, )
+                        validate_expected_node_class, validate_property, )
 from task_types import (DETECT_AND_VALIDATE_NODE_CLASS, DETECT_INPUT_TYPE, CRITERIA_PROPERTY_DEPENDENCIES,
                         EVIDENCE_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE, JSONLD_COMPACT_DATA,
                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,

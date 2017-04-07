@@ -11,7 +11,7 @@ from badgecheck.state import filter_active_tasks, INITIAL_STATE
 from badgecheck.tasks import task_named
 from badgecheck.tasks.validation import (criteria_property_dependencies, detect_and_validate_node_class,
                                          evidence_property_dependencies, OBClasses, PrimitiveValueValidator,
-                                         validate_id_property, validate_property, ValueTypes, )
+                                         validate_property, ValueTypes, )
 from badgecheck.tasks.task_types import (CRITERIA_PROPERTY_DEPENDENCIES, DETECT_AND_VALIDATE_NODE_CLASS,
                                          EVIDENCE_PROPERTY_DEPENDENCIES, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
                                          VALIDATE_PROPERTY, )
@@ -449,7 +449,7 @@ class IDPropertyValidationTests(unittest.TestCase):
             expected_class=OBClasses.IdentityObject
         )
 
-        result, message, actions = validate_id_property(state, task)
+        result, message, actions = validate_property(state, task)
         self.assertTrue(result, "Property validation task should succeed.")
         self.assertEqual(len(actions), 1)
         self.assertEqual(actions[0]['expected_class'], OBClasses.IdentityObject)
@@ -471,7 +471,7 @@ class IDPropertyValidationTests(unittest.TestCase):
             fetch=True
         )
 
-        result, message, actions = validate_id_property(state, task)
+        result, message, actions = validate_property(state, task)
         self.assertTrue(result, "Property validation task should succeed.")
         self.assertEqual(len(actions), 1)
         self.assertEqual(actions[0]['expected_class'], OBClasses.BadgeClass)
@@ -502,26 +502,24 @@ class IDPropertyValidationTests(unittest.TestCase):
             prop_name='evidence', prop_type=ValueTypes.ID, required=required, many=True, fetch=False,
             expected_class=OBClasses.Evidence, allow_remote_url=True
         )
-        result, message, actions = validate_id_property(state, task)
+        result, message, actions = validate_property(state, task)
         self.assertFalse(result)
         self.assertTrue('Required property evidence not present' in message)
 
         first_node['evidence'] = 'http://youtube.com/avideoofmedoingthething'
-        result, message, actions = validate_id_property(state, task)
+        result, message, actions = validate_property(state, task)
         self.assertTrue(result, "A single string URL value should be acceptable for evidence")
-        self.assertTrue('reference is' in message, "Message should properly report single property entry")
 
         first_node['evidence'] = 'notanurl'
-        result, message, actions = validate_id_property(state, task)
+        result, message, actions = validate_property(state, task)
         self.assertFalse(result, "A single string value that doesn't look like a URL is not acceptable as evidence")
 
         first_node['evidence'] = ['http://example.com/1', 'http://example.com/2']
-        result, message, actions = validate_id_property(state, task)
+        result, message, actions = validate_property(state, task)
         self.assertTrue(result, "Multiple string URLs should be acceptable for evidence")
-        self.assertTrue('references are' in message, "Message should properly report plural references.")
 
         first_node['evidence'] = ['_:b1', 'http://example.com/2']
-        result, message, actions = validate_id_property(state, task)
+        result, message, actions = validate_property(state, task)
         self.assertTrue(result, "An embedded node and a URL should be acceptable evidence references")
         self.assertEqual(len(actions), 1)
         self.assertEqual(actions[0]['node_id'], '_:b1')
@@ -532,18 +530,18 @@ class IDPropertyValidationTests(unittest.TestCase):
             prop_name='evidence', prop_type=ValueTypes.ID, required=required, many=False, fetch=False,
             expected_class=OBClasses.Evidence, allow_remote_url=True
         )
-        result, message, actions = validate_id_property(state, task)
+        result, message, actions = validate_property(state, task)
         self.assertFalse(result, "Many values should be rejected when many=False")
-        self.assertTrue('has more than 1 value' in message, "Error should mention many violation")
+        self.assertTrue('has more than the single allowed value' in message, "Error should mention many violation")
 
         task = add_task(
             VALIDATE_PROPERTY, node_id=first_node['id'], node_class=OBClasses.Assertion,
             prop_name='evidence', prop_type=ValueTypes.ID, required=required, fetch=False,
             expected_class=OBClasses.Evidence, allow_remote_url=True
         )
-        result, message, actions = validate_id_property(state, task)
+        result, message, actions = validate_property(state, task)
         self.assertFalse(result, "Many values should be rejected when many is not present")
-        self.assertTrue('has more than 1 value' in message, "Error should mention many violation")
+        self.assertTrue('has more than the single allowed value' in message, "Error should mention many violation")
 
 
 class NodeTypeDetectionTasksTests(unittest.TestCase):
@@ -585,7 +583,7 @@ class ClassValidationTaskTests(unittest.TestCase):
         )
 
         def run(cur_state, cur_task, expected_result, msg=''):
-            result, message, actions = validate_id_property(cur_state, cur_task)
+            result, message, actions = validate_property(cur_state, cur_task)
             self.assertTrue(result, "Property validation task should succeed.")
             self.assertEqual(len(actions), 1)
             self.assertEqual(actions[0]['expected_class'], OBClasses.IdentityObject)
@@ -724,7 +722,7 @@ class ClassValidationTaskTests(unittest.TestCase):
         ]}
 
     def _run(self, task_meta, expected_result, msg=''):
-        result, message, actions = validate_id_property(self.state, task_meta)
+        result, message, actions = validate_property(self.state, task_meta)
         self.assertTrue(result, "Property validation task should succeed.")
         self.assertEqual(len(actions), 1)
         self.assertEqual(actions[0]['expected_class'], OBClasses.Evidence)
