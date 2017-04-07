@@ -233,7 +233,7 @@ class ClassValidators(OBClasses):
                 #   'expected_class': OBClasses.VerificationObject, 'required': True},
                 {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
                 {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
+                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 # TODO: {'prop_name': 'evidence', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, required': True},
