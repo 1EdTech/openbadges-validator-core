@@ -721,21 +721,20 @@ class ClassValidationTaskTests(unittest.TestCase):
             self.fourth_node
         ]}
 
-    def _run(self, task_meta, expected_result, msg=''):
+    def _run(self, task_meta, expected_result, msg='', test_task=EVIDENCE_PROPERTY_DEPENDENCIES):
         result, message, actions = validate_property(self.state, task_meta)
         self.assertTrue(result, "Property validation task should succeed.")
         self.assertEqual(len(actions), 1)
-        self.assertEqual(actions[0]['expected_class'], OBClasses.Evidence)
 
         task_meta = actions[0]
         result, message, actions = task_named(task_meta['name'])(self.state, task_meta)
-        self.assertTrue(result, "IdentityObject validation task discovery should succeed.")
+        self.assertTrue(result, "Class validation task discovery should succeed.")
 
         for task_meta in [a for a in actions if a.get('type') == ADD_TASK]:
             val_result, val_message, val_actions = task_named(task_meta['name'])(self.state, task_meta)
-            if not task_meta['name'] == EVIDENCE_PROPERTY_DEPENDENCIES:
+            if not task_meta['name'] == test_task:
                 self.assertTrue(val_result, "Test {} should pass".format(task_meta['name']))
-            else:
+            elif task_meta['name'] == test_task:
                 self.assertEqual(
                     val_result, expected_result,
                     "{} should be {}: {}".format(task_meta['name'], expected_result, msg)
@@ -789,3 +788,25 @@ class ClassValidationTaskTests(unittest.TestCase):
         task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="http://example.com/a")
         result, message, actions = evidence_property_dependencies(state, task)
         self.assertTrue(result, "External URL and narrative passes")
+
+    def test_alignment_object_validation(self):
+        self.first_node = {'id': 'http://example.com/badge1'}
+        self.state = {
+            'graph': [
+                self.first_node,
+                {'id': '_:b0'},
+                {'id': '_:b1', 'targetUrl': 'http://example.com/skill1', 'targetName': 'Cool Skill'},
+            ]
+        }
+        self.first_node['alignment'] = '_:b1'
+
+        task = add_task(
+            VALIDATE_PROPERTY,
+            node_id="http://example.com/badge1",
+            prop_name="alignment",
+            prop_required=False,
+            prop_type=ValueTypes.ID,
+            expected_class=OBClasses.AlignmentObject
+        )
+
+        self._run(task, True, 'Single embedded complete alignment node passes', test_task=None)

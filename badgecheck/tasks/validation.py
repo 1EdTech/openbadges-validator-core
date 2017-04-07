@@ -269,8 +269,8 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'criteria', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.Criteria, 'fetch': False,
                     'required': True, 'allow_remote_url': True},
-                # TODO: {'prop_name': 'alignment', 'prop_type': ValueTypes.ID,
-                #   'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, required': False},
+                {'prop_name': 'alignment', 'prop_type': ValueTypes.ID,
+                   'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, 'required': False},
                 # TODO: {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
             )
         elif class_name == OBClasses.Profile:
@@ -291,6 +291,16 @@ class ClassValidators(OBClasses):
                 #   'expected_class': OBClasses.VerificationObject, 'fetch': False, 'required': False},
                 # TODO: {'prop_name': 'revocationList', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.Revocationlist, 'fetch': True, 'required': False},  # TODO: Fetch only for relevant assertions?
+            )
+        elif class_name == OBClasses.AlignmentObject:
+            self.validators = (
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
+                #   'required': False, 'default': OBClasses.AlignmentObject},
+                {'prop_name': 'targetName', 'prop_type': ValueTypes.TEXT, 'required': True},
+                {'prop_name': 'targetUrl', 'prop_type': ValueTypes.URL, 'required': True},
+                {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'targetFramework', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'targetCode', 'prop_type': ValueTypes.TEXT, 'required': False},
             )
         elif class_name == OBClasses.Criteria:
             self.validators = (
