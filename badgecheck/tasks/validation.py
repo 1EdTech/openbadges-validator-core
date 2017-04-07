@@ -88,8 +88,8 @@ class PrimitiveValueValidator(object):
         try:
             if ((value and isinstance(value, six.string_types))
                 and rfc3986.is_valid_uri(value, require_scheme=True)
-                and re.match(data_uri_regex, value)
-                and re.match(data_uri_regex, value).group('scheme').lower() == 'data'):
+                and re.match(data_uri_regex, value, re.IGNORECASE)
+                and re.match(data_uri_regex, value, re.IGNORECASE).group('scheme').lower() == 'data'):
                 ret = True
         except ValueError as e:
             pass
