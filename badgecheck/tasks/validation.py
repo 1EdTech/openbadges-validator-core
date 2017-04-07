@@ -35,6 +35,8 @@ class OBClasses(object):
 
 class ValueTypes(object):
     BOOLEAN = 'BOOLEAN'
+    DATA_URI = 'DATA_URI'
+    DATA_URI_OR_URL = 'DATA_URI_OR_URL'
     DATETIME = 'DATETIME'
     ID = 'ID'
     IDENTITY_HASH = 'IDENTITY_HASH'
@@ -60,6 +62,8 @@ class PrimitiveValueValidator(object):
     def __init__(self, value_type):
         value_check_functions = {
             ValueTypes.BOOLEAN: self._validate_boolean,
+            ValueTypes.DATA_URI: self._validate_data_uri,
+            ValueTypes.DATA_URI_OR_URL: self._validate_data_uri_or_url,
             ValueTypes.DATETIME: self._validate_datetime,
             ValueTypes.IDENTITY_HASH: self._validate_identity_hash,
             ValueTypes.IRI: self._validate_iri,
@@ -76,6 +80,24 @@ class PrimitiveValueValidator(object):
     @staticmethod
     def _validate_boolean(value):
         return isinstance(value, bool)
+
+    @staticmethod
+    def _validate_data_uri(value):
+        data_uri_regex=r'(?P<scheme>^data):(?P<mimetypes>[^,]{0,}?)?(?P<encoding>base64)?,(?P<data>.*$)'
+        ret = False
+        try:
+            if ((value and isinstance(value, six.string_types))
+                and rfc3986.is_valid_uri(value, require_scheme=True)
+                and re.match(data_uri_regex, value)
+                and re.match(data_uri_regex, value).group('scheme').lower() == 'data'):
+                ret = True
+        except ValueError as e:
+            pass
+        return ret
+
+    @classmethod
+    def _validate_data_uri_or_url(cls, value):
+        return bool(cls._validate_url(value) or cls._validate_data_uri(value))
 
     @staticmethod
     def _validate_datetime(value):
