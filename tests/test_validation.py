@@ -3,7 +3,7 @@ import json
 from pydux import create_store
 import unittest
 
-from actions.action_types import ADD_TASK
+from badgecheck.actions.action_types import ADD_TASK
 from badgecheck.actions.graph import add_node
 from badgecheck.actions.tasks import add_task
 from badgecheck.reducers import main_reducer
