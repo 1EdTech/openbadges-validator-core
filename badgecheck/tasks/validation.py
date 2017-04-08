@@ -7,11 +7,12 @@ from ..actions.tasks import add_task
 from ..exceptions import ValidationError
 from ..state import get_node_by_id
 
-from .task_types import (CLASS_VALIDATION_TASKS, FETCH_HTTP_NODE,
+from .task_types import (CLASS_VALIDATION_TASKS, CRITERIA_PROPERTY_DEPENDENCIES,
+                         EVIDENCE_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
                          IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
-                         VALIDATE_ID_PROPERTY, VALIDATE_PRIMITIVE_PROPERTY, )
+                         VALIDATE_PROPERTY, VALIDATE_PROPERTY,)
 
-from .utils import abbreviate_value, is_empty_list, task_result
+from .utils import abbreviate_value, is_empty_list, is_null_list, task_result
 
 
 class OBClasses(object):
@@ -48,7 +49,7 @@ class ValueTypes(object):
     # TODO: EMAIL = 'EMAIL'
     # TODO: TELEPHONE = 'TELEPHONE'
 
-    PRIMITIVES = (BOOLEAN, DATETIME, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TEXT, URL)
+    PRIMITIVES = (BOOLEAN, DATETIME, ID, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TEXT, URL)
 
 
 class PrimitiveValueValidator(object):
@@ -142,9 +143,10 @@ class PrimitiveValueValidator(object):
             re.match(urn_regex, value, re.IGNORECASE)
         )
 
-    @staticmethod
-    def _validate_markdown_text(value):
-        raise NotImplementedError("TODO: Add validator")
+    @classmethod
+    def _validate_markdown_text(cls, value):
+        # TODO Assert no render errors if relevant?
+        return cls._validate_text
 
     @staticmethod
     def _validate_text(value):
@@ -163,10 +165,10 @@ class PrimitiveValueValidator(object):
         return ret
 
 
-def validate_primitive_property(state, task_meta):
+def validate_property(state, task_meta):
     """
     Validates presence and data type of a single property that is
-    expected to be one of the Open Badges Primitive data types.
+    expected to be one of the Open Badges Primitive data types or an ID.
     """
     node_id = task_meta.get('node_id')
     node = get_node_by_id(state, node_id)
@@ -176,44 +178,83 @@ def validate_primitive_property(state, task_meta):
     prop_type = task_meta.get('prop_type')
     prop_value = node.get(prop_name)
     required = bool(task_meta.get('required'))
+    allow_many = task_meta.get('many')
+    actions = []
 
-    if prop_value is None and required:
+    try:
+        prop_value = node[prop_name]
+    except KeyError:
+        if not required:
+            return task_result(
+                True, "Optional property {} not present in {} {}".format(
+                prop_name, node_class, node_id)
+            )
         return task_result(
             False, "Required property {} not present in {} {}".format(
                 prop_name, node_class, node_id)
-        )
-    elif task_meta.get('many') and required and is_empty_list(prop_value):
-        return task_result(
-            False, "Required property {} contains no values in {} {}".format(
-                prop_name, node_class, node_id)
-        )
-
-    if prop_value is None and not required:
-        return task_result(
-            True, "Optional property {} not present in {} {}".format(
-                prop_name, node_class, node_id)
-        )
+            )
 
     if not isinstance(prop_value, (list, tuple,)):
         values_to_test = [prop_value]
     else:
         values_to_test = prop_value
 
+    if required and (is_empty_list(values_to_test) or is_null_list(values_to_test)):
+        return task_result(
+            False, "Required property {} value {} is not acceptable in {} {}".format(
+                prop_name, abbreviate_value(prop_value), node_class, node_id)
+        )
+    if not required and (is_empty_list(values_to_test) or is_null_list(values_to_test)):
+        return task_result(True, "Optional property {} is null in {} {}".format(
+            prop_name, node_class, node_id
+        ))
+        # TODO Return STRIP_PROPERTY action
+
+    if not allow_many and len(values_to_test) > 1:
+        return task_result(
+            False, "Property {} in {} {} has more than the single allowed value.".format(
+                prop_name, node_class, node_id
+            ))
+
     try:
-        for val in values_to_test:
-            value_check_function = PrimitiveValueValidator(prop_type)
-            if not required and not val:
-                continue
-            if not value_check_function(val):
-                raise ValidationError("{} property {} value {} not valid in {} {}".format(
-                    prop_type, prop_name, abbreviate_value(val), node_class, node_id))
+        if prop_type != ValueTypes.ID:
+            for val in values_to_test:
+                value_check_function = PrimitiveValueValidator(prop_type)
+                if not value_check_function(val):
+                    raise ValidationError("{} property {} value {} not valid in {} {}".format(
+                        prop_type, prop_name, abbreviate_value(val), node_class, node_id))
+        else:
+            for val in values_to_test:
+                if not PrimitiveValueValidator(ValueTypes.IRI)(val):
+                    raise ValidationError(
+                        "ID-type property {} had value `{}` not in IRI format in {}.".format(
+                            prop_name, abbreviate_value(val), node_id)
+                    )
+
+                if not task_meta.get('fetch', False):
+                    try:
+                        target = get_node_by_id(state, val)
+                    except IndexError:
+                        if task_meta.get('allow_remote_url') and PrimitiveValueValidator(ValueTypes.URL)(val):
+                            continue
+                        raise ValidationError(
+                            'Node {} has {} property value `{}` that appears not to be in URI format'.format(
+                                node_id, prop_name, abbreviate_value(val)
+                            ))
+                    actions.append(
+                        add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=val,
+                                 expected_class=task_meta.get('expected_class')))
+                else:
+                    actions.append(
+                        add_task(FETCH_HTTP_NODE, url=val,
+                                 expected_class=task_meta.get('expected_class')))
 
     except ValidationError as e:
         return task_result(False, e.message)
     return task_result(
-        True, "{} property {} valid in {} {}".format(
-            prop_type, prop_name, node_class, node_id
-        )
+        True, "{} property {} value {} valid in {} {}".format(
+            prop_type, prop_name, abbreviate_value(prop_value), node_class, node_id
+        ), actions
     )
 
 
@@ -247,10 +288,11 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
-                # TODO: {'prop_name': 'criteria', 'prop_type': ValueTypes.ID,
-                #   'expected_class': OBClasses.Criteria, 'fetch': False, 'required': True},
-                # TODO: {'prop_name': 'alignment', 'prop_type': ValueTypes.ID,
-                #   'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, required': False},
+                {'prop_name': 'criteria', 'prop_type': ValueTypes.ID,
+                    'expected_class': OBClasses.Criteria, 'fetch': False,
+                    'required': True, 'allow_remote_url': True},
+                {'prop_name': 'alignment', 'prop_type': ValueTypes.ID,
+                   'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, 'required': False},
                 # TODO: {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
             )
         elif class_name == OBClasses.Profile:
@@ -272,6 +314,24 @@ class ClassValidators(OBClasses):
                 # TODO: {'prop_name': 'revocationList', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.Revocationlist, 'fetch': True, 'required': False},  # TODO: Fetch only for relevant assertions?
             )
+        elif class_name == OBClasses.AlignmentObject:
+            self.validators = (
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
+                #   'required': False, 'default': OBClasses.AlignmentObject},
+                {'prop_name': 'targetName', 'prop_type': ValueTypes.TEXT, 'required': True},
+                {'prop_name': 'targetUrl', 'prop_type': ValueTypes.URL, 'required': True},
+                {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'targetFramework', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'targetCode', 'prop_type': ValueTypes.TEXT, 'required': False},
+            )
+        elif class_name == OBClasses.Criteria:
+            self.validators = (
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
+                #   'required': False, 'default': OBClasses.Criteria},
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
+                {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
+                {'task_type': CRITERIA_PROPERTY_DEPENDENCIES}
+            )
         elif class_name == OBClasses.IdentityObject:
             self.validators = (
                 # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
@@ -285,7 +345,11 @@ class ClassValidators(OBClasses):
                 # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False},
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
-                #  TODO {'task_type': EVIDENCE_PROPERTY_DEPENDENCIES}
+                {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'genre', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'audience', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'task_type': EVIDENCE_PROPERTY_DEPENDENCIES}
             )
         else:
             raise NotImplementedError("Chosen OBClass not implemented yet.")
@@ -297,12 +361,7 @@ def _get_validation_actions(node_id, node_class):
     for validator in validators:
         if validator.get('prop_type') in ValueTypes.PRIMITIVES:
             actions.append(add_task(
-                VALIDATE_PRIMITIVE_PROPERTY, node_id=node_id,
-                node_class=node_class, **validator
-            ))
-        elif validator.get('prop_type') == ValueTypes.ID:
-            actions.append(add_task(
-                VALIDATE_ID_PROPERTY, node_id=node_id,
+                VALIDATE_PROPERTY, node_id=node_id,
                 node_class=node_class, **validator
             ))
         elif validator.get('task_type') in CLASS_VALIDATION_TASKS:
@@ -345,58 +404,6 @@ def validate_expected_node_class(state, task_meta):
     )
 
 
-def validate_id_property(state, task_meta):
-    node_id = task_meta.get('node_id')
-    node = get_node_by_id(state, node_id)
-    node_class = task_meta.get('node_class')
-    expected_class = task_meta.get('expected_class')
-
-    prop_name = task_meta.get('prop_name')
-    required = bool(task_meta.get('required'))
-    prop_value = node.get(prop_name)
-    actions = []
-
-    if prop_value is None and required:
-        return task_result(
-            False, "Required property {} not present in {} {}".format(
-                prop_name, node_class, node_id)
-        )
-
-    if not isinstance(prop_value, (list, tuple,)):
-        values_to_test = [prop_value]
-    else:
-        values_to_test = prop_value
-
-    try:
-        for val in values_to_test:
-            if not PrimitiveValueValidator(ValueTypes.IRI)(val):
-                raise ValidationError(
-                    "ID-type property {} had value `{}` not in IRI format in {}.".format(
-                        prop_name, abbreviate_value(val), node_id)
-                )
-
-            if not task_meta.get('fetch', False):
-                try:
-                    target = get_node_by_id(state, val)
-                except IndexError:
-                    if task_meta.get('allow_remote_url') and PrimitiveValueValidator(ValueTypes.URL)(val):
-                        continue
-                    raise ValidationError(
-                        'Node {} has {} property value `{}` that appears not to be in URI format'.format(
-                          node_id, prop_name, abbreviate_value(val)
-                        ))
-                actions.append(
-                    add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=val, expected_class=expected_class))
-            else:
-                actions.append(add_task(FETCH_HTTP_NODE, url=val, expected_class=expected_class))
-    except ValidationError as e:
-        return task_result(False, e.message)
-
-    label = 'references are' if len(values_to_test) > 1 else 'reference is'
-    return task_result(True, "{} property {} {} valid in {} {}".format(
-        ValueTypes.ID, prop_name, label, node_class, node_id), actions)
-
-
 """
 Class Validation Tasks
 """
@@ -421,3 +428,47 @@ def identity_object_property_dependencies(state, task_meta):
         return task_result(False, "Email type identity must match email format.")
 
     return task_result(True, "IdentityObject passes validation rules.")
+
+
+def criteria_property_dependencies(state, task_meta):
+    node_id = task_meta.get('node_id')
+    node = get_node_by_id(state, node_id)
+    is_blank_id_node = bool(re.match(r'_:b\d+$', node_id))
+
+    if is_blank_id_node and not node.get('narrative'):
+        return task_result(False,
+            "Criteria node {} has no narrative. Either external id or narrative is required.".format(node_id)
+        )
+    elif is_blank_id_node:
+        return task_result(
+            True, "Criteria node {} is a narrative-based piece of evidence.".format(node_id)
+        )
+    elif not is_blank_id_node and node.get('narrative'):
+        return task_result(
+            True, "Criteria node {} has a URL and narrative."
+        )
+    # Case to handle no narrative but other props preventing compaction down to simple id string:
+    # {'id': 'http://example.com/1', 'name': 'Criteria Name'}
+    return task_result(True, "Criteria node {} has a URL.")
+
+
+def evidence_property_dependencies(state, task_meta):
+    node_id = task_meta.get('node_id')
+    node = get_node_by_id(state, node_id)
+    is_blank_id_node = bool(re.match(r'_:b\d+$', node_id))
+
+    if is_blank_id_node and not node.get('narrative'):
+        return task_result(False,
+            "Evidence node {} has no narrative. Either external id or narrative is required.".format(node_id)
+        )
+    elif is_blank_id_node:
+        return task_result(
+            True, "Evidence node {} is a narrative-based piece of evidence.".format(node_id)
+        )
+    elif not is_blank_id_node and node.get('narrative'):
+        return task_result(
+            True, "Evidence node {} has a URL and narrative."
+        )
+    # Case to handle no narrative but other props preventing compaction down to simple id string:
+    # {'id': 'http://example.com/1', 'name': 'Evidence Name'}
+    return task_result(True, "Evidence node {} has a URL.")
