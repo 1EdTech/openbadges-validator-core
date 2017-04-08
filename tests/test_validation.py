@@ -10,11 +10,9 @@ from badgecheck.reducers import main_reducer
 from badgecheck.state import filter_active_tasks, INITIAL_STATE
 from badgecheck.tasks import task_named
 from badgecheck.tasks.validation import (criteria_property_dependencies, detect_and_validate_node_class,
-                                         evidence_property_dependencies, OBClasses, PrimitiveValueValidator,
-                                         validate_property, ValueTypes, )
+                                         OBClasses, PrimitiveValueValidator, validate_property, ValueTypes, )
 from badgecheck.tasks.task_types import (CRITERIA_PROPERTY_DEPENDENCIES, DETECT_AND_VALIDATE_NODE_CLASS,
-                                         EVIDENCE_PROPERTY_DEPENDENCIES, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
-                                         VALIDATE_PROPERTY, )
+                                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_PROPERTY, )
 from badgecheck.verifier import call_task
 
 from testfiles.test_components import test_components
@@ -701,24 +699,24 @@ class ClassValidationTaskTests(unittest.TestCase):
         result, message, actions = criteria_property_dependencies(state, task)
         self.assertTrue(result)
 
-        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b1")
-        result, message, actions = evidence_property_dependencies(state, task)
+        task = add_task(CRITERIA_PROPERTY_DEPENDENCIES, node_id="_:b1")
+        result, message, actions = criteria_property_dependencies(state, task)
         self.assertTrue(result, "Evidence with blank node ID and narrative passes.")
 
-        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b0")
-        result, message, actions = evidence_property_dependencies(state, task)
+        task = add_task(CRITERIA_PROPERTY_DEPENDENCIES, node_id="_:b0")
+        result, message, actions = criteria_property_dependencies(state, task)
         self.assertFalse(result, "Evidence with just a blank node id fails.")
 
-        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b1")
-        result, message, actions = evidence_property_dependencies(state, task)
+        task = add_task(CRITERIA_PROPERTY_DEPENDENCIES, node_id="_:b1")
+        result, message,CRITERIA = criteria_property_dependencies(state, task)
         self.assertTrue(result, "Evidence with blank node ID and narrative passes.")
 
-        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="http://example.com/b")
-        result, message, actions = evidence_property_dependencies(state, task)
+        task = add_task(CRITERIA_PROPERTY_DEPENDENCIES, node_id="http://example.com/b")
+        result, message, actions = criteria_property_dependencies(state, task)
         self.assertTrue(result, "External URL with unknown properties passes.")
 
-        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="http://example.com/a")
-        result, message, actions = evidence_property_dependencies(state, task)
+        task = add_task(CRITERIA_PROPERTY_DEPENDENCIES, node_id="http://example.com/a")
+        result, message, actions = criteria_property_dependencies(state, task)
         self.assertTrue(result, "External URL and narrative passes")
 
     def test_run_criteria_task_discovery_and_validation(self):
@@ -780,7 +778,11 @@ class ClassValidationTaskTests(unittest.TestCase):
         }
         self.third_node = {
             'id': '_:b2',
-            'narrative': 'Did more cool stuff'
+            'narrative': 'Earner did more cool stuff, like photography',
+            'name': 'My porfolio item',
+            'descrpition': 'A photo of earner\'s cat',
+            'audience': 'Ages 0-99',
+            'genre': 'Photography'
         }
         self.fourth_node = {
             'id': 'http://example.com/myblog/1',
@@ -795,7 +797,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             self.fourth_node
         ]}
 
-    def _run(self, task_meta, expected_result, msg='', test_task=EVIDENCE_PROPERTY_DEPENDENCIES):
+    def _run(self, task_meta, expected_result, msg='', test_task='UNKNOWN'):
         result, message, actions = validate_property(self.state, task_meta)
         self.assertTrue(result, "Property validation task should succeed.")
         self.assertEqual(len(actions), 1)
@@ -829,39 +831,9 @@ class ClassValidationTaskTests(unittest.TestCase):
 
         self._run(task, True, 'Single embedded complete evidence node passes')
         self.first_node['evidence'] = ['_:b3']
-        self._run(task, False, 'Evidence list containing truly blank blank node should fail')
+        self._run(task, True, 'Even an evidence list containing just a blank node should not fail.')
         self.first_node['evidence'] = 'http://example.com/myblog/1'
         self._run(task, True, 'Checks run even when the Evidence node ID is an external URL')
-
-    def test_evidence_cross_property_validation(self):
-        state = {
-            'graph': [
-                {'id': '_:b0'},
-                {'id': '_:b1', 'narrative': 'Did cool stuff'},
-                {'id': 'http://example.com/a', 'narrative': 'Did cool stuff'},
-                {'id': 'http://example.com/b', 'name': 'Another property outside of Evidence class scope'},
-            ]
-        }
-
-        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b1")
-        result, message, actions = evidence_property_dependencies(state, task)
-        self.assertTrue(result, "Evidence with blank node ID and narrative passes.")
-
-        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b0")
-        result, message, actions = evidence_property_dependencies(state, task)
-        self.assertFalse(result, "Evidence with just a blank node id fails.")
-
-        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="_:b1")
-        result, message, actions = evidence_property_dependencies(state, task)
-        self.assertTrue(result, "Evidence with blank node ID and narrative passes.")
-
-        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="http://example.com/b")
-        result, message, actions = evidence_property_dependencies(state, task)
-        self.assertTrue(result, "External URL with unknown properties passes.")
-
-        task = add_task(EVIDENCE_PROPERTY_DEPENDENCIES, node_id="http://example.com/a")
-        result, message, actions = evidence_property_dependencies(state, task)
-        self.assertTrue(result, "External URL and narrative passes")
 
     def test_alignment_object_validation(self):
         self.first_node = {'id': 'http://example.com/badge1'}
