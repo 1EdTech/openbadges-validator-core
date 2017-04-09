@@ -8,7 +8,7 @@ from badgecheck.reducers.graph import graph_reducer
 from badgecheck.state import get_node_by_id
 from badgecheck.tasks.graph import fetch_http_node, jsonld_compact_data
 from badgecheck.tasks.task_types import FETCH_HTTP_NODE, JSONLD_COMPACT_DATA
-from badgecheck.util import OPENBADGES_CONTEXT_URI_V2
+from openbadges_context import OPENBADGES_CONTEXT_V2_URI
 
 from testfiles.test_components import test_components
 
@@ -103,7 +103,7 @@ class JsonLdCompactTests(unittest.TestCase):
     def setUpContextCache(self):
         data = test_components['openbadges_context']
         responses.add(
-            responses.GET, OPENBADGES_CONTEXT_URI_V2,
+            responses.GET, OPENBADGES_CONTEXT_V2_URI,
             body=data, status=200, content_type='application/ld+json'
         )
 

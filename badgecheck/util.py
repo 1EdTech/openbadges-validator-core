@@ -1,12 +1,9 @@
 import string
 from urlparse import urlparse
 
-from pyld.jsonld import JsonLdError
 import requests
 import requests_cache
-
-
-OPENBADGES_CONTEXT_URI_V2 = "https://w3id.org/openbadges/v2"
+from pyld.jsonld import JsonLdError
 
 
 class CachableDocumentLoader(object):
@@ -49,3 +46,7 @@ class CachableDocumentLoader(object):
                 'jsonld.LoadDocumentError',
                 code='loading document failed',
                 cause=cause)
+
+
+jsonld_use_cache = {'documentLoader': CachableDocumentLoader(cachable=True)}
+jsonld_no_cache = {'documentLoader': CachableDocumentLoader(cachable=False)}

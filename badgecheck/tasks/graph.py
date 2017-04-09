@@ -4,7 +4,8 @@ import requests
 
 from ..actions.graph import add_node
 from ..actions.tasks import add_task
-from ..util import CachableDocumentLoader, OPENBADGES_CONTEXT_URI_V2
+from ..util import CachableDocumentLoader
+from openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from task_types import (DETECT_AND_VALIDATE_NODE_CLASS, JSONLD_COMPACT_DATA,
                         VALIDATE_EXPECTED_NODE_CLASS,)
 from utils import task_result
@@ -36,7 +37,7 @@ def jsonld_compact_data(state, task_meta):
         return task_result(False, "Could not load data")
 
     options = {'documentLoader': CachableDocumentLoader(cachable=task_meta.get('use_cache', True))}
-    result = jsonld.compact(input_data, OPENBADGES_CONTEXT_URI_V2, options=options)
+    result = jsonld.compact(input_data, OPENBADGES_CONTEXT_V2_URI, options=options)
     # TODO: We should not necessarily trust this ID over the source URL
     node_id = result.get('id', task_meta.get('node_id'))
 

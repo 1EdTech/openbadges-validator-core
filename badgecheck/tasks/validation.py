@@ -1,4 +1,5 @@
 import aniso8601
+from pyld import jsonld
 import re
 import rfc3986
 import six
@@ -6,6 +7,8 @@ import six
 from ..actions.tasks import add_task
 from ..exceptions import ValidationError
 from ..state import get_node_by_id
+from ..util import jsonld_use_cache
+from ..openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 
 from .task_types import (CLASS_VALIDATION_TASKS, CRITERIA_PROPERTY_DEPENDENCIES,
                          EVIDENCE_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
@@ -39,14 +42,14 @@ class ValueTypes(object):
     DATA_URI = 'DATA_URI'
     DATA_URI_OR_URL = 'DATA_URI_OR_URL'
     DATETIME = 'DATETIME'
+    EMAIL = 'EMAIL'
     ID = 'ID'
     IDENTITY_HASH = 'IDENTITY_HASH'
     IRI = 'IRI'
     MARKDOWN_TEXT = 'MARKDOWN_TEXT'
+    RDF_TYPE = 'RDF_TYPE'
     TEXT = 'TEXT'
     URL = 'URL'
-    # TODO: RDF_TYPE = 'RDF_TYPE'
-    # TODO: EMAIL = 'EMAIL'
     # TODO: TELEPHONE = 'TELEPHONE'
 
     PRIMITIVES = (BOOLEAN, DATETIME, ID, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TEXT, URL)
@@ -69,6 +72,7 @@ class PrimitiveValueValidator(object):
             ValueTypes.IDENTITY_HASH: self._validate_identity_hash,
             ValueTypes.IRI: self._validate_iri,
             ValueTypes.MARKDOWN_TEXT: self._validate_markdown_text,
+            ValueTypes.RDF_TYPE: self._validate_rdf_type,
             ValueTypes.TEXT: self._validate_text,
             ValueTypes.URL: self._validate_url
         }
@@ -147,6 +151,27 @@ class PrimitiveValueValidator(object):
     def _validate_markdown_text(cls, value):
         # TODO Assert no render errors if relevant?
         return cls._validate_text
+
+    @classmethod
+    def _validate_rdf_type(cls, value):
+        try:
+            if not(isinstance(value, six.string_types)):
+                raise ValidationError(
+                    'RDF_TYPE entry {} must be a string value'.format(abbreviate_value(value)))
+
+            expanded = jsonld.expand({"@context": OPENBADGES_CONTEXT_V2_DICT, 'type': value})
+            expanded_value = expanded[0]['@type'][0]
+            if not cls._validate_iri(expanded_value):
+                raise ValidationError(
+                    'RDF_TYPE entry {} must be a valid IRI in the document context'.format(
+                        abbreviate_value(value))
+                )
+        except (ValidationError, jsonld.JsonLdError,):
+            return False
+
+        return True
+
+
 
     @staticmethod
     def _validate_text(value):

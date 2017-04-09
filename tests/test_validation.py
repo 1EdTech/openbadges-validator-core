@@ -1,6 +1,8 @@
 # coding=utf-8
 import json
+from pyld import jsonld
 from pydux import create_store
+import responses
 import unittest
 
 from badgecheck.actions.action_types import ADD_TASK
@@ -15,9 +17,12 @@ from badgecheck.tasks.validation import (criteria_property_dependencies, detect_
 from badgecheck.tasks.task_types import (CRITERIA_PROPERTY_DEPENDENCIES, DETECT_AND_VALIDATE_NODE_CLASS,
                                          EVIDENCE_PROPERTY_DEPENDENCIES, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
                                          VALIDATE_PROPERTY, )
+from openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 from badgecheck.verifier import call_task
 
 from testfiles.test_components import test_components
+from utils import setUpContextMock
+
 
 class PropertyValidationTests(unittest.TestCase):
 
@@ -651,7 +656,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             VALIDATE_PROPERTY,
             node_id="http://example.com/1",
             prop_name="recipient",
-            prop_required=True,
+            required=True,
             prop_type=ValueTypes.ID,
             expected_class=OBClasses.IdentityObject
         )
@@ -736,7 +741,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             VALIDATE_PROPERTY,
             node_id=badgeclass_node['id'],
             prop_name="criteria",
-            prop_required=False,
+            required=False,
             prop_type=ValueTypes.ID,
             expected_class=OBClasses.Criteria
         )]
@@ -758,7 +763,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             VALIDATE_PROPERTY,
             node_id=badgeclass_node['id'],
             prop_name="criteria",
-            prop_required=False,
+            required=False,
             prop_type=ValueTypes.ID,
             expected_class=OBClasses.Criteria
         )]
@@ -822,7 +827,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             VALIDATE_PROPERTY,
             node_id="_:b0",
             prop_name="evidence",
-            prop_required=False,
+            required=False,
             prop_type=ValueTypes.ID,
             expected_class=OBClasses.Evidence
         )
@@ -878,9 +883,50 @@ class ClassValidationTaskTests(unittest.TestCase):
             VALIDATE_PROPERTY,
             node_id="http://example.com/badge1",
             prop_name="alignment",
-            prop_required=False,
+            required=False,
             prop_type=ValueTypes.ID,
             expected_class=OBClasses.AlignmentObject
         )
 
         self._run(task, True, 'Single embedded complete alignment node passes', test_task=None)
+
+
+class RdfTypeValidationTests(unittest.TestCase):
+    @responses.activate
+    def test_validate_in_context_string_type(self):
+        setUpContextMock()
+        input_value = {
+            '@context': OPENBADGES_CONTEXT_V2_DICT,
+            'id': 'http://example.com/badge1',
+            'type': 'BadgeClass',
+            'name': 'Chumley'
+        }
+
+        test_types = (
+            ('BadgeClass',                   True),
+            (['Issuer', 'Extension'],        True),
+            ('AlignmentObject',              True),
+            ('http://example.com/CoolClass', True),
+            ('NotAKnownClass',               False),
+            ([],                             False),
+            (['Issuer', 'UNKNOWN'],          False),
+        )
+
+        for type_value, expected_result in test_types:
+            input_value['type'] = type_value
+            compact_value = jsonld.compact(input_value, OPENBADGES_CONTEXT_V2_DICT)
+            state = {'graph': [compact_value]}
+
+            task_meta = add_task(
+                VALIDATE_PROPERTY,
+                node_id="http://example.com/badge1",
+                prop_name="type",
+                required=True,
+                prop_type=ValueTypes.RDF_TYPE,
+                many=True
+            )
+            result, message, actions = task_named(task_meta['name'])(state, task_meta)
+            self.assertEqual(
+                result, expected_result,
+                "{} didn't meet expectation of result {}".format(type_value, expected_result))
+
