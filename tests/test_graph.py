@@ -119,7 +119,6 @@ class NodeUpdateTests(unittest.TestCase):
         pass
 
 
-
 class JsonLdCompactTests(unittest.TestCase):
     def setUpContextCache(self):
         data = test_components['openbadges_context']
