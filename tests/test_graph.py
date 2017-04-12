@@ -2,7 +2,7 @@ import json
 import responses
 import unittest
 
-from badgecheck.actions.graph import add_node
+from badgecheck.actions.graph import add_node, patch_node
 from badgecheck.actions.tasks import add_task
 from badgecheck.reducers.graph import graph_reducer
 from badgecheck.state import get_node_by_id
@@ -97,6 +97,27 @@ class NodeStorageTests(unittest.TestCase):
         nested_id = root_node['b_list'][1]
         second_node = get_node_by_id({'graph': state}, nested_id)
         self.assertEqual(second_node['c'], 3)
+
+
+class NodeUpdateTests(unittest.TestCase):
+    def test_patch_node(self):
+        first_node = {'id': '_:b0', 'name': 'One'}
+        second_node = {'id': '_:b1', 'name': 'Two'}
+
+        action = patch_node(first_node['id'], {'name': 'New One'})
+        state = graph_reducer([first_node, second_node], action)
+
+        self.assertEqual(len(state), 2)
+        updated_node = get_node_by_id({'graph': state}, first_node['id'])
+        self.assertEqual(updated_node['name'], 'New One')
+
+    def test_update_node_id(self):
+        """
+        TODO: allow ability to update a node id, replacing all references to that
+        id in other nodes with the new id
+        """
+        pass
+
 
 
 class JsonLdCompactTests(unittest.TestCase):

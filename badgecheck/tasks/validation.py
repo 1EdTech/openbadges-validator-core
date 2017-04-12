@@ -4,6 +4,7 @@ import re
 import rfc3986
 import six
 
+from ..actions.graph import patch_node
 from ..actions.tasks import add_task
 from ..exceptions import ValidationError
 from ..state import get_node_by_id
@@ -13,7 +14,7 @@ from ..openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 from .task_types import (CLASS_VALIDATION_TASKS, CRITERIA_PROPERTY_DEPENDENCIES,
                          EVIDENCE_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
                          IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
-                         VALIDATE_PROPERTY, VALIDATE_PROPERTY,)
+                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,)
 
 from .utils import abbreviate_value, is_empty_list, is_null_list, task_result
 
@@ -201,7 +202,6 @@ def validate_property(state, task_meta):
 
     prop_name = task_meta.get('prop_name')
     prop_type = task_meta.get('prop_type')
-    prop_value = node.get(prop_name)
     required = bool(task_meta.get('required'))
     allow_many = task_meta.get('many')
     actions = []
@@ -283,6 +283,38 @@ def validate_property(state, task_meta):
     )
 
 
+def validate_rdf_type_property(state, task_meta):
+    prop_result = validate_property(state, task_meta)
+    if not prop_result[0]:
+        return prop_result
+
+    node_id = task_meta.get('node_id')
+    node = get_node_by_id(state, node_id)
+    prop_value = node.get('type')
+    required = bool(task_meta.get('required'))
+    default = task_meta.get('default')
+    must_contain_one = task_meta.get('must_contain_one')
+    allow_many = task_meta.get('many', False)
+    actions = []
+
+    # Set node type to default value
+    if not prop_value and default:
+        actions.append(patch_node(node_id, {'type': default}))
+        return task_result(True, prop_result[1], actions)
+
+    if not isinstance(prop_value, (list, tuple,)):
+        values_to_test = [prop_value]
+    else:
+        values_to_test = prop_value
+
+    # Reject if value not in allowed set of values.
+    if must_contain_one and not any(val in must_contain_one for val in values_to_test):
+        return task_result(False, 'Node {} of type {} does not have type among allowed values ({})'.format(
+            node_id, abbreviate_value(prop_value), abbreviate_value(must_contain_one)))
+
+    return prop_result
+
+
 class ClassValidators(OBClasses):
     def __init__(self, class_name):
         self.class_name = class_name
@@ -290,7 +322,8 @@ class ClassValidators(OBClasses):
         if class_name == OBClasses.Assertion:
             self.validators = (
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
-                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True,
+                    'many': True, 'must_contain_one': ['Assertion']},
                 {'prop_name': 'recipient', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.IdentityObject, 'required': True},
                 {'prop_name': 'badge', 'prop_type': ValueTypes.ID,
@@ -307,7 +340,8 @@ class ClassValidators(OBClasses):
         elif class_name == OBClasses.BadgeClass:
             self.validators = (
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
-                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True,
+                    'many': True, 'must_contain_one': ['BadgeClass']},
                 {'prop_name': 'issuer', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.Profile, 'fetch': True, 'required': True},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
@@ -325,7 +359,8 @@ class ClassValidators(OBClasses):
             self.validators = (
                 # TODO: "Most platforms to date can only handle HTTP-based IRIs."
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
-                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True,
+                    'many': True, 'must_contain_one': ['Issuer', 'Profile']},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
@@ -341,8 +376,8 @@ class ClassValidators(OBClasses):
             )
         elif class_name == OBClasses.AlignmentObject:
             self.validators = (
-                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
-                #   'required': False, 'default': OBClasses.AlignmentObject},
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
+                    'many': True, 'required': False, 'default': OBClasses.AlignmentObject},
                 {'prop_name': 'targetName', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'targetUrl', 'prop_type': ValueTypes.URL, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
@@ -351,15 +386,16 @@ class ClassValidators(OBClasses):
             )
         elif class_name == OBClasses.Criteria:
             self.validators = (
-                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
-                #   'required': False, 'default': OBClasses.Criteria},
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
+                    'many': True, 'required': False, 'default': OBClasses.Criteria},
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 {'task_type': CRITERIA_PROPERTY_DEPENDENCIES}
             )
         elif class_name == OBClasses.IdentityObject:
             self.validators = (
-                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True},
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True, 'many': False,
+                    'must_contain_one': ['id', 'email', 'url', 'telephone']},  # TODO: support any prop w/string data
                 {'prop_name': 'identity', 'prop_type': ValueTypes.IDENTITY_HASH, 'required': True},
                 {'prop_name': 'hashed', 'prop_type': ValueTypes.BOOLEAN, 'required': True},
                 {'prop_name': 'salt', 'prop_type': ValueTypes.TEXT, 'required': False},
@@ -367,7 +403,8 @@ class ClassValidators(OBClasses):
             )
         elif class_name == OBClasses.Evidence:
             self.validators = (
-                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False},
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'many': True,
+                    'required': False, 'default': 'Evidence'},
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': False},
@@ -384,6 +421,11 @@ def _get_validation_actions(node_id, node_class):
     validators = ClassValidators(node_class).validators
     actions = []
     for validator in validators:
+        if validator.get('prop_type') == ValueTypes.RDF_TYPE:
+            actions.append(add_task(
+                VALIDATE_RDF_TYPE_PROPERTY, node_id=node_id,
+                node_class=node_class, **validator
+            ))
         if validator.get('prop_type') in ValueTypes.PRIMITIVES:
             actions.append(add_task(
                 VALIDATE_PROPERTY, node_id=node_id,

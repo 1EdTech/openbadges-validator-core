@@ -1,6 +1,8 @@
 import copy
 
-from ..actions.action_types import ADD_NODE, UPDATE_NODE
+from ..actions.action_types import ADD_NODE, PATCH_NODE, UPDATE_NODE
+from ..state import get_node_by_id
+
 
 current_node_number = -1
 def _get_next_blank_node_id():
@@ -24,7 +26,7 @@ def _flatten_node(node, node_id=None):
             current_list = node[prop]
             for index in [i for i in range(len(current_list)) if isinstance(current_list[i], dict)]:
                 prop_id = current_list[i].get('id', _get_next_blank_node_id())
-                node_list.extend(_flatten_node(current_list[i], prop_id))
+                node_list.extend(_flatten_node(current_list[index], prop_id))
                 current_list[i] = prop_id
 
     node_list.append(node)
@@ -43,5 +45,15 @@ def graph_reducer(state=None, action=None):
     elif action.get('type') == UPDATE_NODE:
         # TODO
         raise NotImplementedError("TODO: Implement updating nodes.")
+    elif action.get('type') == PATCH_NODE:
+        try:
+            existing_node = get_node_by_id({'graph': state}, action.get('node_id'))
+            state = list(state)
+            updated_node = copy.copy(existing_node)
+            updated_node.update(action.get('data'))
+            state = [node for node in state if node is not existing_node]
+            state.append(updated_node)
+        except IndexError:
+            pass
 
     return state

@@ -5,7 +5,7 @@ from pydux import create_store
 import responses
 import unittest
 
-from badgecheck.actions.action_types import ADD_TASK
+from badgecheck.actions.action_types import ADD_TASK, PATCH_NODE
 from badgecheck.actions.graph import add_node
 from badgecheck.actions.tasks import add_task
 from badgecheck.reducers import main_reducer
@@ -16,7 +16,7 @@ from badgecheck.tasks.validation import (criteria_property_dependencies, detect_
                                          validate_property, ValueTypes, )
 from badgecheck.tasks.task_types import (CRITERIA_PROPERTY_DEPENDENCIES, DETECT_AND_VALIDATE_NODE_CLASS,
                                          EVIDENCE_PROPERTY_DEPENDENCIES, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
-                                         VALIDATE_PROPERTY, )
+                                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY, )
 from openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 from badgecheck.verifier import call_task
 
@@ -748,13 +748,15 @@ class ClassValidationTaskTests(unittest.TestCase):
         badgeclass_node['criteria'] = 'http://example.com/a'
 
         for task in actions:
+            if not task.get('type') == 'ADD_TASK':
+                continue
             result, message, new_actions = task_named(task['name'])(state, task)
             if new_actions:
                 actions.extend(new_actions)
             self.assertTrue(result)
 
-        self.assertEqual(len(actions), 5)
-        self.assertTrue(CRITERIA_PROPERTY_DEPENDENCIES in [a['name'] for a in actions])
+        self.assertEqual(len(actions), 7)
+        self.assertTrue(CRITERIA_PROPERTY_DEPENDENCIES in [a.get('name') for a in actions])
 
     def test_many_criteria_disallowed(self):
         badgeclass_node = {'id': 'http://example.com/badgeclass', 'type': 'BadgeClass'}
@@ -930,3 +932,75 @@ class RdfTypeValidationTests(unittest.TestCase):
                 result, expected_result,
                 "{} didn't meet expectation of result {}".format(type_value, expected_result))
 
+    def test_rdf_property_default_applied(self):
+        """
+        Ensure that when a default is provided it is added to the class if there is no type declared.
+        This occurs by a UPDATE_NODE task.
+        """
+        first_node = {
+            "@context": OPENBADGES_CONTEXT_V2_DICT,
+            'id': '_:b0',
+            'narrative': 'Some criteria'
+        }
+        task_meta = add_task(
+            VALIDATE_RDF_TYPE_PROPERTY,
+            node_id='_:b0',
+            prop_name='type',
+            required=False,
+            default='Criteria',
+            prop_type=ValueTypes.RDF_TYPE,
+            many=True
+        )
+        state = {'graph': [first_node]}
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+
+        self.assertTrue(result)
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(actions[0]['node_id'], '_:b0')
+        self.assertEqual(actions[0]['type'], PATCH_NODE)
+
+    def test_type_must_contain_one(self):
+        """
+        Ensure that a type property doesn't validate if it is required to contain at least one of
+        one or more class options provided in task_meta['must_contain_one']
+        """
+        first_node = {
+            "@context": OPENBADGES_CONTEXT_V2_DICT,
+            'id': '_:b0',
+            'name': 'Some Issuer'
+        }
+        task_meta = add_task(
+            VALIDATE_RDF_TYPE_PROPERTY,
+            node_id='_:b0',
+            prop_name='type',
+            required=True,
+            prop_type=ValueTypes.RDF_TYPE,
+            must_contain_one=['Issuer', 'Profile'],
+            many=True
+        )
+        state = {'graph': [first_node]}
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+
+        self.assertFalse(result)
+        self.assertEqual(len(actions), 0)
+
+        first_node['type'] = 'schema:Buffalo'
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        self.assertFalse(result, "Buffalo is not among allowable type values for this task.")
+        self.assertTrue('does not have type among allowed values' in message)
+
+        first_node['type'] = 'Issuer'
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        self.assertTrue(result, 'Issuer is one of the acceptable values for this task.')
+
+        first_node['type'] = ['Issuer', 'schema:Buffalo']
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        self.assertTrue(result, 'Issuer as one of several values should be acceptable.')
+
+        task_meta['must_contain_one'] = 'Assertion'
+        first_node['type'] = 'A'
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        self.assertFalse(result, 'A portion of the acceptable value is not acceptable.')
+        first_node['type'] = 'Assertion'
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        self.assertTrue(result, 'The exact string match between must_contain_one and type passes.')
