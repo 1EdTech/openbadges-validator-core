@@ -349,6 +349,14 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'genre', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'audience', 'prop_type': ValueTypes.TEXT, 'required': False},
             )
+        elif class_name == OBClasses.Image:
+            self.validators = (
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
+                #   'required': False, 'default': 'schema:ImageObject'}
+                {'prop_name': 'id', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
+                {'prop_name': 'caption', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'author', 'prop_type': ValueTypes.IRI, 'required': False}
+            )
         else:
             raise NotImplementedError("Chosen OBClass not implemented yet.")
 
