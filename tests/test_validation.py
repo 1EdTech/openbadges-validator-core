@@ -835,6 +835,40 @@ class ClassValidationTaskTests(unittest.TestCase):
         self.first_node['evidence'] = 'http://example.com/myblog/1'
         self._run(task, True, 'Checks run even when the Evidence node ID is an external URL')
 
+    def test_image_object_validation(self):
+        image_data_node = {'id': 'data:image/gif;base64,R0lGODlhyAAiALM...DfD0QAADs=',
+                           'type': 'schema:ImageObject'}
+        image_uri_node = {'id': 'http://example.com/images/Badge',
+                          'type': 'schema:ImageObject',
+                          'caption': 'This is an image',
+                          'author': 'http://example.com/users/ProfessorDale'}
+
+        badgeclass_node = {'id': 'http://example.com/badgeclass',
+                           'type': 'BadgeClass',
+                           'image': image_data_node['id']}
+        assertion_node = {'id': '_:b0',
+                          'type': 'Assertion',
+                          'image': image_uri_node['id']}
+
+        badgeclass_state = {'graph': [badgeclass_node, image_data_node]}
+        assertion_state = {'graph': [assertion_node, image_uri_node]}
+
+        task = add_task(
+            VALIDATE_PROPERTY,
+            node_id=badgeclass_node['id'],
+            prop_name='image',
+            prop_required=False,
+            prop_type=ValueTypes.DATA_URI_OR_URL,
+            expected_class=OBClasses.Image
+        )
+
+        result, message, actions = validate_property(badgeclass_state, task)
+        self.assertTrue(result, "Class validation of image property as data node in BadgeClass should succeed.")
+
+        task['node_id']=assertion_node['id']
+        result, message, actions = validate_property(assertion_state, task)
+        self.assertTrue(result, "Class validation of image property as uri node in Assertion should succeed.")
+
     def test_alignment_object_validation(self):
         self.first_node = {'id': 'http://example.com/badge1'}
         self.state = {
