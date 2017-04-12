@@ -171,8 +171,6 @@ class PrimitiveValueValidator(object):
 
         return True
 
-
-
     @staticmethod
     def _validate_text(value):
         return isinstance(value, six.string_types)
