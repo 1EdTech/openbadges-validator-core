@@ -11,8 +11,7 @@ from ..state import get_node_by_id
 from ..util import jsonld_use_cache
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 
-from .task_types import (CLASS_VALIDATION_TASKS, CRITERIA_PROPERTY_DEPENDENCIES,
-                         EVIDENCE_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
+from .task_types import (CLASS_VALIDATION_TASKS, CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
                          IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
                          VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,)
 
@@ -334,8 +333,8 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
                 {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
-                # TODO: {'prop_name': 'evidence', 'prop_type': ValueTypes.ID,
-                #   'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, required': True},
+                {'prop_name': 'evidence', 'prop_type': ValueTypes.ID, 'allow_remote_url': True,
+                    'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, 'required': False},
             )
         elif class_name == OBClasses.BadgeClass:
             self.validators = (
@@ -411,7 +410,14 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'genre', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'audience', 'prop_type': ValueTypes.TEXT, 'required': False},
-                {'task_type': EVIDENCE_PROPERTY_DEPENDENCIES}
+            )
+        elif class_name == OBClasses.Image:
+            self.validators = (
+                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
+                #   'required': False, 'default': 'schema:ImageObject'}
+                {'prop_name': 'id', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
+                {'prop_name': 'caption', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'author', 'prop_type': ValueTypes.IRI, 'required': False}
             )
         else:
             raise NotImplementedError("Chosen OBClass not implemented yet.")
@@ -517,25 +523,3 @@ def criteria_property_dependencies(state, task_meta):
     # Case to handle no narrative but other props preventing compaction down to simple id string:
     # {'id': 'http://example.com/1', 'name': 'Criteria Name'}
     return task_result(True, "Criteria node {} has a URL.")
-
-
-def evidence_property_dependencies(state, task_meta):
-    node_id = task_meta.get('node_id')
-    node = get_node_by_id(state, node_id)
-    is_blank_id_node = bool(re.match(r'_:b\d+$', node_id))
-
-    if is_blank_id_node and not node.get('narrative'):
-        return task_result(False,
-            "Evidence node {} has no narrative. Either external id or narrative is required.".format(node_id)
-        )
-    elif is_blank_id_node:
-        return task_result(
-            True, "Evidence node {} is a narrative-based piece of evidence.".format(node_id)
-        )
-    elif not is_blank_id_node and node.get('narrative'):
-        return task_result(
-            True, "Evidence node {} has a URL and narrative."
-        )
-    # Case to handle no narrative but other props preventing compaction down to simple id string:
-    # {'id': 'http://example.com/1', 'name': 'Evidence Name'}
-    return task_result(True, "Evidence node {} has a URL.")
