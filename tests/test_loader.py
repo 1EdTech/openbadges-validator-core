@@ -6,6 +6,7 @@ import unittest
 from badgecheck.util import CachableDocumentLoader
 
 from testfiles.test_components import test_components
+from utils import setUpContextMock
 
 
 class DocumentLoaderTests(unittest.TestCase):
@@ -43,14 +44,8 @@ class DocumentLoaderTests(unittest.TestCase):
     def test_that_pyld_accepts_caching_loader_for_compaction(self):
         assertion_data = json.loads(test_components['2_0_basic_assertion'])
         context_url = assertion_data['@context']
-        context_data = test_components['openbadges_context']
         loadurl = CachableDocumentLoader(cachable=True)
-        responses.add(
-            responses.GET,
-            context_url,
-            body=context_data,
-            status=200,
-            content_type='application/ld+json')
+        setUpContextMock()
 
         first_compacted = jsonld.compact(
             assertion_data, context_url, options={'documentLoader': loadurl})

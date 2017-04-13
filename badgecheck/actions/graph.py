@@ -1,4 +1,4 @@
-from action_types import ADD_NODE, UPDATE_NODE
+from action_types import ADD_NODE, PATCH_NODE, UPDATE_NODE
 
 
 def add_node(node_id=None, data=None):
@@ -12,12 +12,16 @@ def add_node(node_id=None, data=None):
     }
 
 
-def update_node(node_id, data, new_node_id=None):
+def update_node(node_id, data):
     action ={
         'type': UPDATE_NODE,
         'node_id': node_id,
         'data': data
     }
-    if new_node_id:
-        action.update({'node_id': new_node_id})
+    return action
+
+
+def patch_node(node_id, data):
+    action = update_node(node_id, data)
+    action['type'] = PATCH_NODE
     return action

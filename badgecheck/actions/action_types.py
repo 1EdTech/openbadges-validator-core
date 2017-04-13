@@ -10,6 +10,7 @@ GRAPH Actions:
 Manage the state of the known entities related to the validation subject.
 """
 ADD_NODE = 'ADD_NODE'
+PATCH_NODE = 'PATCH_NODE'
 UPDATE_NODE = 'UPDATE_NODE'
 
 """

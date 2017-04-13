@@ -2,13 +2,13 @@ import json
 import responses
 import unittest
 
-from badgecheck.actions.graph import add_node
+from badgecheck.actions.graph import add_node, patch_node
 from badgecheck.actions.tasks import add_task
 from badgecheck.reducers.graph import graph_reducer
 from badgecheck.state import get_node_by_id
 from badgecheck.tasks.graph import fetch_http_node, jsonld_compact_data
 from badgecheck.tasks.task_types import FETCH_HTTP_NODE, JSONLD_COMPACT_DATA
-from badgecheck.util import OPENBADGES_CONTEXT_URI_V2
+from openbadges_context import OPENBADGES_CONTEXT_V2_URI
 
 from testfiles.test_components import test_components
 
@@ -99,11 +99,31 @@ class NodeStorageTests(unittest.TestCase):
         self.assertEqual(second_node['c'], 3)
 
 
+class NodeUpdateTests(unittest.TestCase):
+    def test_patch_node(self):
+        first_node = {'id': '_:b0', 'name': 'One'}
+        second_node = {'id': '_:b1', 'name': 'Two'}
+
+        action = patch_node(first_node['id'], {'name': 'New One'})
+        state = graph_reducer([first_node, second_node], action)
+
+        self.assertEqual(len(state), 2)
+        updated_node = get_node_by_id({'graph': state}, first_node['id'])
+        self.assertEqual(updated_node['name'], 'New One')
+
+    def test_update_node_id(self):
+        """
+        TODO: allow ability to update a node id, replacing all references to that
+        id in other nodes with the new id
+        """
+        pass
+
+
 class JsonLdCompactTests(unittest.TestCase):
     def setUpContextCache(self):
         data = test_components['openbadges_context']
         responses.add(
-            responses.GET, OPENBADGES_CONTEXT_URI_V2,
+            responses.GET, OPENBADGES_CONTEXT_V2_URI,
             body=data, status=200, content_type='application/ld+json'
         )
 
