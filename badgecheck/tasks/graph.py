@@ -4,8 +4,8 @@ import requests
 
 from ..actions.graph import add_node
 from ..actions.tasks import add_task
+from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..util import CachableDocumentLoader
-from openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from task_types import (DETECT_AND_VALIDATE_NODE_CLASS, JSONLD_COMPACT_DATA,
                         VALIDATE_EXPECTED_NODE_CLASS,)
 from utils import task_result

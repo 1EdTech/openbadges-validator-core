@@ -12,8 +12,9 @@ from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 from badgecheck.reducers import main_reducer
 from badgecheck.state import filter_active_tasks, INITIAL_STATE
 from badgecheck.tasks import task_named
-from badgecheck.tasks.validation import (criteria_property_dependencies, detect_and_validate_node_class,
-                                         OBClasses, PrimitiveValueValidator, validate_property, ValueTypes,)
+from badgecheck.tasks.validation import (_get_validation_actions, criteria_property_dependencies,
+                                         detect_and_validate_node_class, OBClasses, PrimitiveValueValidator,
+                                         validate_property, ValueTypes,)
 from badgecheck.tasks.task_types import (CRITERIA_PROPERTY_DEPENDENCIES, DETECT_AND_VALIDATE_NODE_CLASS,
                                          IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_RDF_TYPE_PROPERTY,
                                          VALIDATE_PROPERTY,)
@@ -900,6 +901,29 @@ class ClassValidationTaskTests(unittest.TestCase):
 
         self._run(task, True, 'Single embedded complete alignment node passes', test_task=None)
 
+    def test_basic_badgeclass_validation(self):
+        first_node = {
+            '@context': OPENBADGES_CONTEXT_V2_DICT,
+            'id': 'http://example.com/badgeclass',
+            'type': 'BadgeClass',
+            'name': 'Test Badge',
+            'description': 'A badge of learning',
+            'image': 'http://example.com/badgeimage',
+            'criteria': '_:b0',
+            'issuer': 'http://example.com/issuer',
+            'tags': ['important', 'learning']
+        }
+        second_node = {'id': '_:b0', 'narrative': 'Do the important learning.'}
+        state = {'graph': [first_node, second_node]}
+
+        actions = _get_validation_actions(first_node['id'], OBClasses.BadgeClass)
+        results = []
+        for action in actions:
+            if action['type'] == 'ADD_TASK':
+                results.append(
+                    task_named(action['name'])(state, action)
+                )
+        self.assertTrue(all(i[0] for i in results))
 
 class RdfTypeValidationTests(unittest.TestCase):
     @responses.activate

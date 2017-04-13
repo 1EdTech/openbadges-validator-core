@@ -262,7 +262,7 @@ def validate_property(state, task_meta):
                         raise ValidationError(
                             'Node {} has {} property value `{}` that appears not to be in URI format'.format(
                                 node_id, prop_name, abbreviate_value(val)
-                            ))
+                            ) + ' or did not correspond to a known local node.')
                     actions.append(
                         add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=val,
                                  expected_class=task_meta.get('expected_class')))
@@ -349,7 +349,7 @@ class ClassValidators(OBClasses):
                     'required': True, 'allow_remote_url': True},
                 {'prop_name': 'alignment', 'prop_type': ValueTypes.ID,
                    'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, 'required': False},
-                # TODO: {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
+                {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
             )
         elif class_name == OBClasses.Profile:
             # To start, required values will assume the Profile class is used as BadgeClass.issuer

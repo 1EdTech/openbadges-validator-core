@@ -5,6 +5,7 @@ from pydux import create_store
 from badgecheck.reducers import main_reducer
 from badgecheck.actions.tasks import add_task, resolve_task
 from badgecheck.reducers.tasks import _new_state_with_updated_item
+from badgecheck.tasks.utils import abbreviate_value
 from badgecheck.state import INITIAL_STATE, filter_active_tasks
 
 
@@ -44,3 +45,19 @@ class TaskActionTests(unittest.TestCase):
         initial = [{'id': 1}, {'id': 2}, {'id': 3}]
         updated = _new_state_with_updated_item(initial, 2, {'id': 2, 'foo': 'bar'})
         self.assertEqual(updated[1].get('foo'), 'bar')
+
+
+class TaskUtilsTests(unittest.TestCase):
+    def test_abbreviate_values(self):
+        def chars(length):
+            return ''.join(['a' for _ in range(length)])
+
+        self.assertEqual(abbreviate_value('abc'), 'abc')
+        self.assertEqual(abbreviate_value(chars(47)), chars(47))
+        self.assertEqual(abbreviate_value(chars(48)), chars(48) + '...')
+
+        test_list = ['interesting', 'entries']
+        self.assertEqual(abbreviate_value(test_list), 'interesting, entries')
+        self.assertEqual(abbreviate_value(['interesting']), 'interesting')
+        self.assertEqual(abbreviate_value(['interesting', 1]), 'interesting, 1')
+        self.assertEqual(abbreviate_value([{'a': 'b'}, 'interesting']), "{'a': 'b'}, interesting")

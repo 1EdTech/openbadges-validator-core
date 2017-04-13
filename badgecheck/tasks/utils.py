@@ -22,7 +22,7 @@ def is_null_list(value):
 
 def abbreviate_value(value):
     if isinstance(value, (tuple, list)):
-        value = ', '.join(str(value))
+        value = ', '.join([str(val) for val in value])
 
     if len(str(value)) < 48:
         return str(value)
