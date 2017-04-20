@@ -1,3 +1,5 @@
+from .utils import cast_as_list
+
 INITIAL_STATE = {
     'input': {},
     'graph': [],
@@ -7,7 +9,22 @@ INITIAL_STATE = {
 
 # Tasks
 def filter_active_tasks(state):
-    return [t for t in state.get('tasks') if not t.get('complete')]
+    tasks = state.get('tasks')
+
+    def _task_is_ready(task):
+        # Return True if task is not complete and task has no unfulfilled prerequisites
+        if task.get('complete'):
+            return False
+
+        prerequisites = cast_as_list(task.get('prerequisites', []))
+        for prereq in prerequisites:
+            prereq_tasks = [pt for pt in tasks if pt.get('name') == prereq]
+            if not prereq_tasks or not all(task.get('complete') for task in prereq_tasks):
+                return False
+
+        return True
+
+    return [t for t in tasks if _task_is_ready(t)]
 
 
 def filter_failed_tasks(state):

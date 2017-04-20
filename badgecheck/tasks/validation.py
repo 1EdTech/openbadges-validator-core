@@ -8,13 +8,12 @@ from ..actions.graph import patch_node
 from ..actions.tasks import add_task
 from ..exceptions import ValidationError
 from ..state import get_node_by_id
-from ..util import jsonld_use_cache
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 
-from .task_types import (CLASS_VALIDATION_TASKS, CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
-                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
-                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,)
-
+from .task_types import (ASSERTION_VERIFICATION_DEPENDENCIES, CLASS_VALIDATION_TASKS,
+                         CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE, HOSTED_ID_IN_VERIFICATION_SCOPE,
+                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, ISSUER_PROPERTY_DEPENDENCIES,
+                         VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,)
 from .utils import abbreviate_value, is_empty_list, is_null_list, task_result
 
 
@@ -31,6 +30,9 @@ class OBClasses(object):
     Profile = 'Profile'
     RevocationList = 'RevocationList'
     VerificationObject = 'VerificationObject'
+
+    VerificationObjectAssertion = 'VerificationObjectAssertion'
+    VerificationObjectIssuer = 'VerificationObjectIssuer'
 
     ALL_CLASSES = (AlignmentObject, Assertion, BadgeClass, Criteria, CryptographicKey,
                    Extension, Evidence, IdentityObject, Image, Profile, RevocationList,
@@ -325,14 +327,15 @@ class ClassValidators(OBClasses):
                     'expected_class': OBClasses.IdentityObject, 'required': True},
                 {'prop_name': 'badge', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.BadgeClass, 'fetch': True, 'required': True},
-                # TODO: {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
-                #   'expected_class': OBClasses.VerificationObject, 'required': True},
+                {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
+                    'expected_class': OBClasses.VerificationObjectAssertion, 'required': True},
                 {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
                 {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
                 {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 {'prop_name': 'evidence', 'prop_type': ValueTypes.ID, 'allow_remote_url': True,
                     'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, 'required': False},
+                {'task_type': ASSERTION_VERIFICATION_DEPENDENCIES, 'prerequisites': ISSUER_PROPERTY_DEPENDENCIES}
             )
         elif class_name == OBClasses.BadgeClass:
             self.validators = (
@@ -366,10 +369,11 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},  # TODO: Add ValueTypes.TELEPHONE
                 # TODO: {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
-                # TODO: {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
-                #   'expected_class': OBClasses.VerificationObject, 'fetch': False, 'required': False},
+                {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
+                   'expected_class': OBClasses.VerificationObjectIssuer, 'fetch': False, 'required': False},
                 # TODO: {'prop_name': 'revocationList', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.Revocationlist, 'fetch': True, 'required': False},  # TODO: Fetch only for relevant assertions?
+                {'task_type': ISSUER_PROPERTY_DEPENDENCIES}
             )
         elif class_name == OBClasses.AlignmentObject:
             self.validators = (
@@ -411,11 +415,27 @@ class ClassValidators(OBClasses):
             )
         elif class_name == OBClasses.Image:
             self.validators = (
-                # TODO: {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
-                #   'required': False, 'default': 'schema:ImageObject'}
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'many': True,
+                    'required': False, 'default': 'schema:ImageObject'},
                 {'prop_name': 'id', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
                 {'prop_name': 'caption', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'author', 'prop_type': ValueTypes.IRI, 'required': False}
+            )
+        elif class_name == OBClasses.VerificationObjectAssertion:
+            self.validators = (
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True, 'many': False,
+                    'must_contain_one': ['HostedBadge', 'SignedBadge']},
+                # {'prop_name': 'creator', 'prop_type': ValueTypes.ID,
+                #     'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
+            )
+        elif class_name == OBClasses.VerificationObjectIssuer:
+            self.validators = (
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False, 'many': True,
+                    'default': 'VerificationObject'},
+                {'prop_name': 'verificationProperty', 'prop_type': ValueTypes.IRI, 'required': False},  # TODO: set default?
+                {'prop_name': 'startsWith', 'prop_type': ValueTypes.URL, 'required': False},
+                {'prop_name': 'allowedOrigins', 'prop_type': ValueTypes.TEXT, 'required': False,
+                 'many': True}  # TODO: Add Origin type?
             )
         else:
             raise NotImplementedError("Chosen OBClass not implemented yet.")
@@ -521,3 +541,28 @@ def criteria_property_dependencies(state, task_meta):
     # Case to handle no narrative but other props preventing compaction down to simple id string:
     # {'id': 'http://example.com/1', 'name': 'Criteria Name'}
     return task_result(True, "Criteria node {} has a URL.")
+
+
+def assertion_verification_dependencies(state, task_meta):
+    """
+    Performs and/or queues some security checks for hosted assertions.
+    """
+    assertion_id = task_meta.get('node_id')
+    assertion_node = get_node_by_id(state, assertion_id)
+    node_id = assertion_node.get('verification')
+    node = get_node_by_id(state, node_id)
+    actions = []
+
+    if node.get('type') == 'HostedBadge':
+        actions.append(add_task(HOSTED_ID_IN_VERIFICATION_SCOPE, node_id=assertion_id))
+
+    return task_result(
+        True, '{} Assertion {} verification dependencies noted.'.format(
+            node.get('type'), node_id),
+        actions
+    )
+
+
+def issuer_property_dependencies(state, task_meta):
+    # Placeholder task used as prerequisite for hosted id check
+    return task_result(True, "No issuer property dependencies to check.")

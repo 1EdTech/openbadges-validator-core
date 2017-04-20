@@ -3,7 +3,7 @@ from pyld import jsonld
 import responses
 import unittest
 
-from badgecheck.util import CachableDocumentLoader
+from badgecheck.utils import CachableDocumentLoader
 
 from testfiles.test_components import test_components
 from utils import setUpContextMock
