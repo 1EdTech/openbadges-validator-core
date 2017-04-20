@@ -15,9 +15,10 @@ from badgecheck.tasks import task_named
 from badgecheck.tasks.validation import (_get_validation_actions, criteria_property_dependencies,
                                          detect_and_validate_node_class, OBClasses, PrimitiveValueValidator,
                                          validate_property, ValueTypes,)
+from badgecheck.tasks.verification import (_default_verification_policy, hosted_id_in_verification_scope,)
 from badgecheck.tasks.task_types import (CRITERIA_PROPERTY_DEPENDENCIES, DETECT_AND_VALIDATE_NODE_CLASS,
-                                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_RDF_TYPE_PROPERTY,
-                                         VALIDATE_PROPERTY,)
+                                         HOSTED_ID_IN_VERIFICATION_SCOPE, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
+                                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,)
 
 from badgecheck.verifier import call_task
 
@@ -1036,3 +1037,60 @@ class RdfTypeValidationTests(unittest.TestCase):
         first_node['type'] = 'Assertion'
         result, message, actions = task_named(task_meta['name'])(state, task_meta)
         self.assertTrue(result, 'The exact string match between must_contain_one and type passes.')
+
+
+class VerificationObjectValiationTests(unittest.TestCase):
+    def test_hosted_verification_object_in_assertion(self):
+        assertion = {
+            'type': 'Assertion',
+            'id': 'http://example.com/assertion',
+            'verification': '_:b0',
+            'badge': 'http://example.com/badgeclass'
+        }
+        verification = {
+            'id': '_:b0',
+            'type': 'HostedBadge'
+        }
+        badge = {
+            'id': 'http://example.com/badgeclass',
+            'issuer': 'http://example.com/issuer'
+        }
+        issuer = {
+            'id': 'http://example.com/issuer',
+            'verification': '_:b1'
+        }
+        issuer_verification = {
+            'id': '_:b1',
+            'allowedOrigins': 'example.com'
+        }
+        state = {'graph': [assertion, verification, badge, issuer, issuer_verification]}
+        task_meta = add_task(HOSTED_ID_IN_VERIFICATION_SCOPE, node_id=assertion['id'])
+
+        result, message, actions = hosted_id_in_verification_scope(state, task_meta)
+        self.assertTrue(result)
+
+        # Use default value for allowedOrigins:
+        del issuer_verification['allowedOrigins']
+        result, message, actions = hosted_id_in_verification_scope(state, task_meta)
+        self.assertTrue(result)
+
+        # Ensure startsWith is used if present
+        issuer_verification['startsWith'] = 'http://example.com/'
+        result, message, actions = hosted_id_in_verification_scope(state, task_meta)
+        self.assertTrue(result)
+        issuer_verification['startsWith'] = 'http://example.com/NOT'
+        result, message, actions = hosted_id_in_verification_scope(state, task_meta)
+        self.assertFalse(result)
+
+        # Handle multiple declared values for allowedOrigins
+        issuer_verification['startsWith'] = ['http://example.com/NOT', 'http://example.com/ALSONOT']
+        result, message, actions = hosted_id_in_verification_scope(state, task_meta)
+        self.assertFalse(result)
+        issuer_verification['startsWith'] = ['http://example.com/NOT', 'http://example.com/assert']
+        result, message, actions = hosted_id_in_verification_scope(state, task_meta)
+        self.assertTrue(result)
+
+        # Use default policy
+        del issuer['verification']
+        result, message, actions = hosted_id_in_verification_scope(state, task_meta)
+        self.assertTrue(result)

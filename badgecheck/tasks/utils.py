@@ -20,6 +20,12 @@ def is_null_list(value):
     return isinstance(value, (tuple, list,)) and all(val is None for val in value)
 
 
+def cast_as_list(value):
+    if isinstance(value, list):
+        return value
+    return [value]
+
+
 def abbreviate_value(value):
     if isinstance(value, (tuple, list)):
         value = ', '.join([str(val) for val in value])
