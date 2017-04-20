@@ -1,8 +1,9 @@
 import rfc3986
 
 from ..state import get_node_by_id
+from ..utils import cast_as_list
 
-from .utils import abbreviate_value, cast_as_list, task_result
+from .utils import abbreviate_value, task_result
 
 
 def _default_allowed_origins_for_issuer_id(issuer_id):
@@ -49,7 +50,7 @@ def hosted_id_in_verification_scope(state, task_meta):
         )
 
     return task_result(
-        True, 'Assertion {} origin matches allowed value in {}.'.format(
+        True, 'Assertion {} origin matches allowed value in issuer verification policy {}.'.format(
             abbreviate_value(assertion_id), abbreviate_value(allowed_origins))
     )
 

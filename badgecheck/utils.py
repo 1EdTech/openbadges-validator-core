@@ -50,3 +50,9 @@ class CachableDocumentLoader(object):
 
 jsonld_use_cache = {'documentLoader': CachableDocumentLoader(cachable=True)}
 jsonld_no_cache = {'documentLoader': CachableDocumentLoader(cachable=False)}
+
+
+def cast_as_list(value):
+    if isinstance(value, list):
+        return value
+    return [value]

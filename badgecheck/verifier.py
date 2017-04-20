@@ -1,10 +1,10 @@
 from pydux import create_store
 
-from actions.input import store_input
-from actions.tasks import add_task, resolve_task
-from exceptions import SkipTask
-from reducers import main_reducer
-from state import filter_active_tasks, INITIAL_STATE
+from .actions.input import store_input
+from .actions.tasks import add_task, resolve_task
+from .exceptions import SkipTask
+from .reducers import main_reducer
+from .state import filter_active_tasks, INITIAL_STATE
 import tasks
 
 

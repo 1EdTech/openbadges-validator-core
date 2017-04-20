@@ -8,14 +8,12 @@ from ..actions.graph import patch_node
 from ..actions.tasks import add_task
 from ..exceptions import ValidationError
 from ..state import get_node_by_id
-from ..util import jsonld_use_cache
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 
 from .task_types import (ASSERTION_VERIFICATION_DEPENDENCIES, CLASS_VALIDATION_TASKS,
                          CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE, HOSTED_ID_IN_VERIFICATION_SCOPE,
                          IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, ISSUER_PROPERTY_DEPENDENCIES,
                          VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,)
-
 from .utils import abbreviate_value, is_empty_list, is_null_list, task_result
 
 
@@ -337,6 +335,7 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 {'prop_name': 'evidence', 'prop_type': ValueTypes.ID, 'allow_remote_url': True,
                     'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, 'required': False},
+                {'task_type': ASSERTION_VERIFICATION_DEPENDENCIES, 'prerequisites': ISSUER_PROPERTY_DEPENDENCIES}
             )
         elif class_name == OBClasses.BadgeClass:
             self.validators = (
@@ -426,9 +425,8 @@ class ClassValidators(OBClasses):
             self.validators = (
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True, 'many': False,
                     'must_contain_one': ['HostedBadge', 'SignedBadge']},
-                # {'prop_name': 'issuer', 'prop_type': ValueTypes.ID,
+                # {'prop_name': 'creator', 'prop_type': ValueTypes.ID,
                 #     'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
-                {'task_type': ASSERTION_VERIFICATION_DEPENDENCIES}
             )
         elif class_name == OBClasses.VerificationObjectIssuer:
             self.validators = (
@@ -549,12 +547,22 @@ def assertion_verification_dependencies(state, task_meta):
     """
     Performs and/or queues some security checks for hosted assertions.
     """
-    node_id = task_meta.get('node_id')
+    assertion_id = task_meta.get('node_id')
+    assertion_node = get_node_by_id(state, assertion_id)
+    node_id = assertion_node.get('verification')
     node = get_node_by_id(state, node_id)
     actions = []
 
     if node.get('type') == 'HostedBadge':
-        actions.append(add_task(HOSTED_ID_IN_VERIFICATION_SCOPE, node_id=node_id))
+        actions.append(add_task(HOSTED_ID_IN_VERIFICATION_SCOPE, node_id=assertion_id))
 
     return task_result(
-        True, '{} Assertion {} verification dependencies noted.'.format(node.get('type'), node_id))
+        True, '{} Assertion {} verification dependencies noted.'.format(
+            node.get('type'), node_id),
+        actions
+    )
+
+
+def issuer_property_dependencies(state, task_meta):
+    # Placeholder task used as prerequisite for hosted id check
+    return task_result(True, "No issuer property dependencies to check.")
