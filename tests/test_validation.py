@@ -1,8 +1,8 @@
 # coding=utf-8
 from datetime import datetime, timedelta
-from dateutil.tz import tzutc
 import json
 from pyld import jsonld
+from pytz import utc
 from pydux import create_store
 import responses
 import unittest
@@ -1101,7 +1101,7 @@ class VerificationObjectValiationTests(unittest.TestCase):
 
 class AssertionTimeStampValidationTests(unittest.TestCase):
     def test_assertion_not_expired(self):
-        machine_time_now = datetime.now(tzutc())
+        machine_time_now = datetime.now(utc)
         an_hour_ago = machine_time_now - timedelta(hours=1)
         two_hours_ago = an_hour_ago - timedelta(hours=1)
 
@@ -1122,7 +1122,7 @@ class AssertionTimeStampValidationTests(unittest.TestCase):
 
 
     def test_assertion_not_expires_before_issue(self):
-        machine_time_now = datetime.now(tzutc())
+        machine_time_now = datetime.now(utc)
         an_hour_ago = machine_time_now - timedelta(hours=1)
         two_hours_ago = an_hour_ago - timedelta(hours=1)
 
@@ -1139,7 +1139,7 @@ class AssertionTimeStampValidationTests(unittest.TestCase):
         self.assertTrue('expiration is prior to issue date' in message)
 
     def test_assertion_not_issued_in_future(self):
-        machine_time_now = datetime.now(tzutc())
+        machine_time_now = datetime.now(utc)
         an_hour_future = machine_time_now + timedelta(hours=1)
 
         assertion = {

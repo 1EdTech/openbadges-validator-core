@@ -1,7 +1,7 @@
 import aniso8601
 from datetime import datetime
-from dateutil.tz import tzutc
 from pyld import jsonld
+from pytz import utc
 import re
 import rfc3986
 import six
@@ -575,7 +575,7 @@ def assertion_timestamp_checks(state, task_meta):
     except (IndexError, KeyError, ValueError,):
         raise TaskPrerequisitesError(task_meta)
 
-    now = datetime.now(tzutc())
+    now = datetime.now(utc)
     if issued_on > now:
         return task_result(
             False, "Assertion {} has issue date {} in the future.".format(node_id, issued_on))
