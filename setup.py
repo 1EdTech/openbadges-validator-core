@@ -44,6 +44,7 @@ setup(
         'aniso8601>=1.2.0',
         'pydux==0.2.1',
         'PyLD==0.7.1',
+        'pytz==2017.2',
         'requests >= 2.13',
         'rfc3986==0.4.1',
         'validators==0.11.2',

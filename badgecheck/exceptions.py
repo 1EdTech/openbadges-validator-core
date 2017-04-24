@@ -10,6 +10,14 @@ class SkipTask(Exception):
     pass
 
 
+class TaskPrerequisitesError(Exception):
+    """
+    This exception indicates that the present task has prerequisites better
+    expressed in other tasks that were not met in order to run.
+    """
+    pass
+
+
 class ValidationError(Exception):
     """
     This exception is used in tasks to indicate that a requirement has not been met.
