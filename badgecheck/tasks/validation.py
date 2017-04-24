@@ -1,4 +1,6 @@
 import aniso8601
+from datetime import datetime
+from dateutil.tz import tzutc
 from pyld import jsonld
 import re
 import rfc3986
@@ -6,14 +8,15 @@ import six
 
 from ..actions.graph import patch_node
 from ..actions.tasks import add_task
-from ..exceptions import ValidationError
+from ..exceptions import TaskPrerequisitesError, ValidationError
 from ..state import get_node_by_id
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 
-from .task_types import (ASSERTION_VERIFICATION_DEPENDENCIES, CLASS_VALIDATION_TASKS,
-                         CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE, HOSTED_ID_IN_VERIFICATION_SCOPE,
-                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, ISSUER_PROPERTY_DEPENDENCIES,
-                         VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,)
+from .task_types import (ASSERTION_TIMESTAMP_CHECKS, ASSERTION_VERIFICATION_DEPENDENCIES,
+                         CLASS_VALIDATION_TASKS, CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
+                         HOSTED_ID_IN_VERIFICATION_SCOPE, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
+                         ISSUER_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
+                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,)
 from .utils import abbreviate_value, is_empty_list, is_null_list, task_result
 
 
@@ -335,7 +338,8 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 {'prop_name': 'evidence', 'prop_type': ValueTypes.ID, 'allow_remote_url': True,
                     'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, 'required': False},
-                {'task_type': ASSERTION_VERIFICATION_DEPENDENCIES, 'prerequisites': ISSUER_PROPERTY_DEPENDENCIES}
+                {'task_type': ASSERTION_VERIFICATION_DEPENDENCIES, 'prerequisites': ISSUER_PROPERTY_DEPENDENCIES},
+                {'task_type': ASSERTION_TIMESTAMP_CHECKS}
             )
         elif class_name == OBClasses.BadgeClass:
             self.validators = (
@@ -561,6 +565,34 @@ def assertion_verification_dependencies(state, task_meta):
             node.get('type'), node_id),
         actions
     )
+
+
+def assertion_timestamp_checks(state, task_meta):
+    try:
+        node_id = task_meta['node_id']
+        assertion = get_node_by_id(state, node_id)
+        issued_on = aniso8601.parse_datetime(assertion['issuedOn'])
+    except (IndexError, KeyError, ValueError,):
+        raise TaskPrerequisitesError(task_meta)
+
+    now = datetime.now(tzutc())
+    if issued_on > now:
+        return task_result(
+            False, "Assertion {} has issue date {} in the future.".format(node_id, issued_on))
+
+    if assertion.get('expires'):
+        expires = aniso8601.parse_datetime(assertion['expires'])
+        if expires < issued_on:
+            return task_result(
+                False, "Assertion {} expiration is prior to issue date.".format(node_id))
+
+        if expires < now :
+            return task_result(
+                False, "Assertion {} expired on {}".format(node_id, assertion['expires'])
+            )
+
+    return task_result(
+        True, "Assertion {} was issued and has not expired.".format(node_id))
 
 
 def issuer_property_dependencies(state, task_meta):

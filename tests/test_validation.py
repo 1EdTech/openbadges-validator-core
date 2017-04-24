@@ -1,4 +1,6 @@
 # coding=utf-8
+from datetime import datetime, timedelta
+from dateutil.tz import tzutc
 import json
 from pyld import jsonld
 from pydux import create_store
@@ -12,18 +14,19 @@ from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 from badgecheck.reducers import main_reducer
 from badgecheck.state import filter_active_tasks, INITIAL_STATE
 from badgecheck.tasks import task_named
-from badgecheck.tasks.validation import (_get_validation_actions, criteria_property_dependencies,
-                                         detect_and_validate_node_class, OBClasses, PrimitiveValueValidator,
-                                         validate_property, ValueTypes,)
+from badgecheck.tasks.validation import (_get_validation_actions, assertion_timestamp_checks,
+                                         criteria_property_dependencies, detect_and_validate_node_class,
+                                         OBClasses, PrimitiveValueValidator, validate_property, ValueTypes,)
 from badgecheck.tasks.verification import (_default_verification_policy, hosted_id_in_verification_scope,)
-from badgecheck.tasks.task_types import (CRITERIA_PROPERTY_DEPENDENCIES, DETECT_AND_VALIDATE_NODE_CLASS,
-                                         HOSTED_ID_IN_VERIFICATION_SCOPE, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
-                                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,)
+from badgecheck.tasks.task_types import (ASSERTION_TIMESTAMP_CHECKS, CRITERIA_PROPERTY_DEPENDENCIES,
+                                         DETECT_AND_VALIDATE_NODE_CLASS, HOSTED_ID_IN_VERIFICATION_SCOPE,
+                                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_RDF_TYPE_PROPERTY,
+                                         VALIDATE_PROPERTY,)
 
 from badgecheck.verifier import call_task
 
 from testfiles.test_components import test_components
-from utils import setUpContextMock
+from tests.utils import setUpContextMock
 
 
 class PropertyValidationTests(unittest.TestCase):
@@ -1094,3 +1097,58 @@ class VerificationObjectValiationTests(unittest.TestCase):
         del issuer['verification']
         result, message, actions = hosted_id_in_verification_scope(state, task_meta)
         self.assertTrue(result)
+
+
+class AssertionTimeStampValidationTests(unittest.TestCase):
+    def test_assertion_not_expired(self):
+        machine_time_now = datetime.now(tzutc())
+        an_hour_ago = machine_time_now - timedelta(hours=1)
+        two_hours_ago = an_hour_ago - timedelta(hours=1)
+
+        assertion = {
+            'id': 'http://example.com/assertion',
+            'issuedOn': two_hours_ago.isoformat()
+        }
+        state = {'graph': [assertion]}
+        task_meta = add_task(ASSERTION_TIMESTAMP_CHECKS, node_id=assertion['id'])
+
+        result, message, actions = assertion_timestamp_checks(state, task_meta)
+        self.assertTrue(result)
+
+        assertion['expires'] = an_hour_ago.isoformat()
+
+        result, message, actions = assertion_timestamp_checks(state, task_meta)
+        self.assertFalse(result)
+
+
+    def test_assertion_not_expires_before_issue(self):
+        machine_time_now = datetime.now(tzutc())
+        an_hour_ago = machine_time_now - timedelta(hours=1)
+        two_hours_ago = an_hour_ago - timedelta(hours=1)
+
+        assertion = {
+            'id': 'http://example.com/assertion',
+            'issuedOn': an_hour_ago.isoformat(),
+            'expires': two_hours_ago.isoformat()
+        }
+        state = {'graph': [assertion]}
+        task_meta = add_task(ASSERTION_TIMESTAMP_CHECKS, node_id=assertion['id'])
+
+        result, message, actions = assertion_timestamp_checks(state, task_meta)
+        self.assertFalse(result, "Assertion that expires before issue should not be accepted.")
+        self.assertTrue('expiration is prior to issue date' in message)
+
+    def test_assertion_not_issued_in_future(self):
+        machine_time_now = datetime.now(tzutc())
+        an_hour_future = machine_time_now + timedelta(hours=1)
+
+        assertion = {
+            'id': 'http://example.com/assertion',
+            'issuedOn': an_hour_future.isoformat()
+        }
+        state = {'graph': [assertion]}
+        task_meta = add_task(ASSERTION_TIMESTAMP_CHECKS, node_id=assertion['id'])
+
+        result, message, actions = assertion_timestamp_checks(state, task_meta)
+        self.assertFalse(result, "Assertion issued in the future should not be accepted.")
+        self.assertTrue('future in ')
