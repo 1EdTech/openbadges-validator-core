@@ -551,10 +551,14 @@ def assertion_verification_dependencies(state, task_meta):
     """
     Performs and/or queues some security checks for hosted assertions.
     """
-    assertion_id = task_meta.get('node_id')
-    assertion_node = get_node_by_id(state, assertion_id)
-    node_id = assertion_node.get('verification')
-    node = get_node_by_id(state, node_id)
+    try:
+        assertion_id = task_meta['node_id']
+        assertion_node = get_node_by_id(state, assertion_id)
+        node_id = assertion_node['verification']
+        node = get_node_by_id(state, node_id)
+    except (IndexError, KeyError,):
+        raise TaskPrerequisitesError()
+
     actions = []
 
     if node.get('type') == 'HostedBadge':

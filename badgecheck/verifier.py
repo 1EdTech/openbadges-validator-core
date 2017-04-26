@@ -2,7 +2,7 @@ from pydux import create_store
 
 from .actions.input import store_input
 from .actions.tasks import add_task, resolve_task
-from .exceptions import SkipTask
+from .exceptions import SkipTask, TaskPrerequisitesError
 from .reducers import main_reducer
 from .state import (filter_active_tasks, filter_failed_tasks, format_message,
                     INITIAL_STATE, MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING,)
@@ -24,6 +24,9 @@ def call_task(task_func, task_meta, store):
     except SkipTask:
         # TODO: Implement skip handling.
         pass
+    except TaskPrerequisitesError:
+        message = "Task could not run due to unmet prerequisites."
+        store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
     except Exception as e:
         message = "{} {}".format(e.__class__, e.message)
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))

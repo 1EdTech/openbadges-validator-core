@@ -24,10 +24,11 @@ def _flatten_node(node, node_id=None):
             node[prop] = prop_id
         elif isinstance(node[prop], list):
             current_list = node[prop]
-            for index in [i for i in range(len(current_list)) if isinstance(current_list[i], dict)]:
-                prop_id = current_list[i].get('id', _get_next_blank_node_id())
+            dict_indices = [i for i in range(len(current_list)) if isinstance(current_list[i], dict)]
+            for index in dict_indices:
+                prop_id = current_list[index].get('id', _get_next_blank_node_id())
                 node_list.extend(_flatten_node(current_list[index], prop_id))
-                current_list[i] = prop_id
+                current_list[index] = prop_id
 
     node_list.append(node)
     return node_list

@@ -51,6 +51,8 @@ class InitializationTests(unittest.TestCase):
     # def debug_live_badge_verification(self):
     #     """
     #     Developers: Uncomment this test to run a quick verification check in your debugger.
+    #     Because this test method name doesn't start with 'test', it will not be automatically run
+    #     even when uncommented.
     #     """
     #     results = verify(
     #         'http://NOTAVALIDURL.COM')
