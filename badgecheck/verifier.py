@@ -4,7 +4,8 @@ from .actions.input import store_input
 from .actions.tasks import add_task, resolve_task
 from .exceptions import SkipTask
 from .reducers import main_reducer
-from .state import filter_active_tasks, INITIAL_STATE
+from .state import (filter_active_tasks, filter_failed_tasks, format_message,
+                    INITIAL_STATE, MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING,)
 import tasks
 
 
@@ -25,9 +26,9 @@ def call_task(task_func, task_meta, store):
         pass
     except Exception as e:
         message = "{} {}".format(e.__class__, e.message)
-        store.dispatch(resolve_task(task_meta.get('id'), success=False, result=message))
+        store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
     else:
-        store.dispatch(resolve_task(task_meta.get('id'), success=success, result=message))
+        store.dispatch(resolve_task(task_meta.get('task_id'), success=success, result=message))
 
     # Make updates and queue up next tasks.
     for action in actions:
@@ -51,10 +52,24 @@ def verify(badge_input):
         task_meta = active_tasks[0]
         task_func = tasks.task_named(task_meta['name'])
 
-        if task_meta['id'] == last_task_id:
+        if task_meta['task_id'] == last_task_id:
             break
 
-        last_task_id = task_meta['id']
+        last_task_id = task_meta['task_id']
         call_task(task_func, task_meta, store)
 
-    return store.get_state()
+    state = store.get_state()
+    failed_tasks = filter_failed_tasks(state)
+    ret = {
+        'messages': [],
+        'graph': state['graph'],
+        'input': state['input']
+    }
+    for task in failed_tasks:
+        ret['messages'].append(format_message(task))
+
+    ret['errorCount'] = len([m for m in ret['messages'] if m['messageLevel'] == MESSAGE_LEVEL_ERROR])
+    ret['warningCount'] = len([m for m in ret['messages'] if m['messageLevel'] == MESSAGE_LEVEL_WARNING])
+    ret['valid'] = not bool(ret['errorCount'])
+
+    return ret

@@ -122,7 +122,6 @@ class PropertyValidationTaskTests(unittest.TestCase):
             prop_type=ValueTypes.TEXT,
             required=False
         )
-        task['id'] = 1
 
         result, message, actions = validate_property(state, task)
         self.assertTrue(result, "Optional property is present and correct; validation should pass.")
@@ -167,7 +166,6 @@ class PropertyValidationTaskTests(unittest.TestCase):
             required=False,
             prop_type=ValueTypes.BOOLEAN
         )
-        task['id'] = 1
 
         result, message, actions = validate_property(state, task)
         self.assertTrue(result, "Optional property is not present; validation should pass.")
@@ -202,7 +200,6 @@ class PropertyValidationTaskTests(unittest.TestCase):
             required=True,
             prop_type=ValueTypes.IRI
         )
-        task['id'] = 1
 
         result, message, actions = validate_property(state, task)
         self.assertTrue(result)
@@ -226,7 +223,6 @@ class PropertyValidationTaskTests(unittest.TestCase):
             required=False,
             prop_type=ValueTypes.DATA_URI_OR_URL
         )
-        task['id'] = 1
 
         result, message, actions = validate_property(state, task)
         self.assertTrue(result, "Optional image_prop URI is present and well-formed; validation should pass.")
@@ -259,7 +255,6 @@ class PropertyValidationTaskTests(unittest.TestCase):
             required=False,
             prop_type=ValueTypes.URL
         )
-        task['id'] = 1
 
         result, message, actions = validate_property(state, task)
         self.assertTrue(result, "Optional URL prop is present and well-formed; validation should pass.")
@@ -386,10 +381,10 @@ class PropertyValidationTaskTests(unittest.TestCase):
             task_meta = active_tasks[0]
             task_func = task_named(task_meta['name'])
 
-            if task_meta['id'] == last_task_id:
+            if task_meta['task_id'] == last_task_id:
                 break
 
-            last_task_id = task_meta['id']
+            last_task_id = task_meta['task_id']
             call_task(task_func, task_meta, store)
 
         state = store.get_state()
