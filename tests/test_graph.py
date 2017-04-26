@@ -8,7 +8,7 @@ from badgecheck.reducers.graph import graph_reducer
 from badgecheck.state import get_node_by_id
 from badgecheck.tasks.graph import fetch_http_node, jsonld_compact_data
 from badgecheck.tasks.task_types import FETCH_HTTP_NODE, JSONLD_COMPACT_DATA
-from openbadges_context import OPENBADGES_CONTEXT_V2_URI
+from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
 
 from testfiles.test_components import test_components
 
