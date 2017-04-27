@@ -97,7 +97,6 @@ class IntegritySerializerV2(IntegritySerializer):
         ret = OrderedDict([
             ("@context", "https://badgecheck.io/public/context"),
             ("@type", "BadgeVerificationReport"),
-            ("request", dict(self.initial_data)),
             ("results", OrderedDict([
                 ("is_valid", instance.is_valid()),
                 ("version", instance.badge_instance.version),
