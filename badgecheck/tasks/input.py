@@ -46,7 +46,7 @@ def detect_input_type(state, task_meta=None):
     elif input_is_json(input_value):
         detected_type = 'json'
         new_actions.append(set_input_type(detected_type))
-    elif input_is_json(input_value):
+    elif input_is_jws(input_value):
         detected_type = 'jws'
         new_actions.append(set_input_type(detected_type))
     else:
