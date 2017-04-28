@@ -42,6 +42,7 @@ setup(
     ],
     install_requires=[
         'aniso8601>=1.2.0',
+        'jsonschema==2.6.0',
         'pydux==0.2.1',
         'PyLD==0.7.1',
         'pytz==2017.2',
