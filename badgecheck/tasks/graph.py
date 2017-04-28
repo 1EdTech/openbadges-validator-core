@@ -6,7 +6,7 @@ from ..actions.graph import add_node
 from ..actions.tasks import add_task
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..utils import CachableDocumentLoader
-from task_types import (DETECT_AND_VALIDATE_NODE_CLASS, JSONLD_COMPACT_DATA,
+from task_types import (DETECT_AND_VALIDATE_NODE_CLASS, EXTENSION_ANALYSIS, JSONLD_COMPACT_DATA,
                         VALIDATE_EXPECTED_NODE_CLASS,)
 from utils import task_result
 
@@ -41,7 +41,10 @@ def jsonld_compact_data(state, task_meta):
     # TODO: We should not necessarily trust this ID over the source URL
     node_id = result.get('id', task_meta.get('node_id'))
 
-    actions = [add_node(node_id, data=result)]
+    actions = [
+        add_node(node_id, data=result),
+        add_task(EXTENSION_ANALYSIS, node_id=node_id)
+    ]
 
     if task_meta.get('expected_class'):
         actions.append(
