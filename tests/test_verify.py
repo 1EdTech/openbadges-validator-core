@@ -45,5 +45,16 @@ class InitializationTests(unittest.TestCase):
         self.assertEqual(results.get('input').get('input_type'), 'url')
 
         self.assertEqual(
-            len([t for t in results['tasks'] if not t['success']]), 0,
+            len(results.get('messages')), 0,
             "There should be no failing tasks.")
+
+    # def debug_live_badge_verification(self):
+    #     """
+    #     Developers: Uncomment this test to run a quick verification check in your debugger.
+    #     Because this test method name doesn't start with 'test', it will not be automatically run
+    #     even when uncommented.
+    #     """
+    #     results = verify(
+    #         'http://NOTAVALIDURL.COM')
+    #
+    #     self.assertTrue(results['valid'])

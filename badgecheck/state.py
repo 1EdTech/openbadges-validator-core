@@ -6,6 +6,11 @@ INITIAL_STATE = {
     'tasks': []
 }
 
+MESSAGE_LEVEL_ERROR = 'ERROR'
+MESSAGE_LEVEL_WARNING = 'WARNING'
+MESSAGE_LEVEL_INFO = 'INFO'
+MESSAGE_LEVELS = (MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING, MESSAGE_LEVEL_INFO,)
+
 
 # Tasks
 def filter_active_tasks(state):
@@ -29,6 +34,24 @@ def filter_active_tasks(state):
 
 def filter_failed_tasks(state):
     return [t for t in state.get('tasks') if not t.get('success')]
+
+
+# Messages
+def format_message(task_meta):
+    ret = {
+        'name': task_meta.get('name'),
+        'success': task_meta.get('success', False),
+        'result': task_meta.get('result', ''),
+        'messageLevel': task_meta.get('messageLevel', MESSAGE_LEVEL_ERROR),
+    }
+    if task_meta.get('node_id'):
+        ret['node_id'] = task_meta['node_id']
+    if task_meta.get('prop_name'):
+        ret['prop_name'] = task_meta['prop_name']
+    if not task_meta.get('complete') and not ret['result']:
+        ret['result'] = 'Task could not execute.'
+
+    return ret
 
 
 # Graph

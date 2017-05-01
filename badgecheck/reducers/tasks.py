@@ -6,17 +6,17 @@ def task_reducer(state=None, action=None):
         state = []
         task_counter = 1
     else:
-        task_counter = state[-1]['id'] + 1
+        task_counter = state[-1]['task_id'] + 1
 
     if action.get('type') == ADD_TASK:
-        new_task = {'id': task_counter, 'complete': False}
+        new_task = {'task_id': task_counter, 'complete': False}
         for key in [k for k in action.keys() if k != 'type']:
             new_task[key] = action[key]
         return list(state) + [new_task]
 
     elif action.get('type') == RESOLVE_TASK:
         try:
-            task = [t for t in state if t['id'] == action['id']][0]
+            task = [t for t in state if t['task_id'] == action['task_id']][0]
         except KeyError:
             return state
         else:
@@ -26,18 +26,18 @@ def task_reducer(state=None, action=None):
                 'success': action.get('success'),
                 'result': action.get('result')
             })
-            return _new_state_with_updated_item(state, action['id'], update)
+            return _new_state_with_updated_item(state, action['task_id'], update)
 
     elif action.get('type') == UPDATE_TASK:
         try:
-            task = [t for t in state if t['id'] == action['id']][0]
+            task = [t for t in state if t['task_id'] == action['task_id']][0]
         except KeyError:
             return state
         else:
             update = task.copy()
-            for key in [k for k in action.keys() if k not in ('type', 'id',)]:
+            for key in [k for k in action.keys() if k not in ('type', 'task_id',)]:
                 update[key] = action[key]
-            return _new_state_with_updated_item(state, action['id'], update)
+            return _new_state_with_updated_item(state, action['task_id'], update)
 
 
     return state
@@ -46,7 +46,7 @@ def task_reducer(state=None, action=None):
 def _new_state_with_updated_item(state, item_id, update):
     new_state = []
     for i in range(0, len(state)):
-        if item_id != state[i].get('id'):
+        if item_id != state[i].get('task_id'):
             new_state.append(state[i])
         else:
             new_state.append(update)

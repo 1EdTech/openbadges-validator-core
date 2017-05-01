@@ -17,7 +17,7 @@ def add_task(task_name, **kwargs):
 def resolve_task(task_id, success=True, result=''):
     return {
         'type': RESOLVE_TASK,
-        'id': task_id,
+        'task_id': task_id,
         'success': success,
         'result': result
     }
@@ -26,7 +26,7 @@ def resolve_task(task_id, success=True, result=''):
 def delete_task(task_id):
     return {
         'type': DELETE_TASK,
-        'id': task_id
+        'task_id': task_id
     }
 
 
@@ -37,7 +37,7 @@ def update_task(task_id, task_name, **kwargs):
 
     task = {
         'type': UPDATE_TASK,
-        'id': task_id,
+        'task_id': task_id,
         'name': task_name,
     }
     task.update(**kwargs)
