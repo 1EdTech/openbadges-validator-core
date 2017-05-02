@@ -42,12 +42,14 @@ def call_task(task_func, task_meta, store):
 def verify(badge_input):
     """
     Verify and validate Open Badges
-    :param badge_input: str (url or json) or python file object (baked badge image)
+    :param badge_input: str (url or json) or python file-like object (baked badge image)
     :return: dict
     """
     store = create_store(main_reducer, INITIAL_STATE)
 
-    if isinstance(badge_input, file):
+    # is file-like
+    if hasattr(badge_input, 'read') and hasattr(badge_input, 'seek'):
+        badge_input.seek(0)
         badge_data = unbake(badge_input)
         if not badge_data:
             raise ValueError("Files as badge input must be baked images.")

@@ -8,6 +8,8 @@ from badgecheck import verify
 from badgecheck.reducers import main_reducer
 from badgecheck.state import INITIAL_STATE
 
+from openbadges_bakery import bake
+
 from testfiles.test_components import test_components
 
 
@@ -52,8 +54,7 @@ class InitializationTests(unittest.TestCase):
     @responses.activate
     def test_verify_of_baked_image(self):
         url = 'https://example.org/beths-robotics-badge.json'
-        # baked badge using the 2_0_basic_assertion as baked-in data
-        png_badge = os.path.join(os.path.dirname(__file__), 'testfiles', 'baked_heart.png')
+        png_badge = os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart.png')
         responses.add(
             responses.GET, url, body=test_components['2_0_basic_assertion'], status=200,
             content_type='application/ld+json'
@@ -74,12 +75,14 @@ class InitializationTests(unittest.TestCase):
             content_type='application/ld+json'
         )
 
-        with open(png_badge) as image:
-            results = verify(image)
+        with open(png_badge, 'rb') as image:
+            baked_image = bake(image, test_components['2_0_basic_assertion'])
+            results = verify(baked_image)
 
         # verify gets the JSON out of the baked image, and then detect_input_type
         # will reach out to the assertion URL to fetch the canonical assertion (thus,
         # we expect this to become an URL input type for the verifier).
+        self.assertNotEqual(results, None)
         self.assertEqual(results.get('input').get('value'), url)
         self.assertEqual(results.get('input').get('input_type'), 'url')
         self.assertEqual(len(results.get('messages')), 0,
