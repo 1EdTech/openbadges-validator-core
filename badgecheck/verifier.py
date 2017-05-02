@@ -47,14 +47,15 @@ def verify(badge_input):
     """
     store = create_store(main_reducer, INITIAL_STATE)
 
-    # is file-like
     if hasattr(badge_input, 'read') and hasattr(badge_input, 'seek'):
         badge_input.seek(0)
         badge_data = unbake(badge_input)
         if not badge_data:
             raise ValueError("Files as badge input must be baked images.")
-        badge_input = badge_data
-    store.dispatch(store_input(badge_input))
+    else:
+        badge_data = badge_input
+
+    store.dispatch(store_input(badge_data))
     store.dispatch(add_task(tasks.DETECT_INPUT_TYPE))
 
     last_task_id = 0
