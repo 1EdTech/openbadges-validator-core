@@ -136,15 +136,14 @@ class JsonLdCompactTests(unittest.TestCase):
             "thing_we_call_you_by": "Test Data"
         }"""
 
-        task = add_task(JSONLD_COMPACT_DATA, data=data)
-        task['id'] = 1
+        task = add_task(JSONLD_COMPACT_DATA, data=data, node_id='http://example.com/1')
 
         result, message, actions = jsonld_compact_data({}, task)
         self.assertTrue(result, "JSON-LD Compaction should be successful.")
-        self.assertEqual(message, "Successfully compacted node with unknown id")
+        self.assertEqual(message, "Successfully compacted node http://example.com/1")
         self.assertEqual(
-            len(actions), 3,
-            "Should queue up add_node, add_task, and extension_analysis for type detection")
+            len(actions), 2,
+            "Should queue up add_node and add_task for type detection")
         self.assertEqual(
             actions[0]['data']['name'], "Test Data",
             "Node should be compacted into OB Context and use OB property names.")
@@ -152,7 +151,6 @@ class JsonLdCompactTests(unittest.TestCase):
     @responses.activate
     def test_no_task_data(self):
         task = add_task(JSONLD_COMPACT_DATA)
-        task['id'] = 1
 
         result, message, actions = jsonld_compact_data({}, task)
         self.assertFalse(result)
@@ -168,8 +166,7 @@ class JsonLdCompactTests(unittest.TestCase):
             "thing_we_call_you_by": "Test Data"
         }
 
-        task = add_task(JSONLD_COMPACT_DATA, data=json.dumps(data))
-        task['id'] = 1
+        task = add_task(JSONLD_COMPACT_DATA, data=json.dumps(data), node_id='_:b100')
 
         result, message, actions = jsonld_compact_data({}, task)
 

@@ -2,7 +2,70 @@ import unittest
 
 from badgecheck.actions.tasks import add_task
 from badgecheck.tasks.extensions import extension_analysis, validate_extension_node
+from badgecheck.tasks.graph import _get_extension_actions
 from badgecheck.tasks.task_types import EXTENSION_ANALYSIS, VALIDATE_EXTENSION_NODE
+
+
+class CompactJsonExtensionDiscoveryTests(unittest.TestCase):
+    def test_can_discover_actions_right(self):
+        node = {
+            'string_prop': 'string_val'
+        }
+        self.assertEqual(_get_extension_actions(node, ['_:b0']), [])
+
+        node['dict_prop_1'] = {'type': 'Extension'}
+        actions = _get_extension_actions(node, ['_:b0'])
+        self.assertEqual(len(actions), 1,
+                         "When one Extension-type node is present, file one action")
+        self.assertEqual(actions[0]['node_path'], ['_:b0', 'dict_prop_1'])
+
+        node['dict_prop_1'] = {'type': ['Extension', 'extensions:ApplyLink']}
+        actions = _get_extension_actions(node, ['_:b0'])
+        self.assertEqual(len(actions), 1,
+                         "It can handle an Extension-type node declared in list")
+        self.assertEqual(actions[0]['node_path'], ['_:b0', 'dict_prop_1'])
+
+        node['dict_prop_2'] = {'type': 'NotAnExtension'}
+        self.assertEqual(len(_get_extension_actions(node, ['_:b0'])), 1,
+                         "Another non-Extension node doesn't add another action.")
+
+        node['dict_prop_2'] = {'type': 'Extension'}
+        self.assertEqual(len(_get_extension_actions(node, ['_:b0'])), 2,
+                         "A second Extension node yields another action.")
+
+        node = {
+            'dict_prop_3': {
+                'string_prop_2': 'string_val',
+                'dict_prop_4': {'type': 'Extension'}
+            }
+        }
+        actions = _get_extension_actions(node, ['_:b0'])
+        self.assertEqual(len(actions), 1, "One Extension is found.")
+        self.assertEqual(actions[0]['node_path'], ['_:b0', 'dict_prop_3', 'dict_prop_4'],
+                         "A deeply nested extension is properly identified.")
+
+        node = {
+            'list_prop_1': [
+                {
+                    'prop': 'not an extension'
+                },
+                {
+                    'id': '_:b0',
+                    'string_prop_1': 'string_val',
+                    'dict_prop_1': {'id': '_:b1'}
+                },
+                'string_val'
+            ]
+        }
+
+        actions = _get_extension_actions(node, ['_:b0'])
+        self.assertEqual(len(actions), 0, "No extensions exist in node yet")
+        node['list_prop_1'][1]['type'] = 'Extension'
+        actions = _get_extension_actions(node, ['_:b0'])
+        self.assertEqual(len(actions), 1, "An Extension is found inside a many=True value.")
+        self.assertEqual(
+            actions[0]['node_path'], ['_:b0', 'list_prop_1', 1],
+            "The action's node_path correctly identifies the list index of the Extension")
 
 
 class ExtensionTaskDiscoveryTests(unittest.TestCase):
@@ -48,6 +111,10 @@ class ExtensionTaskDiscoveryTests(unittest.TestCase):
         self.extension['obi:myAssertion'] = 'http://example.org/assertion'
 
         self.test_queue_extension_validation_check()
+
+    def test_does_not_discover_unknown_type_to_test(self):
+        # Define a node with an unknown extension type
+        pass
 
 
 class ExtensionNodeValidationTests(unittest.TestCase):
@@ -109,6 +176,3 @@ class ExtensionNodeValidationTests(unittest.TestCase):
         self.assertTrue(all(a['name'] == VALIDATE_EXTENSION_NODE for a in actions),
                         'All tasks created should be of correct type')
 
-    def test_does_not_discover_known_type_to_test(self):
-        # Define a node with an unknown extension type
-        pass
