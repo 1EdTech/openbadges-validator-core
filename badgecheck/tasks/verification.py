@@ -1,7 +1,7 @@
 import rfc3986
 
 from ..state import get_node_by_id
-from ..utils import cast_as_list
+from ..utils import list_of
 
 from .utils import abbreviate_value, task_result
 
@@ -32,14 +32,14 @@ def hosted_id_in_verification_scope(state, task_meta):
         verification_policy = _default_verification_policy(issuer_node)
 
     if verification_policy.get('startsWith'):
-        starts_with = cast_as_list(verification_policy['startsWith'])
+        starts_with = list_of(verification_policy['startsWith'])
         if not any([assertion_id.startswith(i) for i in starts_with]):
             return task_result(
                 False, "Assertion id {}".format(assertion_id) +
                 "does not start with any permitted values in its issuer's verification policy."
             )
 
-    allowed_origins = cast_as_list(
+    allowed_origins = list_of(
         verification_policy.get(
             'allowedOrigins', _default_allowed_origins_for_issuer_id(issuer_node.get('id')))
     )

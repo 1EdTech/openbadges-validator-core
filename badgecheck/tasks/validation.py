@@ -17,7 +17,7 @@ from .task_types import (ASSERTION_TIMESTAMP_CHECKS, ASSERTION_VERIFICATION_DEPE
                          HOSTED_ID_IN_VERIFICATION_SCOPE, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
                          ISSUER_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
                          VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,)
-from .utils import abbreviate_value, is_empty_list, is_null_list, task_result
+from .utils import abbreviate_value, is_empty_list, is_null_list, is_iri, is_url, task_result
 
 
 class OBClasses(object):
@@ -145,12 +145,7 @@ class PrimitiveValueValidator(object):
         :return: bool
         """
         # TODO: Accept other IRI schemes in the future for certain classes.
-        urn_regex = r'^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
-        return bool(
-            cls._validate_url(value) or
-            re.match(r'_:b\d+$', value) or
-            re.match(urn_regex, value, re.IGNORECASE)
-        )
+        return is_iri(value)
 
     @classmethod
     def _validate_markdown_text(cls, value):
@@ -182,15 +177,7 @@ class PrimitiveValueValidator(object):
 
     @staticmethod
     def _validate_url(value):
-        ret = False
-        try:
-            if ((value and isinstance(value, six.string_types))
-                and rfc3986.is_valid_uri(value, require_scheme=True)
-                and rfc3986.uri_reference(value).scheme.lower() in ['http', 'https']):
-                ret = True
-        except ValueError as e:
-            pass
-        return ret
+        return is_url(value)
 
 
 def validate_property(state, task_meta):
