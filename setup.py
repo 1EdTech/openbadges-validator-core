@@ -49,5 +49,8 @@ setup(
         'rfc3986==0.4.1',
         'validators==0.11.2',
         # 'openbadges_bakery >= 0.1.4'  # Removing until openbadges_bakery does not require Django.
-    ]
+    ],
+    extras_require={
+        'server':  ["Flask==0.12.1"],
+    }
 )
