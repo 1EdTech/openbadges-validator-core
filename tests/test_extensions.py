@@ -1,9 +1,18 @@
+import json
+import responses
 import unittest
 
+from badgecheck.actions.graph import add_node
 from badgecheck.actions.tasks import add_task
-from badgecheck.tasks.extensions import extension_analysis, validate_extension_node
+from badgecheck.extensions import GeoLocation
+from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
+from badgecheck.reducers.graph import graph_reducer
+from badgecheck.tasks.extensions import validate_extension_node
 from badgecheck.tasks.graph import _get_extension_actions
-from badgecheck.tasks.task_types import EXTENSION_ANALYSIS, VALIDATE_EXTENSION_NODE
+from badgecheck.tasks import task_named
+from badgecheck.tasks.task_types import JSONLD_COMPACT_DATA, VALIDATE_EXTENSION_NODE
+
+from tests.utils import setUpContextMock
 
 
 class CompactJsonExtensionDiscoveryTests(unittest.TestCase):
@@ -68,55 +77,6 @@ class CompactJsonExtensionDiscoveryTests(unittest.TestCase):
             "The action's node_path correctly identifies the list index of the Extension")
 
 
-class ExtensionTaskDiscoveryTests(unittest.TestCase):
-    def setUp(self):
-        self.first_node = {
-            'id': 'http://example.org/assertion',
-            'extensions:exampleExtension': '_:b0',
-            'evidence': '_:b1'
-        }
-        self.extension = {
-            'id': '_:b0',
-            'type': ['Extension', 'extensions:ExampleExtension'],
-            'exampleProperty': 'I\'m a property, short and sweet'
-        }
-        self.evidence = {
-            'id': '_:b1',
-            'narrative': 'Rocked the free world'
-        }
-        self.state = {'graph': [self.first_node, self.extension, self.evidence]}
-
-    def test_queue_extension_validation_check(self):
-        task_meta = add_task(EXTENSION_ANALYSIS, node_id=self.first_node['id'])
-
-        result, message, actions = extension_analysis(self.state, task_meta)
-        self.assertTrue(result)
-        self.assertEqual(len(actions), 1)
-        self.assertEqual(actions[0]['node_id'], self.extension['id'])
-        self.assertEqual(actions[0]['name'], VALIDATE_EXTENSION_NODE)
-
-    def test_does_not_queue_duplicate_tasks(self):
-        # Queue up existing task that should not be duplicated
-        self.state['tasks'] = [add_task(VALIDATE_EXTENSION_NODE, node_id='_:b0')]
-
-        task_meta = add_task(EXTENSION_ANALYSIS, node_id=self.first_node['id'])
-        result, message, actions = extension_analysis(self.state, task_meta)
-        self.assertTrue(result)
-        self.assertEqual(
-            len(actions), 0,
-            "There should not be any actions returned that would duplicate existing tasks.")
-
-    def test_does_not_get_stuck_in_circular_loop(self):
-        # Ensure that if Node A references Node B and vice versa, that we do not get stuck.
-        self.extension['obi:myAssertion'] = 'http://example.org/assertion'
-
-        self.test_queue_extension_validation_check()
-
-    def test_does_not_discover_unknown_type_to_test(self):
-        # Define a node with an unknown extension type
-        pass
-
-
 class ExtensionNodeValidationTests(unittest.TestCase):
     def setUp(self):
         self.first_node = {
@@ -127,7 +87,7 @@ class ExtensionNodeValidationTests(unittest.TestCase):
         self.extension = {
             'id': '_:b0',
             'type': ['Extension', 'extensions:ExampleExtension'],
-            'exampleProperty': 'I\'m a property, short and sweet'
+            'http://schema.org/text': 'I\'m a property, short and sweet'
         }
         self.evidence = {
             'id': '_:b1',
@@ -138,6 +98,15 @@ class ExtensionNodeValidationTests(unittest.TestCase):
     def test_validate_extension_node_basic(self):
         task_meta = add_task(
             VALIDATE_EXTENSION_NODE, node_id=self.extension['id'])
+
+        result, message, actions = validate_extension_node(self.state, task_meta)
+        self.assertTrue(result, "A valid expression of the extension should pass")
+        self.assertIn('validated on node', message)
+        self.assertEqual(len(actions), 0)
+
+    def test_validate_extension_node_path_based(self):
+        task_meta = add_task(
+            VALIDATE_EXTENSION_NODE, node_path=[self.extension['id']])
 
         result, message, actions = validate_extension_node(self.state, task_meta)
         self.assertTrue(result, "A valid expression of the extension should pass")
@@ -157,7 +126,7 @@ class ExtensionNodeValidationTests(unittest.TestCase):
     def test_validate_extension_node_invalid(self):
         task_meta = add_task(
             VALIDATE_EXTENSION_NODE, node_id=self.extension['id'])
-        self.extension['exampleProperty'] = 1337  # String value required
+        self.extension['http://schema.org/text'] = 1337  # String value required
 
         result, message, actions = validate_extension_node(self.state, task_meta)
         self.assertFalse(result, "An invalid expression of a rule in schema should fail")
@@ -165,7 +134,7 @@ class ExtensionNodeValidationTests(unittest.TestCase):
         self.assertEqual(len(actions), 0)
 
     def test_validation_breaks_down_multiple_extensions(self):
-        self.extension['type'].append('extensions:ApplyLink')  # TODO: switch to a different extension after installing another
+        self.extension['type'].append('extensions:ApplyLink')
         task_meta = add_task(
             VALIDATE_EXTENSION_NODE, node_id=self.extension['id'])
 
@@ -176,3 +145,105 @@ class ExtensionNodeValidationTests(unittest.TestCase):
         self.assertTrue(all(a['name'] == VALIDATE_EXTENSION_NODE for a in actions),
                         'All tasks created should be of correct type')
 
+
+class ComplexExtensionNodeValdiationTests(unittest.TestCase):
+    """
+    Tests for extensions that use nested properties.
+    """
+    def test_node_json_validation(self):
+        node = {
+            '@context': OPENBADGES_CONTEXT_V2_URI,
+            'id': 'http://example.com/1',
+            'type': 'Assertion',
+            'schema:location': {
+                '@context': 'https://w3id.org/openbadges/extensions/geoCoordinatesExtension/context.json',
+                'type': ['Extension', 'extensions:GeoCoordinates'],
+                'description': 'That place in the woods where we built the fort',
+                'schema:geo': {
+                    'schema:latitude': 44.580900,
+                    'schema:longitude': -123.301815
+                }
+            }
+        }
+        state = {'graph': graph_reducer([], add_node(node['id'], node))}
+
+        task_meta = add_task(
+            VALIDATE_EXTENSION_NODE,
+            node_path=['http://example.com/1', 'schema:location'],
+            node_json=json.dumps(node['schema:location']))
+
+        result, message, actions = validate_extension_node(state, task_meta)
+        self.assertTrue(result, "A valid expression of the extension should pass")
+        self.assertIn('validated on node', message)
+        self.assertEqual(len(actions), 0)
+
+        del node['schema:location']['schema:geo']['schema:latitude']
+        task_meta['node_json'] = json.dumps(node['schema:location'])
+        result, message, actions = validate_extension_node(state, task_meta)
+        self.assertFalse(result, "A required property not present should be detected by JSON-schema.")
+
+    @responses.activate
+    def test_extension_discovered_jsonld_compact(self):
+        """
+        Ensure an extension node is properly discovered and that the task runs without error.
+        """
+        node = {
+            '@context': OPENBADGES_CONTEXT_V2_URI,
+            'id': 'http://example.com/1',
+            'type': 'Assertion',
+            'schema:location': {
+                '@context': 'https://w3id.org/openbadges/extensions/geoCoordinatesExtension/context.json',
+                'type': ['Extension', 'extensions:GeoCoordinates'],
+                'description': 'That place in the woods where we built the fort',
+                'geo': {
+                    'latitude': 44.580900,
+                    'longitude': -123.301815
+                }
+            }
+        }
+        state = {'graph': graph_reducer([], add_node(node['id'], node))}
+
+        setUpContextMock()
+
+        responses.add(
+            responses.GET,
+            "https://w3id.org/openbadges/extensions/geoCoordinatesExtension/context.json",
+            body=json.dumps(GeoLocation.context_json),
+            status=200,
+            content_type='application/ld+json')
+
+        compact_task = add_task(JSONLD_COMPACT_DATA, data=json.dumps(node))
+
+        result, message, actions = task_named(JSONLD_COMPACT_DATA)(state, compact_task)
+        self.assertTrue(result, "JSON-LD Compact is successful.")
+        self.assertIn(VALIDATE_EXTENSION_NODE, [i.get('name') for i in actions], "Validation task queued.")
+
+        validate_task = [i for i in actions if i.get('name') == VALIDATE_EXTENSION_NODE][0]
+        self.assertIsNotNone(validate_task['node_json'])
+
+        result, message, actions = task_named(VALIDATE_EXTENSION_NODE)(state, validate_task)
+        self.assertTrue(result, "Validation task is successful.")
+
+
+class UnknownExtensionsTests(unittest.TestCase):
+    """
+    TODO: In the future, dynamic discovery of extensions will be possible.
+    Until then, make sure we are reporting on unverified extensions.
+    """
+    def test_report_message_on_unknown_extension(self):
+        first_node = {
+            'id': 'http://example.org/assertion',
+            'extensions:exampleExtension': '_:b0',
+            'evidence': '_:b1'
+        }
+        extension = {
+            'id': '_:b0',
+            'type': ['Extension', 'extensions:UnknownExtension'],
+            'schema:unknownProperty': 'I\'m a property, short and sweet'
+        }
+        state = {'graph': [first_node, extension]}
+        task_meta = add_task(
+            VALIDATE_EXTENSION_NODE, node_id=extension['id'])
+
+        result, message, actions = validate_extension_node(state, task_meta)
+        self.assertFalse(result, "An unknown extension will fail for now.")

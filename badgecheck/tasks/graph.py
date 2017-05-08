@@ -6,7 +6,7 @@ from ..actions.graph import add_node
 from ..actions.tasks import add_task
 from ..exceptions import TaskPrerequisitesError, ValidationError
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
-from ..utils import CachableDocumentLoader, cast_as_list
+from ..utils import CachableDocumentLoader, list_of
 
 from .task_types import (DETECT_AND_VALIDATE_NODE_CLASS, JSONLD_COMPACT_DATA,
                         VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_EXTENSION_NODE,)
@@ -39,7 +39,7 @@ def _get_extension_actions(current_node, entry_path):
         return new_actions
 
     if current_node.get('type'):
-        types = cast_as_list(current_node['type'])
+        types = list_of(current_node['type'])
         if 'Extension' in types:
             new_actions += [add_task(
                 VALIDATE_EXTENSION_NODE,

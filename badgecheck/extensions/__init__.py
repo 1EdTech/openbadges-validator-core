@@ -105,14 +105,15 @@ class GeoLocation(object):
                         "longitude": {"type": "number"}
                     },
                     "required": ["latitude", "longitude"]
-                },
-                "required": ["description", "geo"]
-            }
+                }
+            },
+            "required": ["description", "geo"]
         }
     }
 
 
 ALL_KNOWN_EXTENSIONS = {
     'extensions:ApplyLink': ApplyLink,
-    'extensions:ExampleExtension': ExampleExtension
+    'extensions:ExampleExtension': ExampleExtension,
+    'extensions:GeoCoordinates': GeoLocation
 }
