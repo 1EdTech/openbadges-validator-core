@@ -12,3 +12,6 @@ validators==0.11.2
 # Development dependencies
 pytest
 responses==0.5.1
+
+# Server dependencies
+Flask==0.12.1

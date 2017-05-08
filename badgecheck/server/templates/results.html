@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block main %}
+<p>The results returned by the validator are shown in the box below. Please report any bugs or issues to the <a href="https://github.com/openbadges/badgecheck/issues">development team</a>.</p>
+
+<form id="results">
+	<textarea id="data" rows="30">{{ results }}</textarea>
+</form>
+{% endblock %}
