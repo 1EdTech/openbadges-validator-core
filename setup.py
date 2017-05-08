@@ -42,6 +42,7 @@ setup(
     ],
     install_requires=[
         'aniso8601>=1.2.0',
+        'jsonschema==2.6.0',
         'openbadges-bakery>=0.1.4',
         'pydux==0.2.1',
         'pypng', # inherited from the bakery, which doesn't properly include it as a package req
@@ -50,5 +51,8 @@ setup(
         'requests >= 2.13',
         'rfc3986==0.4.1',
         'validators==0.11.2',
-    ]
+    ],
+    extras_require={
+        'server':  ["Flask==0.12.1"],
+    }
 )

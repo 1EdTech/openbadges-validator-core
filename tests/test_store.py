@@ -5,7 +5,8 @@ from pydux import create_store
 
 from badgecheck import verify
 from badgecheck.reducers import main_reducer
-from badgecheck.state import filter_active_tasks, INITIAL_STATE
+from badgecheck.state import (filter_active_tasks, INITIAL_STATE, get_node_by_id,
+                              get_node_by_path,)
 
 from testfiles.test_components import test_components
 
@@ -43,3 +44,21 @@ class TaskFilterTests(unittest.TestCase):
         mary['prerequisites'] = ['Tim', 'Linda']
         active_tasks = filter_active_tasks(state)
         self.assertEqual(len(active_tasks), 1, "Task with an incomplete prereq should not be active")
+
+
+class FindNodeByPathTests(unittest.TestCase):
+    def test_find_node_with_single_length_path(self):
+        state = {
+            'graph': [{'id': '_:b0'}]
+        }
+        with self.assertRaises(IndexError):
+            get_node_by_path(state, ['_:b100'])
+
+        self.assertEqual(get_node_by_path(state, ['_:b0']), state['graph'][0])
+
+        state['graph'].append({'id': '_:b1', 'prop': '_:b0'})
+        self.assertEqual(get_node_by_path(state, ['_:b1', 'prop']), state['graph'][0])
+
+        state['graph'].append({'id': '_:b2', 'prop': ['http://unknown.external', '_:b1']})
+        self.assertEqual(get_node_by_path(state, ['_:b2', 'prop', 1]), state['graph'][1])
+        self.assertEqual(get_node_by_path(state, ['_:b2', 'prop', 1, 'prop']), state['graph'][0])

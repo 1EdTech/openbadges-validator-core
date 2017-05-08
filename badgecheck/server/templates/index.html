@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block main %}
+<form action="/results" method="post" id="submit">
+	<p>Paste an <a href="https://www.imsglobal.org/sites/default/files/Badges/OBv2p0/index.html">Open Badges 2.0</a> assertion URL or JSON-LD payload in the text field below and submit.</p>
+	<input type="text" id="input-name" name="data" placeholder="URL or JSON-LD">
+	<input type="submit" value="Submit" id="input-submit">
+</form>
+{% endblock %}

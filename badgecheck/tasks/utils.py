@@ -1,3 +1,8 @@
+import re
+import rfc3986
+import six
+
+
 def task_result(success=True, message='', actions=None):
     """
     Formats a response from a task so that the task caller can dispatch actions
@@ -28,3 +33,33 @@ def abbreviate_value(value):
         return str(value)
     else:
         return str(value)[:48] + '...'
+
+
+def is_iri(value):
+    urn_regex = r'^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    return bool(
+        is_url(value) or
+        re.match(r'_:b\d+$', value) or
+        re.match(urn_regex, value, re.IGNORECASE)
+    )
+
+
+def is_url(value):
+    ret = False
+    try:
+        if ((value and isinstance(value, six.string_types))
+            and rfc3986.is_valid_uri(value, require_scheme=True)
+            and rfc3986.uri_reference(value).scheme.lower() in ['http', 'https']):
+            ret = True
+    except ValueError as e:
+        pass
+    return ret
+
+
+def filter_tasks(state, **kwargs):
+    tasks = state.get('tasks', [])
+
+    def _matches(val):
+        return all([val.get(kwarg) == kwargs[kwarg] for kwarg in kwargs.keys()])
+
+    return filter(_matches, tasks)

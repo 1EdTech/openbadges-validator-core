@@ -1,11 +1,12 @@
-from input import detect_input_type
-from graph import fetch_http_node, jsonld_compact_data
-from validation import (assertion_timestamp_checks, assertion_verification_dependencies,
+from .extensions import validate_extension_node
+from .input import detect_input_type
+from .graph import fetch_http_node, jsonld_compact_data
+from .validation import (assertion_timestamp_checks, assertion_verification_dependencies,
                         criteria_property_dependencies, detect_and_validate_node_class,
                         identity_object_property_dependencies, issuer_property_dependencies,
                         validate_expected_node_class, validate_rdf_type_property, validate_property,)
-from verification import (hosted_id_in_verification_scope,)
-from task_types import *
+from .verification import (hosted_id_in_verification_scope,)
+from .task_types import *
 
 
 FUNCTIONS = {
@@ -20,6 +21,7 @@ FUNCTIONS = {
     IDENTITY_OBJECT_PROPERTY_DEPENDENCIES:     identity_object_property_dependencies,
     ISSUER_PROPERTY_DEPENDENCIES:              issuer_property_dependencies,
     VALIDATE_EXPECTED_NODE_CLASS:              validate_expected_node_class,
+    VALIDATE_EXTENSION_NODE:                   validate_extension_node,
     VALIDATE_RDF_TYPE_PROPERTY:                validate_rdf_type_property,
     VALIDATE_PROPERTY:                         validate_property,
 }
