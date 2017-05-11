@@ -31,6 +31,22 @@ use the command:
 Follow issues and contribute to the badgecheck roadmap:
 https://github.com/openbadges/badgecheck/issues
 
+How to run the web server
+-------------------------
+
+A Flask webserver is an optional component of badgecheck. The necessary
+dependency is installed when you install from
+`pip install -r requirements.txt`.
+You may install the server using pip with the optional server flag:
+`pip install badgecheck [server]`
+
+In order to run the server, activate your environment and execute the following
+command:
+`python badgecheck/server/app.py`
+
+A local server will start up on the development port 5000 (by default), which
+you can access from your browser.
+
 Design Overview for Developers
 ------------------------------
 
