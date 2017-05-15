@@ -1,11 +1,9 @@
 # Duplicates from setup.py
 aniso8601>=1.2.0
 jsonschema==2.6.0
-openbadges_bakery>=0.4
+openbadges_bakery==1.0.0b1
 pydux==0.2.1
 PyLD==0.7.1
-## pypng is an inherited dependency from the bakery
-pypng
 pytz==2017.2
 requests >= 2.13
 requests_cache >= 0.4.13
