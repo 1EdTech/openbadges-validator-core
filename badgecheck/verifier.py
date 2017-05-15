@@ -1,3 +1,4 @@
+from openbadges_bakery import unbake
 from pydux import create_store
 
 from .actions.input import store_input
@@ -41,12 +42,20 @@ def call_task(task_func, task_meta, store):
 def verify(badge_input):
     """
     Verify and validate Open Badges
-    :param badge_input: str (url or json)
+    :param badge_input: str (url or json) or python file-like object (baked badge image)
     :return: dict
     """
     store = create_store(main_reducer, INITIAL_STATE)
 
-    store.dispatch(store_input(badge_input))
+    if hasattr(badge_input, 'read') and hasattr(badge_input, 'seek'):
+        badge_input.seek(0)
+        badge_data = unbake(badge_input)
+        if not badge_data:
+            raise ValueError("Files as badge input must be baked images.")
+    else:
+        badge_data = badge_input
+
+    store.dispatch(store_input(badge_data))
     store.dispatch(add_task(tasks.DETECT_INPUT_TYPE))
 
     last_task_id = 0
