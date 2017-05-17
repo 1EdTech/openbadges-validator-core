@@ -8,7 +8,7 @@ import responses
 import unittest
 
 from badgecheck.actions.action_types import ADD_TASK, PATCH_NODE
-from badgecheck.actions.graph import add_node
+from badgecheck.actions.graph import add_node, patch_node
 from badgecheck.actions.tasks import add_task
 from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 from badgecheck.reducers import main_reducer
@@ -356,11 +356,24 @@ class PropertyValidationTaskTests(unittest.TestCase):
             prop_type=ValueTypes.BOOLEAN
         ))
 
-        # 3. Test of a present invalid text prop: expected fail
+        num_actions = len(store.get_state()['tasks'])
+        # 2b. Retesting the same property won't add any actions to state
         store.dispatch(add_task(
             VALIDATE_PROPERTY,
             node_id="http://example.com/1",
             prop_name="bool_prop",
+            required=True,
+            prop_type=ValueTypes.TEXT
+        ))
+        self.assertEqual(num_actions, len(store.get_state()['tasks']),
+                         "Duplicate check shouldn't add another action")
+
+        store.dispatch(patch_node(node_id="http://example.com/1", data={'bool_prop2': True}))
+        # 3 Invalid text value for required bool prop should fail.
+        store.dispatch(add_task(
+            VALIDATE_PROPERTY,
+            node_id="http://example.com/1",
+            prop_name="bool_prop2",
             required=True,
             prop_type=ValueTypes.TEXT
         ))
@@ -374,7 +387,6 @@ class PropertyValidationTaskTests(unittest.TestCase):
             prop_type=ValueTypes.BOOLEAN
         ))
 
-        # TODO refactor while loop into callable here and in badgecheck.verifier.verify()
         last_task_id = 0
         while len(filter_active_tasks(store.get_state())):
             active_tasks = filter_active_tasks(store.get_state())
