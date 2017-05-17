@@ -16,3 +16,4 @@ responses==0.5.1
 
 # Server dependencies
 Flask==0.12.1
+gunicorn==19.7.1
