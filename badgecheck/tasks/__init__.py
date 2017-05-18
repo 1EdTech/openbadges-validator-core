@@ -5,7 +5,7 @@ from .validation import (assertion_timestamp_checks, assertion_verification_depe
                         criteria_property_dependencies, detect_and_validate_node_class,
                         identity_object_property_dependencies, issuer_property_dependencies,
                         validate_expected_node_class, validate_rdf_type_property, validate_property,)
-from .verification import (hosted_id_in_verification_scope,)
+from .verification import (hosted_id_in_verification_scope, verify_recipient_against_trusted_profile)
 from .task_types import *
 
 
@@ -24,6 +24,7 @@ FUNCTIONS = {
     VALIDATE_EXTENSION_NODE:                   validate_extension_node,
     VALIDATE_RDF_TYPE_PROPERTY:                validate_rdf_type_property,
     VALIDATE_PROPERTY:                         validate_property,
+    VERIFY_RECIPIENT_IDENTIFIER:               verify_recipient_against_trusted_profile,
 }
 
 

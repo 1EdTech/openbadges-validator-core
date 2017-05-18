@@ -2,8 +2,9 @@
 INPUT Actions:
 Store and process user input via the API
 """
-STORE_INPUT = 'STORE_INPUT'
 SET_INPUT_TYPE = 'SET_INPUT_TYPE'
+SET_PROFILE_ID = 'SET_PROFILE_ID'
+STORE_INPUT = 'STORE_INPUT'
 
 """
 GRAPH Actions:

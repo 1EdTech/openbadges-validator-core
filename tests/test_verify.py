@@ -98,3 +98,8 @@ class InitializationTests(unittest.TestCase):
     #         'http://NOTAVALIDURL.COM')
     #
     #     self.assertTrue(results['valid'])
+
+
+class RecipientProfileVerificationTests(unittest.TestCase):
+    def test_can_verify_assertion_against_recipient_profile(self):
+        pass
