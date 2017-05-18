@@ -5,6 +5,8 @@ import unittest
 from pydux import create_store
 
 from badgecheck import verify
+from badgecheck.verifier import generate_report
+from badgecheck.actions.tasks import report_message
 from badgecheck.reducers import main_reducer
 from badgecheck.state import INITIAL_STATE
 
@@ -100,6 +102,14 @@ class InitializationTests(unittest.TestCase):
     #     self.assertTrue(results['valid'])
 
 
-class RecipientProfileVerificationTests(unittest.TestCase):
-    def test_can_verify_assertion_against_recipient_profile(self):
-        pass
+class MessagesTests(unittest.TestCase):
+    def test_message_reporting(self):
+        store = create_store(main_reducer, INITIAL_STATE)
+        store.dispatch(report_message('TEST MESSAGE'))
+
+        state = store.get_state()
+        self.assertEqual(len(state['tasks']), 1)
+
+        report = generate_report(store)
+        self.assertEqual(len(report['messages']), 1)
+        self.assertEqual(report['messages'][0]['result'], 'TEST MESSAGE')

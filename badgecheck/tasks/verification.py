@@ -1,6 +1,7 @@
 import hashlib
 import rfc3986
 
+from ..actions.tasks import report_message
 from ..exceptions import TaskPrerequisitesError
 from ..state import get_node_by_id, get_node_by_path
 from ..utils import list_of
@@ -57,11 +58,11 @@ def hosted_id_in_verification_scope(state, task_meta):
     )
 
 
-def _matches_hash(profile_identifier, id_hash):
+def _matches_hash(profile_identifier, id_hash, salt=''):
     if id_hash.startswith('md5'):
-        return 'md5$' + hashlib.md5(profile_identifier).hexdigest() == id_hash
+        return 'md5$' + hashlib.md5(profile_identifier + salt).hexdigest() == id_hash
     elif id_hash.startswith('sha256'):
-        return 'sha256$' + hashlib.sha256(profile_identifier).hexdigest() == id_hash
+        return 'sha256$' + hashlib.sha256(profile_identifier + salt).hexdigest() == id_hash
 
     raise TypeError("Cannot interpret hash type of {}".format(id_hash))
 
@@ -69,7 +70,7 @@ def _matches_hash(profile_identifier, id_hash):
 def verify_recipient_against_trusted_profile(state, task_meta):
     try:
         # Use the ID of the first Assertion found in current state
-        assertion_id = [n for n in state['graph'] if n['type'] == 'Assertion'][0]['id']
+        assertion_id = [n for n in state['graph'] if n.get('type') == 'Assertion'][0]['id']
 
         identity_node = get_node_by_path(state, [assertion_id, 'recipient'])
         profile_id = task_meta['node_id']
@@ -82,14 +83,12 @@ def verify_recipient_against_trusted_profile(state, task_meta):
     a = identity_node['identity']  # Recipient value in (a)ssertion
     recipient_type = identity_node['type']
     if recipient_type not in ['id', 'email', 'url', 'telephone']:
-        # TODO: Add system for reporting messages that will appear in final API output
-        # actions += report_message(
-        #   "Recipient identifier type {} in assertion {} is not one of the recommended types").format(
-        #       recipient_type, assertion_id))
-        pass
+        actions += [report_message(
+            "Recipient identifier type {} in assertion {} is not one of the recommended types".format(
+                recipient_type, assertion_id))]
 
     try:
-        p = profile_node[recipient_type]  # matching type recipient value in submitted (p)rofile
+        p = list_of(profile_node[recipient_type])  # matching type recipient value in submitted (p)rofile
     except KeyError:
         return task_result(
             False, "Profile identifier property of type {} not found in submitted profile {}".format(
@@ -97,13 +96,21 @@ def verify_recipient_against_trusted_profile(state, task_meta):
             ), actions)
 
     if identity_node['hashed']:
-        if not _matches_hash(p, a):
+        salt = identity_node.get('salt', '')
+        for possible_id in p:
+            if _matches_hash(possible_id, a, salt):
+                confirmed_id = possible_id
+                break
+        else:
+            # If no identifier in the profile matches, return failure
             return task_result(
                 False,
-                "Profile {} identifier {} of type {} did not match assertion {} recipient hash {}.".format(
-                    abv(profile_id), p, recipient_type, abv(assertion_id), a),
+                "Profile {} identifier(s) {} of type {} did not match assertion {} recipient hash {}.".format(
+                    abv(profile_id), abv(p), recipient_type, abv(assertion_id), a),
                 actions)
-    elif not p == a:
+    elif a in p:
+        confirmed_id = a
+    else:
         return task_result(
             False,
             "Profile {} identifier {} of type {} did not match assertion {} recipient value {}".format(
@@ -111,4 +118,4 @@ def verify_recipient_against_trusted_profile(state, task_meta):
             actions)
 
     return task_result(True, "Assertion {} awarded to trusted profile identifier {} of type {}".format(
-        abv(assertion_id), p, recipient_type), actions)
+        abv(assertion_id), confirmed_id, recipient_type), actions)

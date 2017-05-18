@@ -1,4 +1,5 @@
-from ..actions.action_types import ADD_TASK, RESOLVE_TASK, UPDATE_TASK
+from ..actions.action_types import ADD_TASK, REPORT_MESSAGE, RESOLVE_TASK, UPDATE_TASK
+from ..state import MESSAGE_LEVEL_INFO
 
 
 def task_reducer(state=None, action=None):
@@ -39,6 +40,15 @@ def task_reducer(state=None, action=None):
                 update[key] = action[key]
             return _new_state_with_updated_item(state, action['task_id'], update)
 
+    elif action.get('type') == REPORT_MESSAGE:
+        new_task = {
+            'task_id': task_counter,
+            'complete': True,
+            'success': action.get('success', True),
+            'result': action.get('message'),
+            'messageLevel': action.get('messageLevel', MESSAGE_LEVEL_INFO)
+        }
+        return list(state) + [new_task]
 
     return state
 

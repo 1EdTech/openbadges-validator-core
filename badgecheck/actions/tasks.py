@@ -1,4 +1,4 @@
-from action_types import ADD_TASK, DELETE_TASK, RESOLVE_TASK, UPDATE_TASK
+from action_types import ADD_TASK, DELETE_TASK, REPORT_MESSAGE, RESOLVE_TASK, UPDATE_TASK
 
 
 def add_task(task_name, **kwargs):
@@ -42,3 +42,10 @@ def update_task(task_id, task_name, **kwargs):
     }
     task.update(**kwargs)
     return task
+
+
+def report_message(msg):
+    return {
+        'type': REPORT_MESSAGE,
+        'message': msg
+    }

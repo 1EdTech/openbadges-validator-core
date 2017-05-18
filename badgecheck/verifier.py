@@ -7,7 +7,7 @@ from .actions.tasks import add_task, resolve_task
 from .exceptions import SkipTask, TaskPrerequisitesError
 from .openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from .reducers import main_reducer
-from .state import (filter_active_tasks, filter_failed_tasks, format_message,
+from .state import (filter_active_tasks, filter_messages_for_report, format_message,
                     INITIAL_STATE, MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING,)
 import tasks
 from tasks.task_types import JSONLD_COMPACT_DATA
@@ -89,13 +89,13 @@ def generate_report(store):
     Returns a report of validity information based on a store and its tasks.
     """
     state = store.get_state()
-    failed_tasks = filter_failed_tasks(state)
+    tasks_for_messages_list = filter_messages_for_report(state)
     ret = {
         'messages': [],
         'graph': state['graph'],
         'input': state['input']
     }
-    for task in failed_tasks:
+    for task in tasks_for_messages_list:
         ret['messages'].append(format_message(task))
 
     ret['errorCount'] = len([m for m in ret['messages'] if m['messageLevel'] == MESSAGE_LEVEL_ERROR])
