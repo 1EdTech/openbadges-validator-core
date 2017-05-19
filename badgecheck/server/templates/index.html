@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 
 {% block main %}
-<form action="/results" method="post" id="submit">
-	<p>Paste an <a href="https://www.imsglobal.org/sites/default/files/Badges/OBv2p0/index.html">Open Badges 2.0</a> assertion URL or JSON-LD payload in the text field below and submit.</p>
-	<input type="text" id="input-name" name="data" placeholder="URL or JSON-LD">
-	<input type="submit" value="Submit" id="input-submit">
+<form action="/results" method="post" id="submit" enctype="multipart/form-data">
+	<p>Paste an <a href="https://www.imsglobal.org/sites/default/files/Badges/OBv2p0/index.html">Open Badges 2.0</a>
+		assertion URL or JSON-LD payload in the text field below, or upload a baked image file. If an image
+		is used, if will take precedence over text data. </p>
+	<input type="text" id="input-name" name="data" placeholder="URL or JSON-LD" />
+	<input type="file" id="input-file" name="image" />
+	<input type="submit" value="Submit" id="input-submit" />
 </form>
 {% endblock %}
