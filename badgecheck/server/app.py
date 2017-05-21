@@ -18,7 +18,8 @@ def home():
 def results():
     if isinstance(request.form['data'], six.string_types) or request.files:
         user_input = request.form['data']
-        if 'image' in request.files:
+        import pdb; pdb.set_trace();
+        if 'image' in request.files and len(request.files['image'].filename):
             user_input = request.files['image']
         verification_results = verify(user_input)
         return render_template(
