@@ -1,3 +1,4 @@
+from .crypto import process_jws_input, verify_jws_signature, verify_key_ownership
 from .extensions import validate_extension_node
 from .input import detect_input_type
 from .graph import fetch_http_node, jsonld_compact_data
@@ -20,10 +21,13 @@ FUNCTIONS = {
     JSONLD_COMPACT_DATA:                       jsonld_compact_data,
     IDENTITY_OBJECT_PROPERTY_DEPENDENCIES:     identity_object_property_dependencies,
     ISSUER_PROPERTY_DEPENDENCIES:              issuer_property_dependencies,
+    PROCESS_JWS_INPUT:                         process_jws_input,
     VALIDATE_EXPECTED_NODE_CLASS:              validate_expected_node_class,
     VALIDATE_EXTENSION_NODE:                   validate_extension_node,
     VALIDATE_RDF_TYPE_PROPERTY:                validate_rdf_type_property,
     VALIDATE_PROPERTY:                         validate_property,
+    VERIFY_JWS:                                verify_jws_signature,
+    VERIFY_KEY_OWNERSHIP:                      verify_key_ownership,
 }
 
 

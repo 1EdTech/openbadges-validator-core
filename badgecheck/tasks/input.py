@@ -7,7 +7,7 @@ from ..actions.input import set_input_type, store_input
 from ..actions.tasks import add_task
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..utils import CachableDocumentLoader
-from task_types import FETCH_HTTP_NODE
+from task_types import FETCH_HTTP_NODE, PROCESS_JWS_INPUT
 from utils import task_result
 
 
@@ -27,7 +27,7 @@ def input_is_json(user_input):
 
 
 def input_is_jws(user_input):
-    jws_regex = re.compile(r'^[A-z0-9-]+.[A-z0-9-]+.[A-z0-9-_]+$')
+    jws_regex = re.compile(r'^[A-z0-9\-=]+.[A-z0-9\-=]+.[A-z0-9\-_=]+$')
     return bool(jws_regex.match(user_input))
 
 
@@ -67,6 +67,7 @@ def detect_input_type(state, task_meta=None):
     elif input_is_jws(input_value):
         detected_type = 'jws'
         new_actions.append(set_input_type(detected_type))
+        new_actions.append(add_task(PROCESS_JWS_INPUT, data=input_value))
     else:
         raise NotImplementedError("only URL, JSON, or JWS input implemented so far")
 

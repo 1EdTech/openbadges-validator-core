@@ -345,6 +345,14 @@ class ClassValidators(OBClasses):
                    'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, 'required': False},
                 {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
             )
+        elif class_name == OBClasses.CryptographicKey:
+            self.validators = (
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False, 'many': True,
+                 'default': 'CryptographicKey'},
+                {'prop_name': 'owner', 'prop_type': ValueTypes.IRI, 'required': False, 'fetch': False},
+                {'prop_name': 'publicKeyPem', 'prop_type': ValueTypes.TEXT, 'required': False},
+            )
         elif class_name == OBClasses.Profile:
             # To start, required values will assume the Profile class is used as BadgeClass.issuer
             self.validators = (
@@ -358,8 +366,8 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': True},
                 {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': True},  # TODO: Add ValueTypes.EMAIL
                 {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},  # TODO: Add ValueTypes.TELEPHONE
-                # TODO: {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID,
-                #   'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
+                {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID,
+                    'expected_class': OBClasses.CryptographicKey, 'fetch': False, 'required': False},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
                    'expected_class': OBClasses.VerificationObjectIssuer, 'fetch': False, 'required': False},
                 # TODO: {'prop_name': 'revocationList', 'prop_type': ValueTypes.ID,
@@ -416,8 +424,8 @@ class ClassValidators(OBClasses):
             self.validators = (
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True, 'many': False,
                     'must_contain_one': ['HostedBadge', 'SignedBadge']},
-                # {'prop_name': 'creator', 'prop_type': ValueTypes.ID,
-                #     'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
+                {'prop_name': 'creator', 'prop_type': ValueTypes.ID,
+                    'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
             )
         elif class_name == OBClasses.VerificationObjectIssuer:
             self.validators = (
