@@ -16,7 +16,7 @@ from .task_types import (ASSERTION_TIMESTAMP_CHECKS, ASSERTION_VERIFICATION_DEPE
                          CLASS_VALIDATION_TASKS, CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
                          HOSTED_ID_IN_VERIFICATION_SCOPE, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
                          ISSUER_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
-                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,)
+                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY, VERIFY_RECIPIENT_IDENTIFIER)
 from .utils import abbreviate_value, is_empty_list, is_null_list, is_iri, is_url, task_result
 
 
@@ -26,8 +26,9 @@ class OBClasses(object):
     BadgeClass = 'BadgeClass'
     Criteria = 'Criteria'
     CryptographicKey = 'CryptographicKey'
-    Extension = 'Extension'
     Evidence = 'Evidence'
+    ExpectedRecipientProfile = 'ExpectedRecipientProfile'
+    Extension = 'Extension'
     IdentityObject = 'IdentityObject'
     Image = 'Image'
     Issuer = 'Issuer'
@@ -39,8 +40,9 @@ class OBClasses(object):
     VerificationObjectIssuer = 'VerificationObjectIssuer'
 
     ALL_CLASSES = (AlignmentObject, Assertion, BadgeClass, Criteria, CryptographicKey,
-                   Extension, Evidence, IdentityObject, Image, Issuer, Profile, RevocationList,
-                   VerificationObject, VerificationObjectAssertion, VerificationObjectIssuer)
+                   ExpectedRecipientProfile, Extension, Evidence, IdentityObject, Image, Issuer,
+                   Profile, RevocationList, VerificationObject, VerificationObjectAssertion,
+                   VerificationObjectIssuer)
 
     @classmethod
     def default_for(cls, class_name):
@@ -383,10 +385,28 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.CryptographicKey, 'fetch': False, 'required': False},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
-                   'expected_class': OBClasses.VerificationObjectIssuer, 'fetch': False, 'required': False},
+                 'expected_class': OBClasses.VerificationObjectIssuer, 'fetch': False, 'required': False},
                 # TODO: {'prop_name': 'revocationList', 'prop_type': ValueTypes.ID,
                 #   'expected_class': OBClasses.Revocationlist, 'fetch': True, 'required': False},  # TODO: Fetch only for relevant assertions?
                 {'task_type': ISSUER_PROPERTY_DEPENDENCIES}
+            )
+        elif class_name == OBClasses.ExpectedRecipientProfile:
+            # For ephemeral profiles representing recipients, there are few required properties.
+            self.validators = (
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False, 'many': True,
+                 'must_contain_one': ['Issuer', 'Profile'], 'default': OBClasses.Profile},
+                {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
+                {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': False},
+                {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': False},  # TODO: Add ValueTypes.EMAIL
+                {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},  # TODO: Add ValueTypes.TELEPHONE
+                {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID,
+                   'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
+                {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
+                 'expected_class': OBClasses.VerificationObjectIssuer, 'fetch': False, 'required': False},
+                {'task_type': VERIFY_RECIPIENT_IDENTIFIER, 'prerequisites': ASSERTION_VERIFICATION_DEPENDENCIES}
             )
         elif class_name == OBClasses.AlignmentObject:
             self.validators = (

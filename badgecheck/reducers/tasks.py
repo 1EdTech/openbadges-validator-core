@@ -1,7 +1,7 @@
-from ..actions.action_types import ADD_TASK, RESOLVE_TASK, UPDATE_TASK
-from ..tasks.task_types import VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_PROPERTY, VALIDATE_RDF_TYPE_PROPERTY
-from ..state import filter_active_tasks
 
+from ..actions.action_types import ADD_TASK, REPORT_MESSAGE, RESOLVE_TASK, UPDATE_TASK
+from ..tasks.task_types import VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_PROPERTY, VALIDATE_RDF_TYPE_PROPERTY
+from ..state import filter_active_tasks, MESSAGE_LEVEL_INFO
 
 def _task_to_add_exists(state, action):
     try:
@@ -61,6 +61,15 @@ def task_reducer(state=None, action=None):
                 update[key] = action[key]
             return _new_state_with_updated_item(state, action['task_id'], update)
 
+    elif action.get('type') == REPORT_MESSAGE:
+        new_task = {
+            'task_id': task_counter,
+            'complete': True,
+            'success': action.get('success', True),
+            'result': action.get('message'),
+            'messageLevel': action.get('messageLevel', MESSAGE_LEVEL_INFO)
+        }
+        return list(state) + [new_task]
 
     return state
 

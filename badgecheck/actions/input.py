@@ -1,4 +1,4 @@
-from action_types import SET_INPUT_TYPE, STORE_INPUT
+from action_types import SET_INPUT_TYPE, SET_PROFILE_ID, STORE_INPUT
 
 
 def store_input(badge_input):
@@ -27,4 +27,11 @@ def set_input_type(type_string):
     return {
         'type': SET_INPUT_TYPE,
         'input_type': type_string
+    }
+
+
+def store_expected_profile_id(profile_id):
+    return {
+        'type': SET_PROFILE_ID,
+        'node_id': profile_id
     }

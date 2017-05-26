@@ -3,10 +3,10 @@ from .extensions import validate_extension_node
 from .input import detect_input_type
 from .graph import fetch_http_node, jsonld_compact_data
 from .validation import (assertion_timestamp_checks, assertion_verification_dependencies,
-                        criteria_property_dependencies, detect_and_validate_node_class,
-                        identity_object_property_dependencies, issuer_property_dependencies,
-                        validate_expected_node_class, validate_rdf_type_property, validate_property,)
-from .verification import (hosted_id_in_verification_scope,)
+                         criteria_property_dependencies, detect_and_validate_node_class,
+                         identity_object_property_dependencies, issuer_property_dependencies,
+                         validate_expected_node_class, validate_rdf_type_property, validate_property,)
+from .verification import (hosted_id_in_verification_scope, verify_recipient_against_trusted_profile)
 from .task_types import *
 
 
@@ -28,6 +28,7 @@ FUNCTIONS = {
     VALIDATE_PROPERTY:                         validate_property,
     VERIFY_JWS:                                verify_jws_signature,
     VERIFY_KEY_OWNERSHIP:                      verify_key_ownership,
+    VERIFY_RECIPIENT_IDENTIFIER:               verify_recipient_against_trusted_profile,
 }
 
 

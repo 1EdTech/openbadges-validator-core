@@ -1,13 +1,17 @@
+import json
 from openbadges_bakery import unbake
 from pydux import create_store
 
 from .actions.input import store_input
 from .actions.tasks import add_task, resolve_task
 from .exceptions import SkipTask, TaskPrerequisitesError
+from .openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from .reducers import main_reducer
-from .state import (filter_active_tasks, filter_failed_tasks, format_message,
+from .state import (filter_active_tasks, filter_messages_for_report, format_message,
                     INITIAL_STATE, MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING,)
 import tasks
+from tasks.task_types import JSONLD_COMPACT_DATA
+from tasks.validation import OBClasses
 
 
 def call_task(task_func, task_meta, store):
@@ -39,13 +43,9 @@ def call_task(task_func, task_meta, store):
         store.dispatch(action)
 
 
-def verify(badge_input):
-    """
-    Verify and validate Open Badges
-    :param badge_input: str (url or json) or python file-like object (baked badge image)
-    :return: dict
-    """
-    store = create_store(main_reducer, INITIAL_STATE)
+def verification_store(badge_input, recipient_profile=None, store=None):
+    if store is None:
+        store = create_store(main_reducer, INITIAL_STATE)
 
     if hasattr(badge_input, 'read') and hasattr(badge_input, 'seek'):
         badge_input.seek(0)
@@ -57,6 +57,17 @@ def verify(badge_input):
 
     store.dispatch(store_input(badge_data))
     store.dispatch(add_task(tasks.DETECT_INPUT_TYPE))
+
+    if recipient_profile:
+        profile_id = recipient_profile.get('id')
+        recipient_profile['@context'] = recipient_profile.get('@context', OPENBADGES_CONTEXT_V2_URI)
+        task = add_task(
+            JSONLD_COMPACT_DATA,
+            data=json.dumps(recipient_profile),
+            expected_class=OBClasses.ExpectedRecipientProfile)
+        if profile_id:
+            task['node_id'] = profile_id
+        store.dispatch(task)
 
     last_task_id = 0
     while len(filter_active_tasks(store.get_state())):
@@ -70,14 +81,21 @@ def verify(badge_input):
         last_task_id = task_meta['task_id']
         call_task(task_func, task_meta, store)
 
+    return store
+
+
+def generate_report(store):
+    """
+    Returns a report of validity information based on a store and its tasks.
+    """
     state = store.get_state()
-    failed_tasks = filter_failed_tasks(state)
+    tasks_for_messages_list = filter_messages_for_report(state)
     ret = {
         'messages': [],
         'graph': state['graph'],
         'input': state['input']
     }
-    for task in failed_tasks:
+    for task in tasks_for_messages_list:
         ret['messages'].append(format_message(task))
 
     ret['errorCount'] = len([m for m in ret['messages'] if m['messageLevel'] == MESSAGE_LEVEL_ERROR])
@@ -85,3 +103,15 @@ def verify(badge_input):
     ret['valid'] = not bool(ret['errorCount'])
 
     return ret
+
+
+def verify(badge_input, recipient_profile=None):
+    """
+    Verify and validate Open Badges
+    :param badge_input: str (url or json) or python file-like object (baked badge image)
+    :param recipient_profile: dict of a trusted Profile describing the entity assumed to be recipient
+    :return: dict
+    """
+    store = verification_store(badge_input, recipient_profile)
+
+    return generate_report(store)
