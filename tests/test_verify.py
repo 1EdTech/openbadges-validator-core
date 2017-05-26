@@ -5,7 +5,6 @@ import unittest
 from pydux import create_store
 
 from badgecheck import verify
-from badgecheck.reducers import main_reducer
 from badgecheck.state import INITIAL_STATE
 
 from openbadges_bakery import bake

@@ -30,6 +30,7 @@ class OBClasses(object):
     Evidence = 'Evidence'
     IdentityObject = 'IdentityObject'
     Image = 'Image'
+    Issuer = 'Issuer'
     Profile = 'Profile'
     RevocationList = 'RevocationList'
     VerificationObject = 'VerificationObject'
@@ -38,8 +39,21 @@ class OBClasses(object):
     VerificationObjectIssuer = 'VerificationObjectIssuer'
 
     ALL_CLASSES = (AlignmentObject, Assertion, BadgeClass, Criteria, CryptographicKey,
-                   Extension, Evidence, IdentityObject, Image, Profile, RevocationList,
-                   VerificationObject)
+                   Extension, Evidence, IdentityObject, Image, Issuer, Profile, RevocationList,
+                   VerificationObject, VerificationObjectAssertion, VerificationObjectIssuer)
+
+    @classmethod
+    def default_for(cls, class_name):
+        defaults = {
+            cls.Issuer: cls.Profile
+        }
+
+        if class_name not in cls.ALL_CLASSES:
+            raise TypeError("Unknown class name {}".format(class_name))
+        try:
+            return defaults[class_name]
+        except KeyError:
+            return class_name
 
 
 class ValueTypes(object):
@@ -345,7 +359,7 @@ class ClassValidators(OBClasses):
                    'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, 'required': False},
                 {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
             )
-        elif class_name == OBClasses.Profile:
+        elif class_name == OBClasses.Profile or class_name == OBClasses.Issuer:
             # To start, required values will assume the Profile class is used as BadgeClass.issuer
             self.validators = (
                 # TODO: "Most platforms to date can only handle HTTP-based IRIs."
@@ -463,6 +477,7 @@ def detect_and_validate_node_class(state, task_meta):
 
     for ob_class in OBClasses.ALL_CLASSES:
         if declared_node_type == ob_class:
+            # TODO USe default for
             node_class = ob_class
             break
 
@@ -477,7 +492,7 @@ def detect_and_validate_node_class(state, task_meta):
 def validate_expected_node_class(state, task_meta):
     node_id = task_meta.get('node_id')
     node = get_node_by_id(state, node_id)  # Raises if not exists
-    node_class = task_meta.get('expected_class')
+    node_class = OBClasses.default_for(task_meta.get('expected_class'))
     actions = _get_validation_actions(node_id, node_class)
 
     return task_result(

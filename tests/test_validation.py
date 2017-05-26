@@ -21,9 +21,9 @@ from badgecheck.tasks.verification import (_default_verification_policy, hosted_
 from badgecheck.tasks.task_types import (ASSERTION_TIMESTAMP_CHECKS, CRITERIA_PROPERTY_DEPENDENCIES,
                                          DETECT_AND_VALIDATE_NODE_CLASS, HOSTED_ID_IN_VERIFICATION_SCOPE,
                                          IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_RDF_TYPE_PROPERTY,
-                                         VALIDATE_PROPERTY,)
+                                         VALIDATE_PROPERTY, VALIDATE_EXPECTED_NODE_CLASS)
 
-from badgecheck.verifier import call_task
+from badgecheck.verifier import call_task, verify
 
 from testfiles.test_components import test_components
 from tests.utils import setUpContextMock
@@ -924,6 +924,7 @@ class ClassValidationTaskTests(unittest.TestCase):
                 )
         self.assertTrue(all(i[0] for i in results))
 
+
 class RdfTypeValidationTests(unittest.TestCase):
     @responses.activate
     def test_validate_in_context_string_type(self):
@@ -1147,3 +1148,57 @@ class AssertionTimeStampValidationTests(unittest.TestCase):
         result, message, actions = assertion_timestamp_checks(state, task_meta)
         self.assertFalse(result, "Assertion issued in the future should not be accepted.")
         self.assertTrue('future in ')
+
+
+class BadgeClassInputValidationTests(unittest.TestCase):
+    @responses.activate
+    def test_can_input_badgeclass(self):
+        badgeclass = {
+            '@context': OPENBADGES_CONTEXT_V2_DICT,
+            'id': 'http://example.com/badgeclass1',
+            'type': 'BadgeClass',
+            'name': 'Example Badge',
+            'description': 'An example',
+            'criteria': 'http://example.com/criteria',
+            'issuer': 'http://example.com/issuer1',
+            'image': 'http://example.com/image1',
+        }
+        issuer = {
+            '@context': OPENBADGES_CONTEXT_V2_DICT,
+            'id': 'http://example.com/issuer1',
+            'type': 'Issuer',
+            'name': 'Example Issuer',
+            'email': 'me@example.com',
+            'url': 'http://example.com'
+        }
+
+        responses.add(responses.GET, badgeclass['id'], json=badgeclass)
+        responses.add(responses.GET, issuer['id'], json=issuer)
+        setUpContextMock()
+
+        results = verify('http://example.com/badgeclass1')
+        self.assertTrue(results.get('valid'))
+
+
+
+
+class IssuerClassValidationTests(unittest.TestCase):
+    def test_both_issuer_and_profile_queue_class_validation(self):
+        issuer = {
+            '@context': OPENBADGES_CONTEXT_V2_DICT,
+            'id': 'http://example.com/issuer1',
+            'type': 'Issuer',
+            'url': 'http://example.com'
+        }
+
+        state = {'graph': [issuer]}
+
+        task_meta = add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=issuer['id'],
+                             expected_class=issuer['type'])
+
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        self.assertTrue(result)
+
+        task_meta = add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=issuer['id'])
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        self.assertTrue(result)
