@@ -1,7 +1,10 @@
-import unittest
-
+from base64 import b64encode
+from Crypto.PublicKey import RSA
 import json
+import jws
 from pydux import create_store
+import responses
+import unittest
 
 from badgecheck.actions.input import set_input_type, store_input
 from badgecheck.reducers import main_reducer
@@ -9,6 +12,8 @@ from badgecheck.state import INITIAL_STATE
 from badgecheck.tasks.input import detect_input_type
 
 from testfiles.test_components import test_components
+
+from tests.utils import setUpContextMock
 
 
 class InputReducerTests(unittest.TestCase):
@@ -80,3 +85,57 @@ class InputTaskTests(unittest.TestCase):
         self.assertEqual(actions[0]['type'], 'SET_INPUT_TYPE')
         self.assertEqual(actions[0]['input_type'], 'json')
 
+
+class InputJwsTests(unittest.TestCase):
+    def setUp(self):
+        self.private_key = RSA.generate(2048)
+        self.signing_key_doc = {
+            'id': 'http://example.org/key1',
+            'type': 'CryptographicKey',
+            'owner': 'http://example.org/issuer',
+            'publicKeyPem': self.private_key.publickey().exportKey('PEM')
+        }
+        self.issuer_data = {
+            'id': 'http://example.org/issuer',
+            'publicKey': 'http://example.org/key1'
+        }
+        self.badgeclass = {
+            'id': '_:b1',
+            'issuer': 'http://example.org/issuer'
+        }
+        self.verification_object = {
+            'id': '_:b0',
+            'type': 'SignedBadge',
+            'creator': 'http://example.org/key1'
+        }
+        self.assertion_data = {
+            'id': 'urn:uuid:bf8d3c3d-fe60-487c-87a3-06440d0d0163',
+            'verification': '_:b0',
+            'badge': '_:b1'
+        }
+
+        header = {'alg': 'RS256'}
+        payload = self.assertion_data
+        signature = jws.sign(header, payload, self.private_key)
+        self.signed_assertion = '.'.join((b64encode(json.dumps(header)), b64encode(json.dumps(payload)), signature))
+
+        self.state = {
+            'graph': [self.signing_key_doc, self.issuer_data, self.badgeclass,
+                      self.verification_object, self.assertion_data]
+        }
+
+    @responses.activate
+    def test_detect_jws_signed_input_type(self):
+        setUpContextMock()
+        # responses.add(responses.GET, badgeclass_data['id'], json=badgeclass_data, status=200)
+        # responses.add(responses.GET, issuer_data['id'], json=issuer_data, status=200)
+        # responses.add(responses.GET, signing_key['id'], json=signing_key, status=200)
+
+        state = INITIAL_STATE.copy()
+        state['input']['value'] = self.signed_assertion
+
+        success, message, actions = detect_input_type(state)
+
+        self.assertTrue(success)
+        self.assertEqual(len(actions), 2)
+        self.assertEqual(actions[0]['input_type'], 'jws')

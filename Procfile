@@ -1,0 +1,1 @@
+web: gunicorn badgecheck.server.app:app

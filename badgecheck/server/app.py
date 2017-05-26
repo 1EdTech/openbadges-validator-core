@@ -1,13 +1,12 @@
 from flask import Flask, redirect, render_template, request
 import json
+import six
 
-from badgecheck.verifier import verify
+from ..verifier import verify
 
-from utils import validate_input
 
 app = Flask(__name__)
-
-
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024  # 4mb file upload limit
 
 
 @app.route("/")
@@ -17,8 +16,11 @@ def home():
 
 @app.route("/results", methods=['POST'])
 def results():
-    if validate_input(request.form['data']):
+    if isinstance(request.form['data'], six.string_types) or request.files:
         user_input = request.form['data']
+        import pdb; pdb.set_trace();
+        if 'image' in request.files and len(request.files['image'].filename):
+            user_input = request.files['image']
         verification_results = verify(user_input)
         return render_template(
             'results.html', results=json.dumps(verification_results, indent=4))

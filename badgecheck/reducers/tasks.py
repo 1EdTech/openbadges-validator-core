@@ -1,4 +1,26 @@
 from ..actions.action_types import ADD_TASK, RESOLVE_TASK, UPDATE_TASK
+from ..tasks.task_types import VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_PROPERTY, VALIDATE_RDF_TYPE_PROPERTY
+from ..state import filter_active_tasks
+
+
+def _task_to_add_exists(state, action):
+    try:
+        if action.get('name') == VALIDATE_EXPECTED_NODE_CLASS:
+            task = [t for t in state if
+                    action['name'] == t.get('name') and
+                    action.get('node_id') == t.get('node_id')][0]
+
+        elif action.get('name') in [VALIDATE_PROPERTY, VALIDATE_RDF_TYPE_PROPERTY]:
+            task = [t for t in state if
+                    action.get('node_id') == t.get('node_id') and
+                    action.get('prop_name') == t.get('prop_name')][0]
+
+        else:
+            return False
+    except IndexError:
+        return False
+
+    return True
 
 
 def task_reducer(state=None, action=None):
@@ -8,7 +30,7 @@ def task_reducer(state=None, action=None):
     else:
         task_counter = state[-1]['task_id'] + 1
 
-    if action.get('type') == ADD_TASK:
+    if action.get('type') == ADD_TASK and not _task_to_add_exists(state, action):
         new_task = {'task_id': task_counter, 'complete': False}
         for key in [k for k in action.keys() if k != 'type']:
             new_task[key] = action[key]
