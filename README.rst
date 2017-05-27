@@ -6,8 +6,8 @@ based on a variety of input sources and present a useful interface for
 accessing their properties and validation information. Python and command line
 APIs are provided.
 
-**Note - Badgecheck is in *early beta* stage. The results provided *can not* 
-be used as a reliable indicator of the validity of an Open Badge, and *can not* 
+**Note - Badgecheck is in *early beta* stage. The results provided *cannot*
+be used as a reliable indicator of the validity of an Open Badge, and *cannot*
 be used as proof to claim implementation conformance.** 
 
 If you want to validate 1.0 or 1.1 badges in the meanwhile, please use 
