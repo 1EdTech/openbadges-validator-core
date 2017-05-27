@@ -1192,8 +1192,6 @@ class BadgeClassInputValidationTests(unittest.TestCase):
         self.assertTrue(results.get('valid'))
 
 
-
-
 class IssuerClassValidationTests(unittest.TestCase):
     def test_both_issuer_and_profile_queue_class_validation(self):
         issuer = {
