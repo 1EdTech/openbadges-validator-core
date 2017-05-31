@@ -1,11 +1,13 @@
-from .crypto import process_jws_input, verify_jws_signature, verify_key_ownership
+from .crypto import (process_jws_input, verify_jws_signature, verify_key_ownership,
+                     verify_signed_assertion_not_revoked,)
 from .extensions import validate_extension_node
 from .input import detect_input_type
 from .graph import fetch_http_node, jsonld_compact_data
 from .validation import (assertion_timestamp_checks, assertion_verification_dependencies,
                          criteria_property_dependencies, detect_and_validate_node_class,
                          identity_object_property_dependencies, issuer_property_dependencies,
-                         validate_expected_node_class, validate_rdf_type_property, validate_property,)
+                         validate_expected_node_class, validate_rdf_type_property, validate_property,
+                         validate_revocationlist_entries,)
 from .verification import (hosted_id_in_verification_scope, verify_recipient_against_trusted_profile)
 from .task_types import *
 
@@ -26,9 +28,11 @@ FUNCTIONS = {
     VALIDATE_EXTENSION_NODE:                   validate_extension_node,
     VALIDATE_RDF_TYPE_PROPERTY:                validate_rdf_type_property,
     VALIDATE_PROPERTY:                         validate_property,
+    VALIDATE_REVOCATIONLIST_ENTRIES:           validate_revocationlist_entries,
     VERIFY_JWS:                                verify_jws_signature,
     VERIFY_KEY_OWNERSHIP:                      verify_key_ownership,
     VERIFY_RECIPIENT_IDENTIFIER:               verify_recipient_against_trusted_profile,
+    VERIFY_SIGNED_ASSERTION_NOT_REVOKED:       verify_signed_assertion_not_revoked,
 }
 
 

@@ -9,14 +9,16 @@ import six
 from ..actions.graph import patch_node
 from ..actions.tasks import add_task
 from ..exceptions import TaskPrerequisitesError, ValidationError
-from ..state import get_node_by_id
+from ..state import get_node_by_id, get_node_by_path
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_DICT
+from ..utils import list_of
 
 from .task_types import (ASSERTION_TIMESTAMP_CHECKS, ASSERTION_VERIFICATION_DEPENDENCIES,
                          CLASS_VALIDATION_TASKS, CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE,
                          HOSTED_ID_IN_VERIFICATION_SCOPE, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
                          ISSUER_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
-                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY, VERIFY_RECIPIENT_IDENTIFIER)
+                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY, VALIDATE_REVOCATIONLIST_ENTRIES,
+                         VERIFY_RECIPIENT_IDENTIFIER)
 from .utils import abbreviate_value, is_empty_list, is_null_list, is_iri, is_url, task_result
 
 
@@ -202,7 +204,11 @@ def validate_property(state, task_meta):
     expected to be one of the Open Badges Primitive data types or an ID.
     """
     node_id = task_meta.get('node_id')
-    node = get_node_by_id(state, node_id)
+    node_path = task_meta.get('node_path')
+    if node_id:
+        node = get_node_by_id(state, node_id)
+    elif node_path:
+        node = get_node_by_path(state, node_path)
     node_class = task_meta.get('node_class', 'unknown type node')
 
     prop_name = task_meta.get('prop_name')
@@ -386,8 +392,6 @@ class ClassValidators(OBClasses):
                     'expected_class': OBClasses.CryptographicKey, 'fetch': False, 'required': False},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
                  'expected_class': OBClasses.VerificationObjectIssuer, 'fetch': False, 'required': False},
-                # TODO: {'prop_name': 'revocationList', 'prop_type': ValueTypes.ID,
-                #   'expected_class': OBClasses.Revocationlist, 'fetch': True, 'required': False},  # TODO: Fetch only for relevant assertions?
                 {'task_type': ISSUER_PROPERTY_DEPENDENCIES}
             )
         elif class_name == OBClasses.ExpectedRecipientProfile:
@@ -469,6 +473,13 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'startsWith', 'prop_type': ValueTypes.URL, 'required': False},
                 {'prop_name': 'allowedOrigins', 'prop_type': ValueTypes.TEXT, 'required': False,
                  'many': True}  # TODO: Add Origin type?
+            )
+        elif class_name == OBClasses.RevocationList:
+            self.validators = (
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True, 'many': True,
+                 'must_contain_one': OBClasses.RevocationList},
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
+                {'task_type': VALIDATE_REVOCATIONLIST_ENTRIES}
             )
         else:
             raise NotImplementedError("Chosen OBClass not implemented yet.")
@@ -632,3 +643,41 @@ def assertion_timestamp_checks(state, task_meta):
 def issuer_property_dependencies(state, task_meta):
     # Placeholder task used as prerequisite for hosted id check
     return task_result(True, "No issuer property dependencies to check.")
+
+
+def validate_revocationlist_entries(state, task_meta):
+    try:
+        node_id = task_meta['node_id']
+        revocation_list = get_node_by_id(state, node_id)
+    except (IndexError, KeyError,):
+        raise TaskPrerequisitesError()
+
+    try:
+        revoked_assertions = list_of(revocation_list['revokedAssertions'])
+    except KeyError:
+        return task_result(False, "RevocationList {} missing required property revokedAssertions.")
+
+    for entry in revoked_assertions:
+        if isinstance(entry, dict):
+            try:
+                if not PrimitiveValueValidator(ValueTypes.IRI)(entry['id']):
+                    return task_result(False, "RevocationList {} has entry with id {} not in IRI format".format(
+                        node_id, entry['id']
+                    ))
+            except KeyError:
+                if not isinstance(entry.get('uid'), six.string_types):
+                    return task_result(False, "RevocationList {} has entry with uid '{}' not in text format.".format(
+                        node_id, abbreviate_value(entry.get('uid'))
+                    ))
+        elif isinstance(entry, six.string_types):
+            if not PrimitiveValueValidator(ValueTypes.IRI)(entry):
+                return task_result(False, "RevocationList {} has entry with id {} not in IRI format".format(
+                    node_id, entry
+                ))
+        else:
+            return task_result(False, "RevocationList {} has entry with id {} not in IRI format".format(
+                    node_id, entry
+                ))
+
+    # Node flattening system will insert all entries into graph.
+    return task_result(True)
