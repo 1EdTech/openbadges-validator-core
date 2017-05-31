@@ -27,8 +27,7 @@ def call_task(task_func, task_meta, store):
     try:
         success, message, actions = task_func(store.get_state(), task_meta)
     except SkipTask:
-        # TODO: Implement skip handling.
-        pass
+        raise NotImplemented("Implement SkipTask handling in call_task")
     except TaskPrerequisitesError:
         message = "Task could not run due to unmet prerequisites."
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))

@@ -73,7 +73,6 @@ class ValueTypes(object):
     RDF_TYPE = 'RDF_TYPE'
     TEXT = 'TEXT'
     URL = 'URL'
-    # TODO: TELEPHONE = 'TELEPHONE'
 
     PRIMITIVES = (BOOLEAN, DATETIME, ID, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TEXT, URL)
 
@@ -162,12 +161,11 @@ class PrimitiveValueValidator(object):
         :param value: six.string_types 
         :return: bool
         """
-        # TODO: Accept other IRI schemes in the future for certain classes.
         return is_iri(value)
 
     @classmethod
     def _validate_markdown_text(cls, value):
-        # TODO Assert no render errors if relevant?
+        # All markdown is "valid" if it is a string.
         return cls._validate_text
 
     @classmethod
@@ -244,7 +242,6 @@ def validate_property(state, task_meta):
         return task_result(True, "Optional property {} is null in {} {}".format(
             prop_name, node_class, node_id
         ))
-        # TODO Return STRIP_PROPERTY action
 
     if not allow_many and len(values_to_test) > 1:
         return task_result(
@@ -378,7 +375,6 @@ class ClassValidators(OBClasses):
         elif class_name == OBClasses.Profile or class_name == OBClasses.Issuer:
             # To start, required values will assume the Profile class is used as BadgeClass.issuer
             self.validators = (
-                # TODO: "Most platforms to date can only handle HTTP-based IRIs."
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True,
                     'many': True, 'must_contain_one': ['Issuer', 'Profile']},
@@ -386,8 +382,8 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': True},
-                {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': True},  # TODO: Add ValueTypes.EMAIL
-                {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},  # TODO: Add ValueTypes.TELEPHONE
+                {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': True},
+                {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.CryptographicKey, 'fetch': False, 'required': False},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
@@ -404,8 +400,8 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': False},
-                {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': False},  # TODO: Add ValueTypes.EMAIL
-                {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},  # TODO: Add ValueTypes.TELEPHONE
+                {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID,
                    'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
@@ -433,7 +429,7 @@ class ClassValidators(OBClasses):
         elif class_name == OBClasses.IdentityObject:
             self.validators = (
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True, 'many': False,
-                    'must_contain_one': ['id', 'email', 'url', 'telephone']},  # TODO: support any prop w/string data
+                    'must_contain_one': ['id', 'email', 'url', 'telephone']},
                 {'prop_name': 'identity', 'prop_type': ValueTypes.IDENTITY_HASH, 'required': True},
                 {'prop_name': 'hashed', 'prop_type': ValueTypes.BOOLEAN, 'required': True},
                 {'prop_name': 'salt', 'prop_type': ValueTypes.TEXT, 'required': False},
@@ -469,10 +465,10 @@ class ClassValidators(OBClasses):
             self.validators = (
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False, 'many': True,
                     'default': 'VerificationObject'},
-                {'prop_name': 'verificationProperty', 'prop_type': ValueTypes.IRI, 'required': False},  # TODO: set default?
+                {'prop_name': 'verificationProperty', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'prop_name': 'startsWith', 'prop_type': ValueTypes.URL, 'required': False},
                 {'prop_name': 'allowedOrigins', 'prop_type': ValueTypes.TEXT, 'required': False,
-                 'many': True}  # TODO: Add Origin type?
+                 'many': True}
             )
         elif class_name == OBClasses.RevocationList:
             self.validators = (
@@ -516,7 +512,6 @@ def detect_and_validate_node_class(state, task_meta):
 
     for ob_class in OBClasses.ALL_CLASSES:
         if declared_node_type == ob_class:
-            # TODO USe default for
             node_class = ob_class
             break
 

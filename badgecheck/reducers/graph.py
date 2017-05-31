@@ -10,7 +10,6 @@ def get_next_blank_node_id():
     global current_node_number
     current_node_number += 1
     return "_:b{}".format(current_node_number)
-    # TODO: Handle case where current blank node id is already in the node list
 
 
 def _flatten_node(node, node_id=None):
@@ -68,7 +67,6 @@ def graph_reducer(state=None, action=None):
         new_nodes = _flatten_node(new_node, action.get('node_id'))
         state.extend(new_nodes)
     elif action.get('type') == UPDATE_NODE:
-        # TODO
         raise NotImplementedError("TODO: Implement updating nodes.")
     elif action.get('type') == PATCH_NODE:
         try:

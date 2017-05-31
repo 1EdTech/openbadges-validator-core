@@ -67,7 +67,6 @@ def jsonld_compact_data(state, task_meta):
 
     options = {'documentLoader': CachableDocumentLoader(cachable=task_meta.get('use_cache', True))}
     result = jsonld.compact(input_data, OPENBADGES_CONTEXT_V2_URI, options=options)
-    # TODO: We should not necessarily trust this ID over the source URL
     node_id = result.get('id', task_meta.get('node_id', get_next_blank_node_id()))
 
     actions = [
