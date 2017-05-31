@@ -248,7 +248,7 @@ class JwsFullVerifyTests(unittest.TestCase):
             'type': 'RevocationList',
             'revokedAssertions': [
                 {'id': input_assertion['id'], 'revocationReason': 'A good reason, for sure'},
-                {'id': '52e4c6b3-8c13-4fa8-8482-a5cf34ef37a9'},
+                {'id': 'urn:uuid:52e4c6b3-8c13-4fa8-8482-a5cf34ef37a9'},
                 'urn:uuid:6deb4a00-ebce-4b28-8cc2-afa705ef7be4'
             ]
         }
@@ -286,18 +286,21 @@ class JwsFullVerifyTests(unittest.TestCase):
         self.assertEqual(
             len([i for i in response['graph'] if i.get('id') == input_assertion['id']]), 2,
             "There is one original assertion and one graph entry from the revocationList")
-        self.assertEqual(len([i for i in response['graph'] if i.get('id') == '52e4c6b3-8c13-4fa8-8482-a5cf34ef37a9']), 0)
+        self.assertEqual(
+            len([i for i in response['graph'] if i.get('id') == revocation_list['revokedAssertions'][1]['id']]), 0,
+            "A revoked assertion entry not related to this graph does not appear in the output."
+        )
 
 
 class GraphScrubbingTests(unittest.TestCase):
     def test_can_scrub_revocationlist_from_graph(self):
         assertion_data = {
-            'id': 'urn:uuid:99',
+            'id': 'urn:uuid:339e3b02-8b45-4948-b8d9-3589ec0f75d4',
             'type': 'Assertion',
-            'badge': 'urn:uuid:50'
+            'badge': 'urn:uuid:6cd431ae-3155-4a81-b404-3bdc4d64b10d'
         }
         badgeclass_data = {
-            'id': 'urn:uuid:50',
+            'id': assertion_data['badge'],
             'type': 'BadgeClass',
             'issuer': 'http://example.org/issuer'
         }
@@ -308,7 +311,11 @@ class GraphScrubbingTests(unittest.TestCase):
         }
         revocation_list = {
             'id': 'http://example.org/revocations',
-            'revokedAssertions': ['urn:uuid:1', 'urn:uuid:2', '_:b0']
+            'revokedAssertions': [
+                'urn:uuid:1fac23b6-f1f7-46bd-9247-b1a94c3f8aaa',
+                'urn:uuid:486590d2-89ec-4f71-9c1e-63d1be796a95',
+                '_:b0'
+            ]
         }
         b0 = {
             'id': '_:b0',
@@ -319,9 +326,9 @@ class GraphScrubbingTests(unittest.TestCase):
 
         new_graph = graph_reducer(graph, action)
 
-        self.assertEqual(len(new_graph), 3)
+        self.assertEqual(len(new_graph), 4)
 
         action = scrub_revocation_list(revocation_list['id'], safe_ids=['_:b0'])
         new_graph = graph_reducer(graph, action)
-        self.assertEqual(len(new_graph), 4, "An otherwise deletable node is marked safe.")
+        self.assertEqual(len(new_graph), 5, "An otherwise deletable node is marked safe.")
         self.assertTrue('_:b0' in [i.get('id') for i in new_graph])

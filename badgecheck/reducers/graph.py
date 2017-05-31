@@ -49,7 +49,7 @@ def _scrub_revocation_list_node(state, node_id, safe_ids=None):
 
     new_state = []
 
-    ids_to_exclude = [node_id] + list_of(target_node.get('revokedAssertions', []))
+    ids_to_exclude = list_of(target_node.get('revokedAssertions', []))
 
     for node in state:
         if node.get('id') in safe_ids or node.get('id') not in ids_to_exclude:
