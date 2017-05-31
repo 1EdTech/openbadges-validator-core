@@ -5,9 +5,11 @@ import jws
 import responses
 import unittest
 
+from badgecheck.actions.graph import scrub_revocation_list
 from badgecheck.actions.tasks import add_task
 from badgecheck.exceptions import TaskPrerequisitesError
 from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
+from badgecheck.reducers.graph import graph_reducer
 from badgecheck.tasks.crypto import (process_jws_input, verify_key_ownership, verify_jws_signature,
                                      verify_signed_assertion_not_revoked,)
 from badgecheck.tasks.task_types import (PROCESS_JWS_INPUT, VERIFY_JWS, VERIFY_KEY_OWNERSHIP,
@@ -229,3 +231,41 @@ class JwsFullVerifyTests(unittest.TestCase):
 
         response = verify(signature)
         self.assertTrue(response['valid'])
+
+
+class GraphScrubbingTests(unittest.TestCase):
+    def test_can_scrub_revocationlist_from_graph(self):
+        assertion_data = {
+            'id': 'urn:uuid:99',
+            'type': 'Assertion',
+            'badge': 'urn:uuid:50'
+        }
+        badgeclass_data = {
+            'id': 'urn:uuid:50',
+            'type': 'BadgeClass',
+            'issuer': 'http://example.org/issuer'
+        }
+        issuer_data = {
+            'id': 'http://example.org/issuer',
+            'type': 'Issuer',
+            'revocationList': 'http://example.org/revocations'
+        }
+        revocation_list = {
+            'id': 'http://example.org/revocations',
+            'revokedAssertions': ['urn:uuid:1', 'urn:uuid:2', '_:b0']
+        }
+        b0 = {
+            'id': '_:b0',
+            'uid': 'abc123'
+        }
+        graph = [assertion_data, badgeclass_data, issuer_data, revocation_list, b0]
+        action = scrub_revocation_list(revocation_list['id'])
+
+        new_graph = graph_reducer(graph, action)
+
+        self.assertEqual(len(new_graph), 3)
+
+        action = scrub_revocation_list(revocation_list['id'], safe_ids=['_:b0'])
+        new_graph = graph_reducer(graph, action)
+        self.assertEqual(len(new_graph), 4, "An otherwise deletable node is marked safe.")
+        self.assertTrue('_:b0' in [i.get('id') for i in new_graph])

@@ -12,6 +12,7 @@ Manage the state of the known entities related to the validation subject.
 """
 ADD_NODE = 'ADD_NODE'
 PATCH_NODE = 'PATCH_NODE'
+SCRUB_REVOCATION_LIST = 'SCRUB_REVOCATION_LIST'
 UPDATE_NODE = 'UPDATE_NODE'
 
 """

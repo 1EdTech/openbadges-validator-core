@@ -1,7 +1,8 @@
 import copy
 
-from ..actions.action_types import ADD_NODE, PATCH_NODE, UPDATE_NODE
+from ..actions.action_types import ADD_NODE, PATCH_NODE, SCRUB_REVOCATION_LIST, UPDATE_NODE
 from ..state import get_node_by_id
+from ..utils import list_of
 
 
 current_node_number = -1
@@ -34,6 +35,29 @@ def _flatten_node(node, node_id=None):
     return node_list
 
 
+def _scrub_revocation_list_node(state, node_id, safe_ids=None):
+    """ Return a copy of state that does not include the revocationList or any assertions referenced from it."""
+    if not node_id:
+        return state
+    if safe_ids is None:
+        safe_ids = []
+
+    try:
+        target_node = [node for node in state if node.get('id') == node_id][0]
+    except IndexError:
+        return state
+
+    new_state = []
+
+    ids_to_exclude = [node_id] + list_of(target_node.get('revokedAssertions', []))
+
+    for node in state:
+        if node.get('id') in safe_ids or node.get('id') not in ids_to_exclude:
+            new_state.append(node)
+
+    return new_state
+
+
 def graph_reducer(state=None, action=None):
     if state is None:
         state = []
@@ -56,5 +80,7 @@ def graph_reducer(state=None, action=None):
             state.append(updated_node)
         except IndexError:
             pass
+    elif action.get('type') == SCRUB_REVOCATION_LIST:
+        state = _scrub_revocation_list_node(state, action.get('node_id'), action.get('safe_ids'))
 
     return state
