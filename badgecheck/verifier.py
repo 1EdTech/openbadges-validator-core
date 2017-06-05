@@ -84,16 +84,26 @@ def verification_store(badge_input, recipient_profile=None, store=None):
     return store
 
 
-def generate_report(store):
+DEFAULT_OPTIONS = {
+    'include_original_json': False  # Return the original JSON strings fetched from HTTP
+}
+
+
+def generate_report(store, options=DEFAULT_OPTIONS):
     """
     Returns a report of validity information based on a store and its tasks.
     """
     state = store.get_state()
+
+    processed_input = state['input'].copy()
+    if not options.get('include_original_json'):
+        del processed_input['original_json']
+
     tasks_for_messages_list = filter_messages_for_report(state)
     ret = {
         'messages': [],
         'graph': state['graph'],
-        'input': state['input']
+        'input': processed_input
     }
     for task in tasks_for_messages_list:
         ret['messages'].append(format_message(task))
@@ -105,13 +115,19 @@ def generate_report(store):
     return ret
 
 
-def verify(badge_input, recipient_profile=None):
+def verify(badge_input, recipient_profile=None, options=None):
     """
     Verify and validate Open Badges
     :param badge_input: str (url or json) or python file-like object (baked badge image)
     :param recipient_profile: dict of a trusted Profile describing the entity assumed to be recipient
+    :param options: dict of options. See DEFAULT_OPTIONS for values
     :return: dict
     """
+    if options:
+        options = DEFAULT_OPTIONS.update(options)
+    else:
+        options = DEFAULT_OPTIONS
+
     store = verification_store(badge_input, recipient_profile)
 
-    return generate_report(store)
+    return generate_report(store, options)

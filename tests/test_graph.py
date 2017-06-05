@@ -2,6 +2,7 @@ import json
 import responses
 import unittest
 
+from badgecheck.actions.action_types import STORE_ORIGINAL_JSON
 from badgecheck.actions.graph import add_node, patch_node
 from badgecheck.actions.tasks import add_task
 from badgecheck.reducers.graph import graph_reducer
@@ -28,8 +29,9 @@ class HttpFetchingTests(unittest.TestCase):
         success, message, actions = fetch_http_node({}, task)
 
         self.assertTrue(success)
-        self.assertEqual(actions[0]['name'], JSONLD_COMPACT_DATA)
-        self.assertEqual(len(actions), 1)
+        self.assertEqual(len(actions), 2)
+        self.assertEqual(actions[0]['type'], STORE_ORIGINAL_JSON)
+        self.assertEqual(actions[1]['name'], JSONLD_COMPACT_DATA)
 
 
 class NodeStorageTests(unittest.TestCase):

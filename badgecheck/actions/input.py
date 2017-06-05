@@ -1,4 +1,4 @@
-from action_types import SET_INPUT_TYPE, SET_PROFILE_ID, STORE_INPUT
+from action_types import SET_INPUT_TYPE, SET_PROFILE_ID, STORE_INPUT, STORE_ORIGINAL_JSON
 
 
 def store_input(badge_input):
@@ -34,4 +34,18 @@ def store_expected_profile_id(profile_id):
     return {
         'type': SET_PROFILE_ID,
         'node_id': profile_id
+    }
+
+
+def store_original_json(data, node_id):
+    """
+    Store a fetched blob of JSON
+    :param data: string
+    :param node_id: string
+    :return: dict
+    """
+    return {
+        'type': STORE_ORIGINAL_JSON,
+        'data': data,
+        'node_id': node_id
     }
