@@ -87,8 +87,7 @@ def task_reducer(state=None, action=None):
             'complete': True,
             'name': action.get('name'),
             'success': action.get('success', True),
-            'result': action.get('message'),
-            'messageLevel': action.get('messageLevel', MESSAGE_LEVEL_INFO)
+            'result': action.get('message')
         }
         return list(state) + [new_task]
 

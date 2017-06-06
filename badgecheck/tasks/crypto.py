@@ -3,6 +3,7 @@ import json
 import jws
 import six
 
+from ..actions.graph import patch_node
 from ..actions.tasks import add_task
 from ..exceptions import TaskPrerequisitesError
 from ..state import get_node_by_id, get_node_by_path
@@ -118,13 +119,16 @@ def verify_signed_assertion_not_revoked(state, task_meta):
 
     revoked_match = [a for a in revoked_assertions if _is_match(assertion_id, a)]
 
-    actions = []
+    actions = [patch_node(revocation_list['id'], {'revokedAssertions': revoked_match})]
 
     if len(revoked_match):
-        try:
-            msg = ' with reason: ' + revoked_match[0].get('revocationReason')
-        except AttributeError:
-            msg = ''
+        assertion_records = [i for i in state['graph'] if i.get('id') == assertion_id]
+        msg = ''
+        for a in revoked_match:
+            try:
+                msg = ' with reason: ' + a['revocationReason']
+            except (KeyError, TypeError,):
+                continue
 
         return task_result(False, "Assertion {} has been revoked in RevocationList {}{}".format(
             assertion_id, issuer['revocationList'], msg

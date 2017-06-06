@@ -28,8 +28,7 @@ def call_task(task_func, task_meta, store):
     try:
         success, message, actions = task_func(store.get_state(), task_meta)
     except SkipTask:
-        # TODO: Implement skip handling.
-        pass
+        raise NotImplemented("Implement SkipTask handling in call_task")
     except TaskPrerequisitesError:
         message = "Task could not run due to unmet prerequisites."
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
@@ -133,10 +132,11 @@ def verify(badge_input, recipient_profile=None, options=None):
     :return: dict
     """
     if options:
-        options = DEFAULT_OPTIONS.update(options)
+        selected_options = DEFAULT_OPTIONS.copy()
+        selected_options.update(options)
     else:
-        options = DEFAULT_OPTIONS
+        selected_options = DEFAULT_OPTIONS
 
     store = verification_store(badge_input, recipient_profile)
 
-    return generate_report(store, options)
+    return generate_report(store, selected_options)
