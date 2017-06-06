@@ -35,6 +35,12 @@ def abbreviate_value(value):
         return str(value)[:48] + '...'
 
 
+def abbreviate_node_id(node_id=None, node_path=None):
+    if node_id:
+        return node_id
+    return abbreviate_value(node_path)
+
+
 def is_iri(value):
     urn_regex = r'^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
     return bool(

@@ -1,19 +1,29 @@
-
-from ..actions.action_types import ADD_TASK, REPORT_MESSAGE, RESOLVE_TASK, UPDATE_TASK
-from ..tasks.task_types import VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_PROPERTY, VALIDATE_RDF_TYPE_PROPERTY
+from ..actions.action_types import ADD_TASK, REPORT_MESSAGE, RESOLVE_TASK, TRIGGER_CONDITION, UPDATE_TASK
+from ..tasks.task_types import FETCH_HTTP_NODE, VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_PROPERTY, VALIDATE_RDF_TYPE_PROPERTY
 from ..state import filter_active_tasks, MESSAGE_LEVEL_INFO
+
 
 def _task_to_add_exists(state, action):
     try:
         if action.get('name') == VALIDATE_EXPECTED_NODE_CLASS:
             task = [t for t in state if
-                    action['name'] == t.get('name') and
-                    action.get('node_id') == t.get('node_id')][0]
+                action['name'] == t.get('name') and
+                action.get('node_id') == t.get('node_id') and
+                action.get('node_path') == t.get('node_path')
+            ][0]
 
         elif action.get('name') in [VALIDATE_PROPERTY, VALIDATE_RDF_TYPE_PROPERTY]:
             task = [t for t in state if
                     action.get('node_id') == t.get('node_id') and
+                    action.get('node_path') == t.get('node_path') and
                     action.get('prop_name') == t.get('prop_name')][0]
+
+        elif action.get('name') == FETCH_HTTP_NODE:
+            task = [
+                t for t in state if
+                action.get('url') == t.get('url')
+            ][0]
+
 
         else:
             return False
@@ -65,6 +75,17 @@ def task_reducer(state=None, action=None):
         new_task = {
             'task_id': task_counter,
             'complete': True,
+            'success': action.get('success', True),
+            'result': action.get('message'),
+            'messageLevel': action.get('messageLevel', MESSAGE_LEVEL_INFO)
+        }
+        return list(state) + [new_task]
+
+    elif action.get('type') == TRIGGER_CONDITION:
+        new_task = {
+            'task_id': task_counter,
+            'complete': True,
+            'name': action.get('name'),
             'success': action.get('success', True),
             'result': action.get('message'),
             'messageLevel': action.get('messageLevel', MESSAGE_LEVEL_INFO)

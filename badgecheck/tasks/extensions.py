@@ -10,7 +10,7 @@ from ..state import get_node_by_id, get_node_by_path
 from ..utils import list_of
 
 from .task_types import VALIDATE_EXTENSION_NODE
-from .utils import abbreviate_value, is_iri, filter_tasks, task_result
+from .utils import abbreviate_value as abv, abbreviate_node_id as abv_node, is_iri, filter_tasks, task_result
 
 
 def _validate_single_extension(node, extension_type, node_json=None):
@@ -51,12 +51,13 @@ def _validate_single_extension(node, extension_type, node_json=None):
 
 def validate_extension_node(state, task_meta):
     try:
-        if task_meta.get('node_id'):
-            node_id = task_meta['node_id']
+        node_id = task_meta.get('node_id')
+        node_path = task_meta.get('node_path')
+        if node_id:
             node = get_node_by_id(state, node_id)
-        else:
-            node = get_node_by_path(state, task_meta['node_path'])
-            node_id = node['id']
+        elif node_path:
+            node = get_node_by_path(state, node_path)
+
         node_type = list_of(node['type'])
         node_json = task_meta.get('node_json')  # Ok to be None
     except (KeyError, ValueError, IndexError, TypeError):
@@ -75,13 +76,13 @@ def validate_extension_node(state, task_meta):
     elif len(types_to_test) > 1:
         # If there is more than one extension, return each validation as a separate task
         actions = [
-            add_task(VALIDATE_EXTENSION_NODE, node_id=node_id,
+            add_task(VALIDATE_EXTENSION_NODE, node_id=node_id, node_path=node_path,
                      node_json=node_json, type_to_test=t)
             for t in types_to_test
         ]
         return task_result(
             True, "Multiple extension types {} discovered in node {}".format(
-                abbreviate_value(types_to_test), node_id
+                abv(types_to_test), abv_node(node_id, node_path)
             ), actions)
     else:
         return _validate_single_extension(node, types_to_test[0], node_json=node_json)

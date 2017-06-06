@@ -1,4 +1,4 @@
-from action_types import ADD_TASK, DELETE_TASK, REPORT_MESSAGE, RESOLVE_TASK, UPDATE_TASK
+from action_types import ADD_TASK, DELETE_TASK, REPORT_MESSAGE, RESOLVE_TASK, TRIGGER_CONDITION, UPDATE_TASK
 
 
 def add_task(task_name, **kwargs):
@@ -19,6 +19,15 @@ def resolve_task(task_id, success=True, result=''):
         'type': RESOLVE_TASK,
         'task_id': task_id,
         'success': success,
+        'result': result
+    }
+
+
+def trigger_condition(condition_key, result=''):
+    return {
+        'type': TRIGGER_CONDITION,
+        'name': condition_key,
+        'success': True,
         'result': result
     }
 

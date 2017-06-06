@@ -41,7 +41,10 @@ def graph_reducer(state=None, action=None):
     if action.get('type') == ADD_NODE:
         state = list(state)  # copy state instead of mutating original
         new_node = copy.deepcopy(action.get('data'))
-        new_nodes = _flatten_node(new_node, action.get('node_id'))
+        if not new_node.get('id'):
+            new_node['id'] = action.get('node_id', get_next_blank_node_id())
+        # new_nodes = _flatten_node(new_node, action.get('node_id'))
+        new_nodes = [new_node]
         state.extend(new_nodes)
     elif action.get('type') == UPDATE_NODE:
         # TODO

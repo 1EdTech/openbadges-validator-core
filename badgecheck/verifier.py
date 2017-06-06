@@ -3,7 +3,7 @@ from openbadges_bakery import unbake
 from pydux import create_store
 
 from .actions.input import store_input
-from .actions.tasks import add_task, resolve_task
+from .actions.tasks import add_task, resolve_task, trigger_condition
 from .exceptions import SkipTask, TaskPrerequisitesError
 from .openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from .reducers import main_reducer
@@ -12,6 +12,7 @@ from .state import (filter_active_tasks, filter_messages_for_report, format_mess
 import tasks
 from tasks.task_types import JSONLD_COMPACT_DATA
 from tasks.validation import OBClasses
+from .utils import list_of
 
 
 def call_task(task_func, task_meta, store):
@@ -37,6 +38,11 @@ def call_task(task_func, task_meta, store):
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
     else:
         store.dispatch(resolve_task(task_meta.get('task_id'), success=success, result=message))
+        if success:
+            for trigger in list_of(task_meta.get('triggers_completion', [])):
+                store.dispatch(trigger_condition(trigger, 'Completed by {}: {}'.format(
+                    task_meta.get('task_id'), task_meta.get('name')
+                )))
 
     # Make updates and queue up next tasks.
     for action in actions:
@@ -97,7 +103,10 @@ def generate_report(store, options=DEFAULT_OPTIONS):
 
     processed_input = state['input'].copy()
     if not options.get('include_original_json'):
-        del processed_input['original_json']
+        try:
+            del processed_input['original_json']
+        except KeyError:
+            pass
 
     tasks_for_messages_list = filter_messages_for_report(state)
     ret = {
