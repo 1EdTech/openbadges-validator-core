@@ -13,7 +13,7 @@ def add_node(node_id=None, data=None):
 
 
 def update_node(node_id, data):
-    action ={
+    action = {
         'type': UPDATE_NODE,
         'node_id': node_id,
         'data': data

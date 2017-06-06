@@ -3,6 +3,7 @@ from pyld import jsonld
 import requests
 
 from ..actions.graph import add_node
+from ..actions.input import store_original_json
 from ..actions.tasks import add_task
 from ..exceptions import TaskPrerequisitesError, ValidationError
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
@@ -28,8 +29,10 @@ def fetch_http_node(state, task_meta):
             return task_result(message='Successfully fetched image from {}'.format(url))
         return task_result(success=False, message="Response could not be interpreted from url {}".format(url))
 
-    actions = [add_task(JSONLD_COMPACT_DATA, data=result.text, node_id=url,
-                        expected_class=task_meta.get('expected_class'))]
+    actions = [
+        store_original_json(data=result.text, node_id=url),
+        add_task(JSONLD_COMPACT_DATA, data=result.text, node_id=url,
+                 expected_class=task_meta.get('expected_class'))]
     return task_result(message="Successfully fetched JSON data from {}".format(url), actions=actions)
 
 
@@ -67,7 +70,6 @@ def jsonld_compact_data(state, task_meta):
 
     options = {'documentLoader': CachableDocumentLoader(cachable=task_meta.get('use_cache', True))}
     result = jsonld.compact(input_data, OPENBADGES_CONTEXT_V2_URI, options=options)
-    # TODO: We should not necessarily trust this ID over the source URL
     node_id = result.get('id', task_meta.get('node_id', get_next_blank_node_id()))
 
     actions = [

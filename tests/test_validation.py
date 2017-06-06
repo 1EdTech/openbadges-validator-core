@@ -184,7 +184,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
         result, message, actions = validate_property(state, task)
         self.assertTrue(result, "Required boolean property matches expectation")
         self.assertEqual(
-            message, "BOOLEAN property bool_prop value True valid in unknown type node {}".format(first_node['id'])
+            message, "BOOLEAN property bool_prop is valid in unknown type node {}".format(first_node['id'])
         )
 
     def test_basic_id_validation(self):
@@ -292,7 +292,7 @@ class PropertyValidationTaskTests(unittest.TestCase):
         result, message, actions = validate_property(state, task)
         self.assertTrue(result, "Optional date prop is present and well-formed; validation should pass.")
         self.assertEqual(
-            message, "DATETIME property date_prop value 1977-06-10T12:00:00Z valid in unknown type node {}".format(first_node['id'])
+            message, "DATETIME property date_prop is valid in unknown type node {}".format(first_node['id'])
         )
 
         for date in _VALID_DATETIMES:
@@ -521,15 +521,14 @@ class IDPropertyValidationTests(unittest.TestCase):
     def test_validate_nested_identity_object(self):
         first_node = {
             'id': 'http://example.com/1',
-            'recipient': '_:b0'
+            'recipient': {
+                'id': '_:b0',
+                'identity': 'two@example.com',
+                'type': 'email',
+                'hashed': False
+            }
         }
-        second_node = {
-            'id': '_:b0',
-            'identity': 'two@example.com',
-            'type': 'email',
-            'hashed': False
-        }
-        state = {'graph': [first_node, second_node]}
+        state = {'graph': [first_node]}
 
         task = add_task(
             VALIDATE_PROPERTY,
@@ -544,6 +543,7 @@ class IDPropertyValidationTests(unittest.TestCase):
         self.assertTrue(result, "Property validation task should succeed.")
         self.assertEqual(len(actions), 1)
         self.assertEqual(actions[0]['expected_class'], OBClasses.IdentityObject)
+        self.assertEqual(actions[0]['node_path'], [first_node['id'], 'recipient'])
 
     def test_validate_linked_related_resource(self):
         first_node = {
@@ -653,16 +653,14 @@ class ClassValidationTaskTests(unittest.TestCase):
     def test_validate_identity_object_property_dependencies(self):
         first_node = {
             'id': 'http://example.com/1',
-            'recipient': '_:b0'
+            'recipient': {
+                'identity': 'sha256$c7ef86405ba71b85acd8e2e95166c4b111448089f2e1599f42fe1bba46e865c5',
+                'type': 'email',
+                'hashed': True,
+                'salt': 'deadsea'
+            }
         }
-        second_node = {
-            'id': '_:b0',
-            'identity': 'sha256$c7ef86405ba71b85acd8e2e95166c4b111448089f2e1599f42fe1bba46e865c5',
-            'type': 'email',
-            'hashed': True,
-            'salt': 'deadsea'
-        }
-        state = {'graph': [first_node, second_node]}
+        state = {'graph': [first_node]}
 
         task = add_task(
             VALIDATE_PROPERTY,
@@ -695,14 +693,14 @@ class ClassValidationTaskTests(unittest.TestCase):
         run(state, task, True, "Good working hashed identity")
 
         # Identity shouldn't look hashed if it says it isn't!
-        second_node['hashed'] = False
+        first_node['recipient']['hashed'] = False
         run(state, task, False, "Identity looks hashed and smells fishy")
 
         # Hash doesn't match known types.
-        second_node['hashed'] = True
-        second_node['identity'] = "sha1billiion$abc123"
+        first_node['recipient']['hashed'] = True
+        first_node['recipient']['identity'] = "sha1billiion$abc123"
         run(state, task, False, "Hash doesn't match known types")
-        second_node['identity'] = "plaintextjane@example.com"
+        first_node['recipient']['identity'] = "plaintextjane@example.com"
         run(state, task, False, "Identity shouldn't look like email if hashed is true")
 
     def test_criteria_property_dependency_validation(self):
@@ -727,7 +725,7 @@ class ClassValidationTaskTests(unittest.TestCase):
         self.assertFalse(result, "Evidence with just a blank node id fails.")
 
         task = add_task(CRITERIA_PROPERTY_DEPENDENCIES, node_id="_:b1")
-        result, message,CRITERIA = criteria_property_dependencies(state, task)
+        result, message, actions = criteria_property_dependencies(state, task)
         self.assertTrue(result, "Evidence with blank node ID and narrative passes.")
 
         task = add_task(CRITERIA_PROPERTY_DEPENDENCIES, node_id="http://example.com/b")
@@ -927,7 +925,7 @@ class ClassValidationTaskTests(unittest.TestCase):
         second_node = {'id': '_:b0', 'narrative': 'Do the important learning.'}
         state = {'graph': [first_node, second_node]}
 
-        actions = _get_validation_actions(first_node['id'], OBClasses.BadgeClass)
+        actions = _get_validation_actions(OBClasses.BadgeClass, first_node['id'])
         results = []
         for action in actions:
             if action['type'] == 'ADD_TASK':

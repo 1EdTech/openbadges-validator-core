@@ -3,14 +3,16 @@ import json
 import jws
 import six
 
+from ..actions.graph import patch_node
 from ..actions.tasks import add_task
 from ..exceptions import TaskPrerequisitesError
 from ..state import get_node_by_id, get_node_by_path
 from ..utils import list_of
 
 from .utils import task_result
-from .task_types import (ISSUER_PROPERTY_DEPENDENCIES, JSONLD_COMPACT_DATA, VERIFY_JWS, VERIFY_KEY_OWNERSHIP,
-                         VALIDATE_PROPERTY, VALIDATE_REVOCATIONLIST_ENTRIES, VERIFY_SIGNED_ASSERTION_NOT_REVOKED)
+from .task_types import (ISSUER_PROPERTY_DEPENDENCIES, JSONLD_COMPACT_DATA, SIGNING_KEY_FETCHED, VERIFY_JWS,
+                         VERIFY_KEY_OWNERSHIP, VALIDATE_PROPERTY, VALIDATE_REVOCATIONLIST_ENTRIES,
+                         VERIFY_SIGNED_ASSERTION_NOT_REVOKED)
 from .validation import OBClasses, ValueTypes
 
 
@@ -28,7 +30,7 @@ def process_jws_input(state, task_meta):
 
     actions = [
         add_task(JSONLD_COMPACT_DATA, data=node_json, node_id=node_id),
-        add_task(VERIFY_JWS, node_id=node_id, data=data, prerequisites=ISSUER_PROPERTY_DEPENDENCIES)
+        add_task(VERIFY_JWS, node_id=node_id, data=data, prerequisites=SIGNING_KEY_FETCHED)
     ]
     return task_result(True, "Processed JWS-signed data and queued signature verification task", actions)
 
@@ -117,13 +119,16 @@ def verify_signed_assertion_not_revoked(state, task_meta):
 
     revoked_match = [a for a in revoked_assertions if _is_match(assertion_id, a)]
 
-    actions = []
+    actions = [patch_node(revocation_list['id'], {'revokedAssertions': revoked_match})]
 
     if len(revoked_match):
-        try:
-            msg = ' with reason: ' + revoked_match[0].get('revocationReason')
-        except AttributeError:
-            msg = ''
+        assertion_records = [i for i in state['graph'] if i.get('id') == assertion_id]
+        msg = ''
+        for a in revoked_match:
+            try:
+                msg = ' with reason: ' + a['revocationReason']
+            except (KeyError, TypeError,):
+                continue
 
         return task_result(False, "Assertion {} has been revoked in RevocationList {}{}".format(
             assertion_id, issuer['revocationList'], msg

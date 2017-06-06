@@ -2,6 +2,7 @@ import json
 import responses
 import unittest
 
+from badgecheck.actions.action_types import STORE_ORIGINAL_JSON
 from badgecheck.actions.graph import add_node, patch_node
 from badgecheck.actions.tasks import add_task
 from badgecheck.reducers.graph import graph_reducer
@@ -28,8 +29,9 @@ class HttpFetchingTests(unittest.TestCase):
         success, message, actions = fetch_http_node({}, task)
 
         self.assertTrue(success)
-        self.assertEqual(actions[0]['name'], JSONLD_COMPACT_DATA)
-        self.assertEqual(len(actions), 1)
+        self.assertEqual(len(actions), 2)
+        self.assertEqual(actions[0]['type'], STORE_ORIGINAL_JSON)
+        self.assertEqual(actions[1]['name'], JSONLD_COMPACT_DATA)
 
 
 class NodeStorageTests(unittest.TestCase):
@@ -55,13 +57,12 @@ class NodeStorageTests(unittest.TestCase):
             "nested1": {"key2": 2}
         }
         state = graph_reducer([], add_node('http://example.com/node1', new_node))
-        self.assertEqual(len(state), 2)
+        self.assertEqual(len(state), 1)
         first_node = [node for node in state if node['id'] == 'http://example.com/node1'][0]
         self.assertEqual(first_node['key1'], 1)
-        nested_node_id = first_node['nested1']
-        second_node = [node for node in state if node['id'] == nested_node_id][0]
-        self.assertEqual(second_node['key2'], 2)
-        self.assertEqual(first_node['nested1'], second_node['id'])
+        nested_node = first_node['nested1']
+        self.assertEqual(nested_node['key2'], 2)
+        self.assertIsNone(nested_node.get('id'))
 
     def test_store_node_inaccurate_id_value(self):
         """
@@ -78,7 +79,7 @@ class NodeStorageTests(unittest.TestCase):
         """
         pass
 
-    def test_store_flattened_lists(self):
+    def test_store_lists(self):
         new_node = {
             "key1": 1,
             "b_list": [
@@ -88,15 +89,13 @@ class NodeStorageTests(unittest.TestCase):
         }
 
         state = graph_reducer([], add_node('http://example.com/node1', new_node))
-        self.assertEqual(len(state), 2)
+        self.assertEqual(len(state), 1)
         root_node = get_node_by_id({'graph': state}, 'http://example.com/node1')
         self.assertEqual(root_node['id'], 'http://example.com/node1')
         self.assertEqual(root_node['key1'], 1)
 
-        # the new_node's b_list's second value will now be a blank node id
-        nested_id = root_node['b_list'][1]
-        second_node = get_node_by_id({'graph': state}, nested_id)
-        self.assertEqual(second_node['c'], 3)
+        nested_node = root_node['b_list'][1]
+        self.assertEqual(nested_node['c'], 3)
 
 
 class NodeUpdateTests(unittest.TestCase):
@@ -173,4 +172,4 @@ class JsonLdCompactTests(unittest.TestCase):
         state = graph_reducer([], actions[0])
         self.assertEqual(len(state), 1, "Node should be added to graph")
         self.assertEqual(state[0]['name'], data['thing_we_call_you_by'])
-        self.assertIsNotNone(state[0].get('id'), "Node should have a blank id assigned")
+        self.assertEqual(state[0].get('id'), '_:b100', "Node should have a blank id assigned")

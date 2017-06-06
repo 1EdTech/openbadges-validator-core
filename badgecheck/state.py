@@ -87,24 +87,30 @@ def get_node_by_path(state, node_path):
     Raises TypeError if node next path not a string or list next path not an int.
     """
     if len(node_path) > 1:
+        paths = iter(node_path)
         try:
-            paths = iter(node_path)
             node_id = paths.next()
             node = get_node_by_id(state, node_id)
+            while True:
+                prop_name = paths.next()
+                if not isinstance(prop_name, six.string_types):
+                    raise TypeError(
+                        'Node property {} should be a string type to use in a path'.format(prop_name))
 
-            prop_name = paths.next()
-            if not isinstance(prop_name, six.string_types):
-                raise TypeError(
-                    'Node property {} should be a string type to use in a path'.format(prop_name))
+                val = node[prop_name]
 
-            val = node[prop_name]
+                if isinstance(val, list):
+                    i = paths.next()
+                    val = val[i]
 
-            if isinstance(val, list):
-                i = paths.next()
-                val = val[i]
+                if isinstance(val, dict):
+                    node = val
+                    continue
 
-            return get_node_by_path(state, [val] + list(paths))  # Recurse with remaining path
+                return get_node_by_path(state, [val] + list(paths))  # Recurse with remaining path
         except StopIteration:
+            if isinstance(val, dict):
+                return val
             raise TypeError("Node path {} not properly formed.")
 
     else:

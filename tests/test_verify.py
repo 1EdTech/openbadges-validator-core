@@ -5,6 +5,7 @@ import unittest
 from pydux import create_store
 
 from badgecheck import verify
+from badgecheck.actions.input import store_original_json
 from badgecheck.verifier import generate_report
 from badgecheck.actions.tasks import report_message
 from badgecheck.reducers import main_reducer
@@ -113,3 +114,43 @@ class MessagesTests(unittest.TestCase):
         report = generate_report(store)
         self.assertEqual(len(report['messages']), 1)
         self.assertEqual(report['messages'][0]['result'], 'TEST MESSAGE')
+
+
+class ResultReportTests(unittest.TestCase):
+    def test_original_json_option(self):
+        store = create_store(main_reducer, INITIAL_STATE)
+        store.dispatch(store_original_json('{"data": "test data"}', 'http://example.org/1'))
+
+        report = generate_report(store)
+        self.assertNotIn('original_json', report['input'].keys())
+
+        report = generate_report(store, {'include_original_json': True})
+        self.assertIn('original_json', report['input'].keys())
+
+    @responses.activate
+    def test_verify_with_original_json(self):
+        url = 'https://example.org/beths-robotics-badge.json'
+        responses.add(
+            responses.GET, url, body=test_components['2_0_basic_assertion'], status=200,
+            content_type='application/ld+json'
+        )
+        responses.add(
+            responses.GET, 'https://w3id.org/openbadges/v2',
+            body=test_components['openbadges_context'], status=200,
+            content_type='application/ld+json'
+        )
+        responses.add(
+            responses.GET, 'https://example.org/robotics-badge.json',
+            body=test_components['2_0_basic_badgeclass'], status=200,
+            content_type='application/ld+json'
+        )
+        responses.add(
+            responses.GET, 'https://example.org/organization.json',
+            body=test_components['2_0_basic_issuer'], status=200,
+            content_type='application/ld+json'
+        )
+
+        result = verify(url, options={'include_original_json': True})
+        self.assertIn('original_json', result['input'].keys())
+        self.assertEqual(len(result['input']['original_json']), 3)
+        self.assertIn(url, result['input']['original_json'].keys())

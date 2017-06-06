@@ -1,5 +1,5 @@
 import os
-from setuptools import setup
+from setuptools import find_packages, setup
 
 with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
     README = readme.read()
@@ -18,7 +18,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 setup(
     name='badgecheck',
     version=".".join(map(str, VERSION)),
-    packages=['badgecheck'],
+    packages=find_packages(),
     include_package_data=True,
     license='Apache 2',
     description='A python module that performs verification for Open Badges.',
@@ -50,6 +50,7 @@ setup(
         'PyLD==0.7.1',
         'pytz==2017.2',
         'requests >= 2.13',
+        'requests_cache==0.4.13',
         'rfc3986==0.4.1',
         'validators==0.11.2',
     ],
