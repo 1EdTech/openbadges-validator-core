@@ -5,7 +5,8 @@ from .utils import list_of
 INITIAL_STATE = {
     'input': {},
     'graph': [],
-    'tasks': []
+    'tasks': [],
+    'validationReport': {}
 }
 
 MESSAGE_LEVEL_ERROR = 'ERROR'

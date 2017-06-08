@@ -42,7 +42,7 @@ class InputTaskTests(unittest.TestCase):
         success, message, actions = detect_input_type(state)
 
         self.assertTrue(success)
-        self.assertEqual(len(actions), 2)
+        self.assertEqual(len(actions), 3)
         self.assertEqual(actions[0]['type'], 'SET_INPUT_TYPE')
         self.assertEqual(actions[1]['url'], url)
 
@@ -58,7 +58,7 @@ class InputTaskTests(unittest.TestCase):
         success, message, actions = detect_input_type(state)
 
         self.assertTrue(success)
-        self.assertEqual(len(actions), 3)
+        self.assertEqual(len(actions), 4)
         self.assertEqual(actions[0]['type'], 'STORE_INPUT')
         self.assertEqual(actions[1]['type'], 'SET_INPUT_TYPE')
         self.assertEqual(actions[2]['type'], 'ADD_TASK')

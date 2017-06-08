@@ -111,7 +111,8 @@ def generate_report(store, options=DEFAULT_OPTIONS):
     ret = {
         'messages': [],
         'graph': state['graph'],
-        'input': processed_input
+        'input': processed_input,
+        'report': state['report']
     }
     for task in tasks_for_messages_list:
         ret['messages'].append(format_message(task))

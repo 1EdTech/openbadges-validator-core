@@ -5,6 +5,7 @@ import six
 
 from ..actions.graph import patch_node
 from ..actions.tasks import add_task
+from ..actions.validation_report import set_validation_subject
 from ..exceptions import TaskPrerequisitesError
 from ..state import get_node_by_id, get_node_by_path
 from ..utils import list_of
@@ -32,6 +33,8 @@ def process_jws_input(state, task_meta):
         add_task(JSONLD_COMPACT_DATA, data=node_json, node_id=node_id),
         add_task(VERIFY_JWS, node_id=node_id, data=data, prerequisites=SIGNING_KEY_FETCHED)
     ]
+    if node_id:
+        actions.append(set_validation_subject(node_id))
     return task_result(True, "Processed JWS-signed data and queued signature verification task", actions)
 
 

@@ -64,7 +64,7 @@ class JwsVerificationTests(unittest.TestCase):
 
         success, message, actions = process_jws_input(state, task_meta)
         self.assertTrue(success)
-        self.assertEqual(len(actions), 2)
+        self.assertEqual(len(actions), 3)
 
     def test_can_verify_jws(self):
         task_meta = add_task(VERIFY_JWS, data=self.signed_assertion,
