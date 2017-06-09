@@ -2,6 +2,7 @@ import hashlib
 import rfc3986
 
 from ..actions.tasks import report_message
+from ..actions.validation_report import set_verified_recipient_profile
 from ..exceptions import TaskPrerequisitesError
 from ..state import get_node_by_id, get_node_by_path
 from ..utils import list_of
@@ -117,5 +118,6 @@ def verify_recipient_against_trusted_profile(state, task_meta):
                 abv(profile_id), p, recipient_type, abv(assertion_id), a),
             actions)
 
+    actions.append(set_verified_recipient_profile(recipient_type, confirmed_id))
     return task_result(True, "Assertion {} awarded to trusted profile identifier {} of type {}".format(
         abv(assertion_id), confirmed_id, recipient_type), actions)

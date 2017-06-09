@@ -1,4 +1,5 @@
-from .action_types import RUN_VALIDATION_REPORT, SET_OPENBADGES_VERSION, SET_VALIDATION_SUBJECT
+from .action_types import (RUN_VALIDATION_REPORT, SET_OPENBADGES_VERSION, SET_VALIDATION_SUBJECT,
+                           SET_VERIFIED_PROFILE)
 
 
 def run_validation_report():
@@ -33,4 +34,17 @@ def set_validation_subject(node_id):
     return {
         'type': SET_VALIDATION_SUBJECT,
         'node_id': node_id
+    }
+
+
+def set_verified_recipient_profile(id_type, confirmed_id):
+    """
+    :param type: str
+    :param value: str
+    :return: dict
+    """
+    return {
+        'type': SET_VERIFIED_PROFILE,
+        'identityType': id_type,
+        'identityValue': confirmed_id
     }

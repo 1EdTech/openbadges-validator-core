@@ -12,6 +12,26 @@ from tests.utils import setUpContextMock
 
 
 class VerificationReportTests(unittest.TestCase):
+    @staticmethod
+    def set_response_mocks():
+        # Make sure to add @responses.activate decorator in calling method
+        setUpContextMock()
+        responses.add(
+            responses.GET, 'https://example.org/beths-robotics-badge.json',
+            body=test_components['2_0_basic_assertion'], status=200,
+            content_type='application/ld+json'
+        )
+        responses.add(
+            responses.GET, 'https://example.org/robotics-badge.json',
+            body=test_components['2_0_basic_badgeclass'], status=200,
+            content_type='application/ld+json'
+        )
+        responses.add(
+            responses.GET, 'https://example.org/organization.json',
+            body=test_components['2_0_basic_issuer'], status=200,
+            content_type='application/ld+json'
+        )
+
     def test_validation_subject_reducer(self):
         """
         The validationReport should contain an ID of the root node that was validated in the graph.
@@ -26,26 +46,18 @@ class VerificationReportTests(unittest.TestCase):
     @responses.activate
     def test_subject_set_from_badge_input(self):
         url = 'https://example.org/beths-robotics-badge.json'
-
-        setUpContextMock()
-        responses.add(
-            responses.GET, url, body=test_components['2_0_basic_assertion'], status=200,
-            content_type='application/ld+json'
-        )
-        responses.add(
-            responses.GET, 'https://example.org/robotics-badge.json',
-            body=test_components['2_0_basic_badgeclass'], status=200,
-            content_type='application/ld+json'
-        )
-        responses.add(
-            responses.GET, 'https://example.org/organization.json',
-            body=test_components['2_0_basic_issuer'], status=200,
-            content_type='application/ld+json'
-        )
-
+        self.set_response_mocks()
         store = verification_store(url)
         report = generate_report(store)
         self.assertEqual(report['report']['validationSubject'], url)
+
+    @responses.activate
+    def test_confirmed_recipient_profile_reported(self):
+        url = 'https://example.org/beths-robotics-badge.json'
+        self.set_response_mocks()
+        store = verification_store(url, recipient_profile={'email': 'test@example.com'})
+        report = generate_report(store)
+        self.assertEqual(report['report']['recipientProfile']['email'], 'test@example.com')
 
     def test_validation_version(self):
         """

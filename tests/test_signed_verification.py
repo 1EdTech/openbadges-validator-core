@@ -77,7 +77,7 @@ class JwsVerificationTests(unittest.TestCase):
         # Construct an invalid signature by adding to payload after signing, one theoretical attack.
         header = {'alg': 'RS256'}
         signature = jws.sign(header, self.assertion_data, self.private_key)
-        self.assertion_data['evidence'] = 'http://hahafakeinserteddata'
+        self.assertion_data['evidence'] = 'http://hahafakeinserteddata.com'
         self.signed_assertion = '.'.join(
             (b64encode(json.dumps(header)), b64encode(json.dumps(self.assertion_data)), signature)
         )

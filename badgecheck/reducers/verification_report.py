@@ -1,4 +1,5 @@
-from ..actions.action_types import RUN_VALIDATION_REPORT, SET_OPENBADGES_VERSION, SET_VALIDATION_SUBJECT
+from ..actions.action_types import (RUN_VALIDATION_REPORT, SET_OPENBADGES_VERSION, SET_VALIDATION_SUBJECT,
+                                    SET_VERIFIED_PROFILE)
 
 
 def verification_report_reducer(state, action):
@@ -15,5 +16,10 @@ def verification_report_reducer(state, action):
     elif action_type == SET_VALIDATION_SUBJECT:
         state = state.copy()
         state['validationSubject'] = action.get('node_id')
+    elif action_type == SET_VERIFIED_PROFILE:
+        state = state.copy()
+        state['recipientProfile'] = {
+            action.get('identityType', 'email'): action.get('identityValue')
+        }
 
     return state
