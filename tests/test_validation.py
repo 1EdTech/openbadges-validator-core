@@ -1187,7 +1187,7 @@ class BadgeClassInputValidationTests(unittest.TestCase):
         setUpContextMock()
 
         results = verify('http://example.com/badgeclass1')
-        self.assertTrue(results.get('valid'))
+        self.assertTrue(results['report']['valid'])
 
 
 class IssuerClassValidationTests(unittest.TestCase):

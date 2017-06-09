@@ -108,19 +108,20 @@ def generate_report(store, options=DEFAULT_OPTIONS):
             pass
 
     tasks_for_messages_list = filter_messages_for_report(state)
+    report = state['report'].copy()
+    report['messages'] = []
+    for task in tasks_for_messages_list:
+        report['messages'].append(format_message(task))
+
+    report['errorCount'] = len([m for m in report['messages'] if m['messageLevel'] == MESSAGE_LEVEL_ERROR])
+    report['warningCount'] = len([m for m in report['messages'] if m['messageLevel'] == MESSAGE_LEVEL_WARNING])
+    report['valid'] = not bool(report['errorCount'])
+
     ret = {
-        'messages': [],
         'graph': state['graph'],
         'input': processed_input,
-        'report': state['report']
+        'report': report
     }
-    for task in tasks_for_messages_list:
-        ret['messages'].append(format_message(task))
-
-    ret['errorCount'] = len([m for m in ret['messages'] if m['messageLevel'] == MESSAGE_LEVEL_ERROR])
-    ret['warningCount'] = len([m for m in ret['messages'] if m['messageLevel'] == MESSAGE_LEVEL_WARNING])
-    ret['valid'] = not bool(ret['errorCount'])
-
     return ret
 
 

@@ -71,7 +71,7 @@ test_components = {
     "type": "email",
     "hashed": true,
     "salt": "deadsea",
-    "identity": "sha256$c7ef86405ba71b85acd8e2e95166c4b111448089f2e1599f42fe1bba46e865c5"
+    "identity": "sha256$ecf5409f3f4b91ab60cc5ef4c02aef7032354375e70cf4d8e43f6a1d29891942"
   },
   "image": "https://example.org/beths-robot-badge.png",
   "evidence": "https://example.org/beths-robot-work.html",

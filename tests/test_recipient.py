@@ -117,7 +117,7 @@ class RecipientProfileVerificationTests(unittest.TestCase):
         result, message, actions = verify_recipient_against_trusted_profile(state, task_meta)
         self.assertTrue(result)
         self.assertIn(recipient_profile['schema:duns'], message)
-        self.assertEqual(len(actions), 1)
+        self.assertEqual(len(actions), 2)
         self.assertIn('schema:duns', actions[0]['message'], "Non-standard identifier reported")
 
     def test_profile_with_multiple_emails(self):
