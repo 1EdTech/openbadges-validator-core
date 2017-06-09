@@ -8,7 +8,7 @@ from ..actions.tasks import add_task
 from ..exceptions import TaskPrerequisitesError, ValidationError
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..reducers.graph import get_next_blank_node_id
-from ..utils import CachableDocumentLoader, list_of
+from ..utils import CachableDocumentLoader, list_of, jsonld_use_cache
 
 from .task_types import (DETECT_AND_VALIDATE_NODE_CLASS, JSONLD_COMPACT_DATA,
                         VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_EXTENSION_NODE,)
@@ -68,8 +68,8 @@ def jsonld_compact_data(state, task_meta):
     except TypeError:
         return task_result(False, "Could not load data")
 
-    options = {'documentLoader': CachableDocumentLoader(cachable=task_meta.get('use_cache', True))}
-    result = jsonld.compact(input_data, OPENBADGES_CONTEXT_V2_URI, options=options)
+    #options = {'documentLoader': CachableDocumentLoader(cachable=task_meta.get('use_cache', True))}
+    result = jsonld.compact(input_data, OPENBADGES_CONTEXT_V2_URI, options=jsonld_use_cache)
     node_id = result.get('id', task_meta.get('node_id', get_next_blank_node_id()))
 
     actions = [

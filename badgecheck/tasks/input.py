@@ -7,7 +7,7 @@ from ..actions.input import set_input_type, store_input
 from ..actions.tasks import add_task
 from ..actions.validation_report import set_validation_subject
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
-from ..utils import CachableDocumentLoader
+from ..utils import CachableDocumentLoader, jsonld_use_cache
 from task_types import FETCH_HTTP_NODE, PROCESS_JWS_INPUT
 from utils import task_result
 
@@ -34,8 +34,8 @@ def input_is_jws(user_input):
 
 def find_id_in_jsonld(json_string):
     input_data = json.loads(json_string)
-    options = {'documentLoader': CachableDocumentLoader(cachable=True)}
-    result = jsonld.compact(input_data, OPENBADGES_CONTEXT_V2_URI, options=options)
+    # options = {'documentLoader': CachableDocumentLoader(cachable=True)}
+    result = jsonld.compact(input_data, OPENBADGES_CONTEXT_V2_URI, options=jsonld_use_cache)
     node_id = result.get('id','')
     return node_id
 
