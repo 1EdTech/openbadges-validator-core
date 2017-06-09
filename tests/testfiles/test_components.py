@@ -62,7 +62,7 @@ test_components = {
     "verify": {"type": "hosted", "url": "http://a.com/instance3"},
     "snood":"a very fun video game"
 }""",
-# Assertion awarded to test@example.com
+# Assertion awarded to nobody@example.org
 '2_0_basic_assertion': """{
   "@context": "https://w3id.org/openbadges/v2",
   "type": "Assertion",
@@ -71,7 +71,7 @@ test_components = {
     "type": "email",
     "hashed": true,
     "salt": "deadsea",
-    "identity": "sha256$1c2b4405bf2b8a315f2667181f7ef4f56650cd3f66d5cfcd6928ec38632e6ba2"
+    "identity": "sha256$c7ef86405ba71b85acd8e2e95166c4b111448089f2e1599f42fe1bba46e865c5"
   },
   "image": "https://example.org/beths-robot-badge.png",
   "evidence": "https://example.org/beths-robot-work.html",

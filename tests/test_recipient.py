@@ -65,6 +65,14 @@ class RecipientProfileVerificationTests(unittest.TestCase):
         self.assertEqual(len(profile_verification_tasks), 1)
         self.assertTrue(profile_verification_tasks[0]['success'])
 
+        recipient_profile = {'email': ['otheremail@example.org', 'nobody@example.org']}
+        result = verification_store(url, recipient_profile)
+        state = result.get_state()
+        profile_verification_tasks = filter_tasks(state, name=VERIFY_RECIPIENT_IDENTIFIER)
+        self.assertEqual(len(filter_failed_tasks(state)), 0)
+        self.assertEqual(len(profile_verification_tasks), 1)
+        self.assertTrue(profile_verification_tasks[0]['success'])
+
     def test_profile_with_salted_hashed_email(self):
         recipient_profile = {'id': '_:b0', 'email': 'nobody@example.org'}
         assertion = {
@@ -132,4 +140,3 @@ class RecipientProfileVerificationTests(unittest.TestCase):
         result, message, actions = verify_recipient_against_trusted_profile(state, task_meta)
         self.assertTrue(result)
         self.assertIn('nobody@example.org', message)
-
