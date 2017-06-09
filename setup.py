@@ -18,7 +18,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 setup(
     name='badgecheck',
     version=".".join(map(str, VERSION)),
-    packages=find_packages(),
+    packages=find_packages(exclude=['tests', 'tests.*']),
     include_package_data=True,
     license='Apache 2',
     description='A python module that performs verification for Open Badges.',
