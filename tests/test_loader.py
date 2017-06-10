@@ -13,7 +13,7 @@ class DocumentLoaderTests(unittest.TestCase):
     @responses.activate
     def test_that_caching_loader_uses_local_cache(self):
         url = 'http://example.com/assertionmaybe'
-        loadurl = CachableDocumentLoader(cachable=True)
+        loadurl = CachableDocumentLoader(use_cache=True)
         data = test_components['2_0_basic_assertion']
         responses.add(
             responses.GET, url, body=data, status=200, content_type='application/ld+json')
@@ -30,7 +30,7 @@ class DocumentLoaderTests(unittest.TestCase):
     @responses.activate
     def test_that_noncaching_loader_loads_url(self):
         url = 'http://example.com/assertionmaybe'
-        loadurl = CachableDocumentLoader(cachable=False)
+        loadurl = CachableDocumentLoader(use_cache=False)
         data = test_components['2_0_basic_assertion']
         responses.add(
             responses.GET, url, body=data, status=200, content_type='application/ld+json')
@@ -44,7 +44,7 @@ class DocumentLoaderTests(unittest.TestCase):
     def test_that_pyld_accepts_caching_loader_for_compaction(self):
         assertion_data = json.loads(test_components['2_0_basic_assertion'])
         context_url = assertion_data['@context']
-        loadurl = CachableDocumentLoader(cachable=True)
+        loadurl = CachableDocumentLoader(use_cache=True)
         setUpContextMock()
 
         first_compacted = jsonld.compact(

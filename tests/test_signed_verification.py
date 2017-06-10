@@ -192,7 +192,7 @@ class JwsFullVerifyTests(unittest.TestCase):
             jws.sign(header, payload, private_key, is_json=True)
         ])
 
-        response = verify(signature)
+        response = verify(signature, use_cache=False)
         self.assertTrue(response['valid'])
 
     @responses.activate
@@ -232,7 +232,7 @@ class JwsFullVerifyTests(unittest.TestCase):
             jws.sign(header, payload, private_key, is_json=True)
         ])
 
-        response = verify(signature)
+        response = verify(signature, use_cache=False)
         self.assertTrue(response['valid'])
 
     @responses.activate
@@ -277,7 +277,7 @@ class JwsFullVerifyTests(unittest.TestCase):
             jws.sign(header, payload, private_key, is_json=True)
         ])
 
-        response = verify(signature)
+        response = verify(signature, use_cache=False)
         self.assertFalse(response['valid'])
         msg = [a for a in response['messages'] if a.get('name') == VERIFY_SIGNED_ASSERTION_NOT_REVOKED][0]
         self.assertIn('A good reason', msg['result'])

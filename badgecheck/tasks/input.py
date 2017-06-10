@@ -32,10 +32,9 @@ def input_is_jws(user_input):
     return bool(jws_regex.match(user_input))
 
 
-def find_id_in_jsonld(json_string):
+def find_id_in_jsonld(json_string, jsonld_options):
     input_data = json.loads(json_string)
-    # options = {'documentLoader': CachableDocumentLoader(cachable=True)}
-    result = jsonld.compact(input_data, OPENBADGES_CONTEXT_V2_URI, options=jsonld_use_cache)
+    result = jsonld.compact(input_data, OPENBADGES_CONTEXT_V2_URI, options=jsonld_options)
     node_id = result.get('id','')
     return node_id
 
@@ -43,7 +42,7 @@ def find_id_in_jsonld(json_string):
 """
 Input-processing tasks
 """
-def detect_input_type(state, task_meta=None):
+def detect_input_type(state, task_meta=None, **options):
     """
     Detects what data format user has provided and saves to the store.
     """
@@ -57,7 +56,7 @@ def detect_input_type(state, task_meta=None):
         new_actions.append(add_task(FETCH_HTTP_NODE, url=input_value))
         new_actions.append(set_validation_subject(input_value))
     elif input_is_json(input_value):
-        id_url = find_id_in_jsonld(input_value)
+        id_url = find_id_in_jsonld(input_value, options.get('jsonld_options', jsonld_use_cache))
         if input_is_url(id_url):
             detected_type = 'url'
             new_actions.append(store_input(id_url))
