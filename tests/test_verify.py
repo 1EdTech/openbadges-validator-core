@@ -51,8 +51,7 @@ class InitializationTests(unittest.TestCase):
         self.assertEqual(results.get('input').get('input_type'), 'url')
 
         self.assertEqual(
-            len(results.get('messages')), 0,
-            "There should be no failing tasks.")
+            len(results['report']['messages']), 0, "There should be no failing tasks.")
 
     @responses.activate
     def test_verify_of_baked_image(self):
@@ -88,8 +87,7 @@ class InitializationTests(unittest.TestCase):
         self.assertNotEqual(results, None)
         self.assertEqual(results.get('input').get('value'), url)
         self.assertEqual(results.get('input').get('input_type'), 'url')
-        self.assertEqual(len(results.get('messages')), 0,
-                         "There should be no failing tasks.")
+        self.assertEqual(len(results['report']['messages']), 0, "There should be no failing tasks.")
 
     # def debug_live_badge_verification(self):
     #     """
@@ -111,9 +109,9 @@ class MessagesTests(unittest.TestCase):
         state = store.get_state()
         self.assertEqual(len(state['tasks']), 1)
 
-        report = generate_report(store)
-        self.assertEqual(len(report['messages']), 1)
-        self.assertEqual(report['messages'][0]['result'], 'TEST MESSAGE')
+        result = generate_report(store)
+        self.assertEqual(len(result['report']['messages']), 1)
+        self.assertEqual(result['report']['messages'][0]['result'], 'TEST MESSAGE')
 
 
 class ResultReportTests(unittest.TestCase):

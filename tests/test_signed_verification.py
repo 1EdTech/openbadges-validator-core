@@ -193,7 +193,7 @@ class JwsFullVerifyTests(unittest.TestCase):
         ])
 
         response = verify(signature, use_cache=False)
-        self.assertTrue(response['valid'])
+        self.assertTrue(response['report']['valid'])
 
     @responses.activate
     def test_can_full_verify_with_revocation_check(self):
@@ -233,7 +233,7 @@ class JwsFullVerifyTests(unittest.TestCase):
         ])
 
         response = verify(signature, use_cache=False)
-        self.assertTrue(response['valid'])
+        self.assertTrue(response['report']['valid'])
 
     @responses.activate
     def test_revoked_badge_marked_invalid(self):
@@ -278,8 +278,8 @@ class JwsFullVerifyTests(unittest.TestCase):
         ])
 
         response = verify(signature, use_cache=False)
-        self.assertFalse(response['valid'])
-        msg = [a for a in response['messages'] if a.get('name') == VERIFY_SIGNED_ASSERTION_NOT_REVOKED][0]
+        self.assertFalse(response['report']['valid'])
+        msg = [a for a in response['report']['messages'] if a.get('name') == VERIFY_SIGNED_ASSERTION_NOT_REVOKED][0]
         self.assertIn('A good reason', msg['result'])
 
         # Assert pruning went well to eliminate revocationlist revokedAssertions except for the revoked one

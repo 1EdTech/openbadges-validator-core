@@ -54,10 +54,11 @@ class VerificationReportTests(unittest.TestCase):
     @responses.activate
     def test_confirmed_recipient_profile_reported(self):
         url = 'https://example.org/beths-robotics-badge.json'
+        email = 'nobody@example.org'
         self.set_response_mocks()
-        store = verification_store(url, recipient_profile={'email': 'test@example.com'})
+        store = verification_store(url, recipient_profile={'email': email})
         report = generate_report(store)
-        self.assertEqual(report['report']['recipientProfile']['email'], 'test@example.com')
+        self.assertEqual(report['report']['recipientProfile']['email'], email)
 
     def test_validation_version(self):
         """
