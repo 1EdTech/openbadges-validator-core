@@ -8,10 +8,10 @@ from pyld.jsonld import JsonLdError
 
 
 class CachableDocumentLoader(object):
-    def __init__(self, cachable=False):
-        self.cachable = cachable
-        if self.cachable:
-            self.session = requests_cache.CachedSession(backend='memory', expire_after=300)
+    def __init__(self, use_cache=False, backend='memory', expire_after=300):
+        self.use_cache = use_cache
+        if self.use_cache:
+            self.session = requests_cache.CachedSession(backend=backend, expire_after=expire_after)
         else:
             self.session = requests.Session()
 
@@ -33,7 +33,7 @@ class CachableDocumentLoader(object):
 
             doc = {'contextUrl': None, 'documentUrl': url, 'document': response.text}
 
-            if self.cachable:
+            if self.use_cache:
                 doc['from_cache'] = response.from_cache
                 self.session.remove_expired_responses()
 
@@ -49,8 +49,8 @@ class CachableDocumentLoader(object):
                 cause=cause)
 
 
-jsonld_use_cache = {'documentLoader': CachableDocumentLoader(cachable=True)}
-jsonld_no_cache = {'documentLoader': CachableDocumentLoader(cachable=False)}
+jsonld_use_cache = {'documentLoader': CachableDocumentLoader(use_cache=True)}
+jsonld_no_cache = {'documentLoader': CachableDocumentLoader(use_cache=False)}
 
 
 def list_of(value):

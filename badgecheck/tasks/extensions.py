@@ -7,13 +7,13 @@ from ..exceptions import TaskPrerequisitesError
 from ..extensions import ALL_KNOWN_EXTENSIONS
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 from ..state import get_node_by_id, get_node_by_path
-from ..utils import list_of
+from ..utils import jsonld_use_cache, list_of
 
 from .task_types import VALIDATE_EXTENSION_NODE
 from .utils import abbreviate_value as abv, abbreviate_node_id as abv_node, is_iri, filter_tasks, task_result
 
 
-def _validate_single_extension(node, extension_type, node_json=None):
+def _validate_single_extension(node, extension_type, node_json=None, **options):
     # Load extension
     extension = ALL_KNOWN_EXTENSIONS[extension_type]
 
@@ -30,7 +30,9 @@ def _validate_single_extension(node, extension_type, node_json=None):
     schema = extension.validation_schema[schema_url]
 
     node_data['@context'] = OPENBADGES_CONTEXT_V2_DICT
-    compact_data = jsonld.compact(node_data, [OPENBADGES_CONTEXT_V2_DICT, context])
+    compact_data = jsonld.compact(
+        node_data, [OPENBADGES_CONTEXT_V2_DICT, context],
+        options=options.get('jsonld_options', jsonld_use_cache))
 
     try:
         jsonschema.validate(compact_data, schema)
@@ -49,7 +51,7 @@ def _validate_single_extension(node, extension_type, node_json=None):
     ))
 
 
-def validate_extension_node(state, task_meta):
+def validate_extension_node(state, task_meta, **options):
     try:
         node_id = task_meta.get('node_id')
         node_path = task_meta.get('node_path')
@@ -85,4 +87,4 @@ def validate_extension_node(state, task_meta):
                 abv(types_to_test), abv_node(node_id, node_path)
             ), actions)
     else:
-        return _validate_single_extension(node, types_to_test[0], node_json=node_json)
+        return _validate_single_extension(node, types_to_test[0], node_json=node_json, **options)

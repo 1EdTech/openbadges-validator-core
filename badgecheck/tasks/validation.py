@@ -198,7 +198,7 @@ class PrimitiveValueValidator(object):
         return is_url(value)
 
 
-def validate_property(state, task_meta):
+def validate_property(state, task_meta, **options):
     """
     Validates presence and data type of a single property that is
     expected to be one of the Open Badges Primitive data types or an ID.
@@ -299,7 +299,7 @@ def validate_property(state, task_meta):
     )
 
 
-def validate_rdf_type_property(state, task_meta):
+def validate_rdf_type_property(state, task_meta, **options):
     prop_result = validate_property(state, task_meta)
     if not prop_result[0]:
         return prop_result
@@ -515,7 +515,7 @@ def _get_validation_actions(node_class, node_id=None, node_path=None):
     return actions
 
 
-def detect_and_validate_node_class(state, task_meta):
+def detect_and_validate_node_class(state, task_meta, **options):
     node_id = task_meta.get('node_id')
     node_path = task_meta.get('node_path')
 
@@ -540,7 +540,7 @@ def detect_and_validate_node_class(state, task_meta):
     )
 
 
-def validate_expected_node_class(state, task_meta):
+def validate_expected_node_class(state, task_meta, **options):
     node_id = task_meta.get('node_id')
     node_path = task_meta.get('node_path')
 
@@ -557,7 +557,7 @@ def validate_expected_node_class(state, task_meta):
 """
 Class Validation Tasks
 """
-def identity_object_property_dependencies(state, task_meta):
+def identity_object_property_dependencies(state, task_meta, **options):
     node_id = task_meta.get('node_id')
     node_path = task_meta.get('node_path')
     if node_id:
@@ -585,7 +585,7 @@ def identity_object_property_dependencies(state, task_meta):
     return task_result(True, "IdentityObject passes validation rules.")
 
 
-def criteria_property_dependencies(state, task_meta):
+def criteria_property_dependencies(state, task_meta, **options):
     node_id = task_meta.get('node_id')
     node = get_node_by_id(state, node_id)
     is_blank_id_node = bool(re.match(r'_:b\d+$', node_id))
@@ -607,7 +607,7 @@ def criteria_property_dependencies(state, task_meta):
     return task_result(True, "Criteria node {} has a URL.")
 
 
-def assertion_verification_dependencies(state, task_meta):
+def assertion_verification_dependencies(state, task_meta, **options):
     """
     Performs and/or queues some security checks for hosted assertions.
     """
@@ -638,7 +638,7 @@ def assertion_verification_dependencies(state, task_meta):
     )
 
 
-def assertion_timestamp_checks(state, task_meta):
+def assertion_timestamp_checks(state, task_meta, **options):
     try:
         node_id = task_meta['node_id']
         assertion = get_node_by_id(state, node_id)
@@ -666,11 +666,11 @@ def assertion_timestamp_checks(state, task_meta):
         True, "Assertion {} was issued and has not expired.".format(node_id))
 
 
-def placeholder_task(state, task_meta):
+def placeholder_task(state, task_meta, **options):
     return task_result(True, "Placeholder (prerequisite) task complete.")
 
 
-def validate_revocationlist_entries(state, task_meta):
+def validate_revocationlist_entries(state, task_meta, **options):
     try:
         node_id = task_meta['node_id']
         revocation_list = get_node_by_id(state, node_id)

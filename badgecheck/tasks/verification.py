@@ -22,7 +22,7 @@ def _default_verification_policy(issuer_node):
     }
 
 
-def hosted_id_in_verification_scope(state, task_meta):
+def hosted_id_in_verification_scope(state, task_meta, **options):
     assertion_id = task_meta.get('node_id')
     assertion_node = get_node_by_id(state, assertion_id)
 
@@ -67,7 +67,7 @@ def _matches_hash(profile_identifier, id_hash, salt=''):
     raise TypeError("Cannot interpret hash type of {}".format(id_hash))
 
 
-def verify_recipient_against_trusted_profile(state, task_meta):
+def verify_recipient_against_trusted_profile(state, task_meta, **options):
     try:
         # Use the ID of the first Assertion found in current state
         assertion_id = [n for n in state['graph'] if n.get('type') == 'Assertion'][0]['id']

@@ -17,7 +17,7 @@ from .task_types import (ISSUER_PROPERTY_DEPENDENCIES, JSONLD_COMPACT_DATA, SIGN
 from .validation import OBClasses, ValueTypes
 
 
-def process_jws_input(state, task_meta):
+def process_jws_input(state, task_meta, **options):
     try:
         data = task_meta['data']
     except KeyError:
@@ -38,7 +38,7 @@ def process_jws_input(state, task_meta):
     return task_result(True, "Processed JWS-signed data and queued signature verification task", actions)
 
 
-def verify_jws_signature(state, task_meta):
+def verify_jws_signature(state, task_meta, **options):
     try:
         data = task_meta['data']
         node_id = task_meta['node_id']
@@ -74,7 +74,7 @@ def verify_jws_signature(state, task_meta):
         True, "Signature for node {} passed verification".format(node_id), actions)
 
 
-def verify_key_ownership(state, task_meta):
+def verify_key_ownership(state, task_meta, **options):
     try:
         node_id = task_meta['node_id']
         issuer_node = get_node_by_path(state, [node_id, 'badge', 'issuer'])
@@ -100,7 +100,7 @@ def verify_key_ownership(state, task_meta):
         True, "Assertion signing key {} is properly declared in issuer profile".format(key_id), actions)
 
 
-def verify_signed_assertion_not_revoked(state, task_meta):
+def verify_signed_assertion_not_revoked(state, task_meta, **options):
     try:
         assertion_id = task_meta['node_id']
         issuer = get_node_by_path(state, [assertion_id, 'badge', 'issuer'])

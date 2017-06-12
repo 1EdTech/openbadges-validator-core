@@ -148,7 +148,7 @@ class ResultReportTests(unittest.TestCase):
             content_type='application/ld+json'
         )
 
-        result = verify(url, options={'include_original_json': True})
+        result = verify(url, include_original_json=True)
         self.assertIn('original_json', result['input'].keys())
         self.assertEqual(len(result['input']['original_json']), 3)
         self.assertIn(url, result['input']['original_json'].keys())

@@ -12,10 +12,39 @@ from .state import (filter_active_tasks, filter_messages_for_report, format_mess
 import tasks
 from tasks.task_types import JSONLD_COMPACT_DATA
 from tasks.validation import OBClasses
-from .utils import list_of
+from .utils import list_of, CachableDocumentLoader, jsonld_use_cache
 
 
-def call_task(task_func, task_meta, store):
+DEFAULT_OPTIONS = {
+    'include_original_json': False,  # Return the original JSON strings fetched from HTTP
+    'use_cache': True,
+    'cache_backend': 'memory',
+    'cache_expire_after': 300,
+    'jsonld_options': jsonld_use_cache
+}
+
+
+def _get_options(options):
+    if options:
+        selected = DEFAULT_OPTIONS.copy()
+        selected.update(options)
+    else:
+        selected = DEFAULT_OPTIONS
+
+    if selected['use_cache']:
+        doc_loader = CachableDocumentLoader(
+            use_cache=selected['use_cache'],
+            backend=selected['cache_backend'],
+            expire_after=selected['cache_expire_after']
+        )
+    else:
+        doc_loader = CachableDocumentLoader(use_cache=False)
+
+    selected['jsonld_options'] = {'documentLoader': doc_loader}
+    return selected
+
+
+def call_task(task_func, task_meta, store, options=DEFAULT_OPTIONS):
     """
     Calls and resolves a task function in response to a queued task. May result
     in additional actions added to the queue.
@@ -26,7 +55,7 @@ def call_task(task_func, task_meta, store):
     """
     actions = []
     try:
-        success, message, actions = task_func(store.get_state(), task_meta)
+        success, message, actions = task_func(store.get_state(), task_meta, **options)
     except SkipTask:
         raise NotImplemented("Implement SkipTask handling in call_task")
     except TaskPrerequisitesError:
@@ -48,7 +77,7 @@ def call_task(task_func, task_meta, store):
         store.dispatch(action)
 
 
-def verification_store(badge_input, recipient_profile=None, store=None):
+def verification_store(badge_input, recipient_profile=None, store=None, options=DEFAULT_OPTIONS):
     if store is None:
         store = create_store(main_reducer, INITIAL_STATE)
 
@@ -84,14 +113,9 @@ def verification_store(badge_input, recipient_profile=None, store=None):
             break
 
         last_task_id = task_meta['task_id']
-        call_task(task_func, task_meta, store)
+        call_task(task_func, task_meta, store, options)
 
     return store
-
-
-DEFAULT_OPTIONS = {
-    'include_original_json': False  # Return the original JSON strings fetched from HTTP
-}
 
 
 def generate_report(store, options=DEFAULT_OPTIONS):
@@ -125,7 +149,7 @@ def generate_report(store, options=DEFAULT_OPTIONS):
     return ret
 
 
-def verify(badge_input, recipient_profile=None, options=None):
+def verify(badge_input, recipient_profile=None, **options):
     """
     Verify and validate Open Badges
     :param badge_input: str (url or json) or python file-like object (baked badge image)
@@ -133,12 +157,6 @@ def verify(badge_input, recipient_profile=None, options=None):
     :param options: dict of options. See DEFAULT_OPTIONS for values
     :return: dict
     """
-    if options:
-        selected_options = DEFAULT_OPTIONS.copy()
-        selected_options.update(options)
-    else:
-        selected_options = DEFAULT_OPTIONS
-
-    store = verification_store(badge_input, recipient_profile)
-
-    return generate_report(store, selected_options)
+    selected_options = _get_options(options)
+    store = verification_store(badge_input, recipient_profile, options=selected_options)
+    return generate_report(store, options=selected_options)
