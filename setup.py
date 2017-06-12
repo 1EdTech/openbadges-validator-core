@@ -42,6 +42,7 @@ setup(
     ],
     install_requires=[
         'aniso8601>=1.2.0',
+        'future==0.16.0',
         'jsonschema==2.6.0',
         'jws==0.1.3',
         'openbadges-bakery>=1.0.0b1',

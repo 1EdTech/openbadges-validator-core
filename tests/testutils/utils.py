@@ -6,7 +6,7 @@ from testfiles.test_components import test_components
 
 
 # Make sure to decorate calling function with @responses.activate
-def setUpContextMock():
+def setup_context_mock():
     context_data = test_components['openbadges_context']
     responses.add(
         responses.GET,

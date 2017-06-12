@@ -13,7 +13,10 @@ from badgecheck.tasks.validation import OBClasses
 from badgecheck.tasks.verification import verify_recipient_against_trusted_profile
 from badgecheck.verifier import verification_store
 
-from testfiles.test_components import test_components
+try:
+    from .testfiles.test_components import test_components
+except (ImportError, SystemError):
+    from testfiles.test_components import test_components
 
 
 class RecipientProfileVerificationTests(unittest.TestCase):

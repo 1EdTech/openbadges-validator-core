@@ -13,7 +13,10 @@ from badgecheck.state import INITIAL_STATE
 
 from openbadges_bakery import bake
 
-from testfiles.test_components import test_components
+try:
+    from .testfiles.test_components import test_components
+except (ImportError, SystemError):
+    from testfiles.test_components import test_components
 
 
 class InitializationTests(unittest.TestCase):

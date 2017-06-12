@@ -1,4 +1,4 @@
-from action_types import ADD_NODE, PATCH_NODE, UPDATE_NODE
+from .action_types import ADD_NODE, PATCH_NODE, UPDATE_NODE
 
 
 def add_node(node_id=None, data=None):

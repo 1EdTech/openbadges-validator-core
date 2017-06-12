@@ -1,6 +1,9 @@
+from future.standard_library import install_aliases
+install_aliases()
+
 import hashlib
 import string
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 import requests
 import requests_cache

@@ -12,7 +12,7 @@ from badgecheck.tasks.graph import _get_extension_actions
 from badgecheck.tasks import task_named
 from badgecheck.tasks.task_types import JSONLD_COMPACT_DATA, VALIDATE_EXTENSION_NODE
 
-from tests.utils import setUpContextMock
+from tests.testutils import setup_context_mock
 
 
 class CompactJsonExtensionDiscoveryTests(unittest.TestCase):
@@ -203,7 +203,7 @@ class ComplexExtensionNodeValdiationTests(unittest.TestCase):
         }
         state = {'graph': graph_reducer([], add_node(node['id'], node))}
 
-        setUpContextMock()
+        setup_context_mock()
 
         responses.add(
             responses.GET,

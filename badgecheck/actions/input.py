@@ -1,4 +1,4 @@
-from action_types import SET_INPUT_TYPE, SET_PROFILE_ID, STORE_INPUT, STORE_ORIGINAL_JSON
+from .action_types import SET_INPUT_TYPE, SET_PROFILE_ID, STORE_INPUT, STORE_ORIGINAL_JSON
 
 
 def store_input(badge_input):

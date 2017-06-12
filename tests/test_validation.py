@@ -22,11 +22,14 @@ from badgecheck.tasks.task_types import (ASSERTION_TIMESTAMP_CHECKS, CRITERIA_PR
                                          DETECT_AND_VALIDATE_NODE_CLASS, HOSTED_ID_IN_VERIFICATION_SCOPE,
                                          IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_RDF_TYPE_PROPERTY,
                                          VALIDATE_PROPERTY, VALIDATE_EXPECTED_NODE_CLASS)
-
 from badgecheck.verifier import call_task, verify
 
-from testfiles.test_components import test_components
-from tests.utils import setUpContextMock
+try:
+    from .testfiles.test_components import test_components
+    from .testutils import setup_context_mock
+except (ImportError, SystemError):
+    from testfiles.test_components import test_components
+    from testutils import setup_context_mock
 
 
 class PropertyValidationTests(unittest.TestCase):
@@ -938,7 +941,7 @@ class ClassValidationTaskTests(unittest.TestCase):
 class RdfTypeValidationTests(unittest.TestCase):
     @responses.activate
     def test_validate_in_context_string_type(self):
-        setUpContextMock()
+        setup_context_mock()
         input_value = {
             '@context': OPENBADGES_CONTEXT_V2_DICT,
             'id': 'http://example.com/badge1',
@@ -1184,7 +1187,7 @@ class BadgeClassInputValidationTests(unittest.TestCase):
 
         responses.add(responses.GET, badgeclass['id'], json=badgeclass)
         responses.add(responses.GET, issuer['id'], json=issuer)
-        setUpContextMock()
+        setup_context_mock()
 
         results = verify('http://example.com/badgeclass1')
         self.assertTrue(results['report']['valid'])

@@ -16,8 +16,12 @@ from badgecheck.tasks.task_types import (PROCESS_JWS_INPUT, VERIFY_JWS, VERIFY_K
                                          VERIFY_SIGNED_ASSERTION_NOT_REVOKED,)
 from badgecheck.verifier import verify
 
-from testfiles.test_components import test_components
-from tests.utils import setUpContextMock
+try:
+    from .testfiles.test_components import test_components
+    from .testutils import setup_context_mock
+except (ImportError, SystemError):
+    from testfiles.test_components import test_components
+    from testutils import setup_context_mock
 
 
 class JwsVerificationTests(unittest.TestCase):
@@ -180,7 +184,7 @@ class JwsFullVerifyTests(unittest.TestCase):
             'publicKeyPem': private_key.publickey().exportKey('PEM')
         }
 
-        setUpContextMock()
+        setup_context_mock()
         for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 
@@ -220,7 +224,7 @@ class JwsFullVerifyTests(unittest.TestCase):
             'publicKeyPem': private_key.publickey().exportKey('PEM')
         }
 
-        setUpContextMock()
+        setup_context_mock()
         for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc, revocation_list]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 
@@ -265,7 +269,7 @@ class JwsFullVerifyTests(unittest.TestCase):
             'publicKeyPem': private_key.publickey().exportKey('PEM')
         }
 
-        setUpContextMock()
+        setup_context_mock()
         for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc, revocation_list]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 

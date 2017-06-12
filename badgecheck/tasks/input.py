@@ -8,8 +8,8 @@ from ..actions.tasks import add_task
 from ..actions.validation_report import set_validation_subject
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..utils import CachableDocumentLoader, jsonld_use_cache
-from task_types import FETCH_HTTP_NODE, PROCESS_JWS_INPUT
-from utils import task_result
+from .task_types import FETCH_HTTP_NODE, PROCESS_JWS_INPUT
+from .utils import task_result
 
 
 """

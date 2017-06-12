@@ -1,8 +1,11 @@
 import json
-import responses
 import unittest
 
-from testfiles.test_components import test_components
+try:
+    from .testfiles.test_components import test_components
+except (ImportError, SystemError):
+    from testfiles.test_components import test_components
+
 
 class TestLoadComponents(unittest.TestCase):
     def test_load_assertion_from_test_components(self):

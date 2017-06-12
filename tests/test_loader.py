@@ -5,8 +5,12 @@ import unittest
 
 from badgecheck.utils import CachableDocumentLoader
 
-from testfiles.test_components import test_components
-from utils import setUpContextMock
+try:
+    from .testfiles.test_components import test_components
+    from .testutils import setup_context_mock
+except (ImportError, SystemError):
+    from testfiles.test_components import test_components
+    from testutils import setup_context_mock
 
 
 class DocumentLoaderTests(unittest.TestCase):
@@ -45,7 +49,7 @@ class DocumentLoaderTests(unittest.TestCase):
         assertion_data = json.loads(test_components['2_0_basic_assertion'])
         context_url = assertion_data['@context']
         loadurl = CachableDocumentLoader(use_cache=True)
-        setUpContextMock()
+        setup_context_mock()
 
         first_compacted = jsonld.compact(
             assertion_data, context_url, options={'documentLoader': loadurl})

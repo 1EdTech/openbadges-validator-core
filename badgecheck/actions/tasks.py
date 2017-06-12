@@ -1,4 +1,4 @@
-from action_types import ADD_TASK, DELETE_TASK, REPORT_MESSAGE, RESOLVE_TASK, TRIGGER_CONDITION, UPDATE_TASK
+from .action_types import ADD_TASK, DELETE_TASK, REPORT_MESSAGE, RESOLVE_TASK, TRIGGER_CONDITION, UPDATE_TASK
 
 
 def add_task(task_name, **kwargs):
