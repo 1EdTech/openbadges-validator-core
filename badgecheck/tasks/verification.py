@@ -1,11 +1,10 @@
-import hashlib
 import rfc3986
 
 from ..actions.tasks import report_message
 from ..actions.validation_report import set_verified_recipient_profile
 from ..exceptions import TaskPrerequisitesError
 from ..state import get_node_by_id, get_node_by_path
-from ..utils import list_of
+from ..utils import identity_hash, list_of
 
 from .utils import abbreviate_value as abv, task_result
 
@@ -61,9 +60,9 @@ def hosted_id_in_verification_scope(state, task_meta):
 
 def _matches_hash(profile_identifier, id_hash, salt=''):
     if id_hash.startswith('md5'):
-        return 'md5$' + hashlib.md5(profile_identifier + salt).hexdigest() == id_hash
+        return identity_hash(profile_identifier, salt, alg='md5') == id_hash
     elif id_hash.startswith('sha256'):
-        return 'sha256$' + hashlib.sha256(profile_identifier + salt).hexdigest() == id_hash
+        return identity_hash(profile_identifier, salt, alg='sha256') == id_hash
 
     raise TypeError("Cannot interpret hash type of {}".format(id_hash))
 

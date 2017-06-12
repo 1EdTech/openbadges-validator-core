@@ -1,3 +1,4 @@
+import hashlib
 import string
 from urlparse import urlparse
 
@@ -56,3 +57,11 @@ def list_of(value):
     if isinstance(value, list):
         return value
     return [value]
+
+
+def identity_hash(identfier, salt='', alg='sha256'):
+    if alg == 'sha256':
+        return alg + '$' + hashlib.sha256(identfier + salt).hexdigest()
+    elif alg == 'md5':
+        return alg + '$' + hashlib.md5(identfier + salt).hexdigest()
+    raise ValueError("Alg {} not supported.".format(alg))
