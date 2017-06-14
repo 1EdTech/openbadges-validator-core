@@ -38,7 +38,7 @@ def filter_failed_tasks(state):
 def filter_messages_for_report(state):
     messages = []
     for t in state.get('tasks'):
-        if not t.get('success') or t.get('messageLevel') in [MESSAGE_LEVEL_INFO, MESSAGE_LEVEL_WARNING]:
+        if not t.get('success') or t.get('messageLevel') == MESSAGE_LEVEL_INFO:
             messages.append(t)
     return messages
 
