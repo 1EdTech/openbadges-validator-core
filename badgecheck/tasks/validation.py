@@ -223,11 +223,11 @@ def validate_property(state, task_meta, **options):
         if not required:
             return task_result(
                 True, "Optional property {} not present in {} {}".format(
-                prop_name, node_class, node_id)
+                prop_name, node_class, abv_node(node_id, node_path))
             )
         return task_result(
             False, "Required property {} not present in {} {}".format(
-                prop_name, node_class, node_id)
+                prop_name, node_class, abv_node(node_id, node_path))
             )
 
     if not isinstance(prop_value, (list, tuple,)):
@@ -535,7 +535,7 @@ def detect_and_validate_node_class(state, task_meta, **options):
     actions = _get_validation_actions(node_class, node_id, node_path)
 
     return task_result(
-        True, "Declared type on node {} is {}".format(node_id, declared_node_type),
+        True, "Declared type on node {} is {}".format(abv_node(node_id, node_path), declared_node_type),
         actions
     )
 
@@ -549,7 +549,7 @@ def validate_expected_node_class(state, task_meta, **options):
 
     return task_result(
         True, "Queued property validations for class {} instance {}".format(
-            node_class, abv(task_meta.get('node_id', task_meta.get('node_path')))),
+            node_class, abv_node(node_id, node_path)),
         actions
     )
 
@@ -586,25 +586,36 @@ def identity_object_property_dependencies(state, task_meta, **options):
 
 
 def criteria_property_dependencies(state, task_meta, **options):
-    node_id = task_meta.get('node_id')
-    node = get_node_by_id(state, node_id)
-    is_blank_id_node = bool(re.match(r'_:b\d+$', node_id))
+    try:
+        node_id = task_meta.get('node_id')
+        node_path = task_meta.get('node_path')
+        if node_id:
+            node = get_node_by_id(state, node_id)
+        else:
+            node = get_node_by_path(state, node_path)
+    except (IndexError, TypeError, KeyError):
+        raise TaskPrerequisitesError()
+
+    is_blank_id_node = bool(re.match(r'_:b\d+$', node.get('id', task_meta.get('node_id', ''))))
 
     if is_blank_id_node and not node.get('narrative'):
         return task_result(False,
-            "Criteria node {} has no narrative. Either external id or narrative is required.".format(node_id)
+            "Criteria node {} has no narrative. Either external id or narrative is required.".format(
+                abv_node(node_id, node_path))
         )
     elif is_blank_id_node:
         return task_result(
-            True, "Criteria node {} is a narrative-based piece of evidence.".format(node_id)
+            True, "Criteria node {} is a narrative-based piece of evidence.".format(
+                abv_node(node_id, node_path)
+            )
         )
     elif not is_blank_id_node and node.get('narrative'):
         return task_result(
-            True, "Criteria node {} has a URL and narrative."
+            True, "Criteria node {} has a URL and narrative.".format(abv_node(node_id, node_path))
         )
     # Case to handle no narrative but other props preventing compaction down to simple id string:
     # {'id': 'http://example.com/1', 'name': 'Criteria Name'}
-    return task_result(True, "Criteria node {} has a URL.")
+    return task_result(True, "Criteria node {} has a URL.".format(abv_node(node_id, node_path)))
 
 
 def assertion_verification_dependencies(state, task_meta, **options):
@@ -633,7 +644,7 @@ def assertion_verification_dependencies(state, task_meta, **options):
 
     return task_result(
         True, '{} Assertion {} verification dependencies noted.'.format(
-            node.get('type'), node_id),
+            node.get('type'), assertion_id),
         actions
     )
 

@@ -768,6 +768,34 @@ class ClassValidationTaskTests(unittest.TestCase):
         self.assertEqual(len(actions), 7)
         self.assertTrue(CRITERIA_PROPERTY_DEPENDENCIES in [a.get('name') for a in actions])
 
+    def test_run_criteria_task_discovery_and_validation_embedded(self):
+        badgeclass_node = {'id': 'http://example.com/badgeclass', 'type': 'BadgeClass'}
+        state = {
+            'graph': [badgeclass_node]
+        }
+        actions = [add_task(
+            VALIDATE_PROPERTY,
+            node_id=badgeclass_node['id'],
+            prop_name="criteria",
+            required=False,
+            prop_type=ValueTypes.ID,
+            expected_class=OBClasses.Criteria
+        )]
+        badgeclass_node['criteria'] = {
+            'narrative': 'Do the important things.'
+        }
+
+        for task in actions:
+            if not task.get('type') == 'ADD_TASK':
+                continue
+            result, message, new_actions = task_named(task['name'])(state, task)
+            if new_actions:
+                actions.extend(new_actions)
+            self.assertTrue(result)
+
+        self.assertEqual(len(actions), 7)
+        self.assertTrue(CRITERIA_PROPERTY_DEPENDENCIES in [a.get('name') for a in actions])
+
     def test_many_criteria_disallowed(self):
         badgeclass_node = {'id': 'http://example.com/badgeclass', 'type': 'BadgeClass'}
         state = {'graph': [badgeclass_node]}
