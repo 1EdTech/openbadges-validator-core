@@ -11,7 +11,7 @@ be used as a reliable indicator of the validity of an Open Badge, and *cannot*
 be used as proof to claim implementation conformance.** 
 
 If you want to validate 1.0 or 1.1 badges in the meanwhile, please use 
-[badgecheck.io](https://badgecheck.io).
+https://badgecheck.io.
 
 Badgecheck was originated by Concentric Sky. https://concentricsky.com
 This version of badgecheck is released by IMS Global Learning Consortium.
