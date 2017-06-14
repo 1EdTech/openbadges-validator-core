@@ -7,11 +7,11 @@ import rfc3986
 import six
 
 from ..actions.graph import patch_node
-from ..actions.tasks import add_task
+from ..actions.tasks import add_task, report_message
 from ..exceptions import TaskPrerequisitesError, ValidationError
 from ..state import get_node_by_id, get_node_by_path
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_DICT
-from ..utils import list_of
+from ..utils import list_of, MESSAGE_LEVEL_WARNING
 
 from .task_types import (ASSERTION_TIMESTAMP_CHECKS, ASSERTION_VERIFICATION_CHECK,
                          ASSERTION_VERIFICATION_DEPENDENCIES, CLASS_VALIDATION_TASKS,
@@ -21,7 +21,7 @@ from .task_types import (ASSERTION_TIMESTAMP_CHECKS, ASSERTION_VERIFICATION_CHEC
                          VALIDATE_REVOCATIONLIST_ENTRIES, VERIFY_RECIPIENT_IDENTIFIER)
 from .utils import (abbreviate_value as abv,
                     abbreviate_node_id as abv_node,
-                    is_empty_list, is_null_list, is_iri, is_url, task_result)
+                    is_empty_list, is_null_list, is_iri, is_url, task_result,)
 
 
 class OBClasses(object):
@@ -401,7 +401,7 @@ class ClassValidators(OBClasses):
                     'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
                  'expected_class': OBClasses.VerificationObjectIssuer, 'fetch': False, 'required': False},
-                {'task_type': ISSUER_PROPERTY_DEPENDENCIES}
+                {'task_type': ISSUER_PROPERTY_DEPENDENCIES, 'messageLevel': MESSAGE_LEVEL_WARNING}
             )
         elif class_name == OBClasses.ExpectedRecipientProfile:
             # For ephemeral profiles representing recipients, there are few required properties.
@@ -664,6 +664,20 @@ def assertion_timestamp_checks(state, task_meta, **options):
 
     return task_result(
         True, "Assertion {} was issued and has not expired.".format(node_id))
+
+
+def issuer_property_dependencies(state, task_meta, **options):
+    try:
+        node_id = task_meta['node_id']
+        issuer_node = get_node_by_id(state, node_id)
+    except (IndexError, KeyError,):
+        raise TaskPrerequisitesError()
+
+    if not bool(re.match('^http(s)?://', node_id)):
+        return task_result(
+            False, "Issuer Profile {} not hosted with HTTP-based identifier.".format(node_id) +
+                  "Many platforms can only handle HTTP(s)-hosted issuers.")
+    return task_result(True, "Issuer profile id meets expectations.")
 
 
 def placeholder_task(state, task_meta, **options):

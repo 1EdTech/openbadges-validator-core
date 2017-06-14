@@ -1,6 +1,6 @@
 import six
 
-from .utils import list_of
+from .utils import list_of, MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_INFO, MESSAGE_LEVEL_WARNING
 
 INITIAL_STATE = {
     'input': {},
@@ -8,11 +8,6 @@ INITIAL_STATE = {
     'tasks': [],
     'validationReport': {}
 }
-
-MESSAGE_LEVEL_ERROR = 'ERROR'
-MESSAGE_LEVEL_WARNING = 'WARNING'
-MESSAGE_LEVEL_INFO = 'INFO'
-MESSAGE_LEVELS = (MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING, MESSAGE_LEVEL_INFO,)
 
 
 # Tasks
