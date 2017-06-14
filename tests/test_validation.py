@@ -154,6 +154,62 @@ class PropertyValidationTaskTests(unittest.TestCase):
         result, message, actions = validate_property(state, task)
         self.assertFalse(result, "Required property is not present; validation should fail.")
 
+    def test_basic_telephone_property_validation(self):
+        first_node = {
+            'id': 'http://example.com'
+        }
+        state = {
+            'graph': [first_node]
+        }
+        task = add_task(
+            VALIDATE_PROPERTY,
+            node_id=first_node['id'],
+            prop_name='tel',
+            required=True,
+            prop_type=ValueTypes.TELEPHONE
+        )
+
+        good_values = ["+64010", "+15417522845", "+18006664358", "+18006662344;ext=666"]
+        bad_values = ["1-800-666-DEVIL", "1 (555) 555-5555", "+99 55 22 1234", "+18006664343 x666"]
+
+        for tel_value in good_values:
+            first_node['tel'] = tel_value
+            result, message, actions = validate_property(state, task)
+            self.assertTrue(result)
+
+        for tel_value in bad_values:
+            first_node['tel'] = tel_value
+            result, message, actions = validate_property(state, task)
+            self.assertFalse(result)
+
+    def test_basic_email_property_validation(self):
+        first_node = {
+            'id': 'http://example.com'
+        }
+        state = {
+            'graph': [first_node]
+        }
+        task = add_task(
+            VALIDATE_PROPERTY,
+            node_id=first_node['id'],
+            prop_name='email',
+            required=True,
+            prop_type=ValueTypes.EMAIL
+        )
+
+        good_values = ["abc@localhost", "cool+uncool@example.org"]
+        bad_values = [" spacey@gmail.com", "steveman [at] gee mail dot com"]
+
+        for val in good_values:
+            first_node['email'] = val
+            result, message, actions = validate_property(state, task)
+            self.assertTrue(result, "{} should be marked a valid email".format(val))
+
+        for val in bad_values:
+            first_node['email'] = val
+            result, message, actions = validate_property(state, task)
+            self.assertFalse(result, "{} should be marked an invalid email".format(val))
+
     def test_basic_boolean_property_validation(self):
         first_node = {'id': 'http://example.com/1'}
         state = {
