@@ -20,9 +20,9 @@ from badgecheck.tasks.validation import (_get_validation_actions, assertion_time
 from badgecheck.tasks.verification import (_default_verification_policy, hosted_id_in_verification_scope,)
 from badgecheck.tasks.task_types import (ASSERTION_TIMESTAMP_CHECKS, CRITERIA_PROPERTY_DEPENDENCIES,
                                          DETECT_AND_VALIDATE_NODE_CLASS, HOSTED_ID_IN_VERIFICATION_SCOPE,
-                                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_RDF_TYPE_PROPERTY,
-                                         VALIDATE_PROPERTY, VALIDATE_EXPECTED_NODE_CLASS)
-
+                                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, ISSUER_PROPERTY_DEPENDENCIES,
+                                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY, VALIDATE_EXPECTED_NODE_CLASS)
+from badgecheck.utils import MESSAGE_LEVEL_WARNING
 from badgecheck.verifier import call_task, verify
 
 from testfiles.test_components import test_components
@@ -1292,5 +1292,25 @@ class IssuerClassValidationTests(unittest.TestCase):
         self.assertTrue(result)
 
         task_meta = add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=issuer['id'])
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        self.assertTrue(result)
+
+    def test_issuer_warn_on_non_https_id(self):
+        issuer = {
+            '@context': OPENBADGES_CONTEXT_V2_DICT,
+            'id': 'urn:uuid:2d391246-6e0d-4dab-906c-b29770bd7aa6',
+            'type': 'Issuer',
+            'url': 'http://example.com'
+        }
+        state = {'graph': [issuer]}
+        task_meta = add_task(ISSUER_PROPERTY_DEPENDENCIES, node_id=issuer['id'],
+                             messageLevel=MESSAGE_LEVEL_WARNING)
+
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        self.assertFalse(result)
+        self.assertIn('HTTP', message)
+
+        issuer['id'] = 'http://example.org/issuer1'
+        task_meta['node_id'] = issuer['id']
         result, message, actions = task_named(task_meta['name'])(state, task_meta)
         self.assertTrue(result)
