@@ -73,10 +73,11 @@ class ValueTypes(object):
     IRI = 'IRI'
     MARKDOWN_TEXT = 'MARKDOWN_TEXT'
     RDF_TYPE = 'RDF_TYPE'
+    TELEPHONE = 'TELEPHONE'
     TEXT = 'TEXT'
     URL = 'URL'
 
-    PRIMITIVES = (BOOLEAN, DATETIME, ID, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TEXT, URL)
+    PRIMITIVES = (BOOLEAN, DATETIME, ID, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TELEPHONE, TEXT, URL)
 
 
 class PrimitiveValueValidator(object):
@@ -93,10 +94,12 @@ class PrimitiveValueValidator(object):
             ValueTypes.DATA_URI: self._validate_data_uri,
             ValueTypes.DATA_URI_OR_URL: self._validate_data_uri_or_url,
             ValueTypes.DATETIME: self._validate_datetime,
+            ValueTypes.EMAIL: self._validate_email,
             ValueTypes.IDENTITY_HASH: self._validate_identity_hash,
             ValueTypes.IRI: self._validate_iri,
             ValueTypes.MARKDOWN_TEXT: self._validate_markdown_text,
             ValueTypes.RDF_TYPE: self._validate_rdf_type,
+            ValueTypes.TELEPHONE: self._validate_tel,
             ValueTypes.TEXT: self._validate_text,
             ValueTypes.URL: self._validate_url
         }
@@ -144,7 +147,7 @@ class PrimitiveValueValidator(object):
 
     @staticmethod
     def _validate_email(value):
-        return bool(re.match(r'(^[^@]+@[^@]+$)', value))
+        return bool(re.match(r'(^[^@\s]+@[^@\s]+$)', value))
 
     @staticmethod
     def is_hashed_identity_hash(value):
@@ -188,6 +191,11 @@ class PrimitiveValueValidator(object):
             return False
 
         return True
+
+    @staticmethod
+    def _validate_tel(value):
+        """ Validates whether item passes E.164 validation (allows extensions)"""
+        return bool(re.match(r'^\+?[1-9]\d{1,14}(;ext=\d+)?$', value))
 
     @staticmethod
     def _validate_text(value):
@@ -395,8 +403,8 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': True},
-                {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': True},
-                {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'email', 'prop_type': ValueTypes.EMAIL, 'required': True},
+                {'prop_name': 'telephone', 'prop_type': ValueTypes.TELEPHONE, 'required': False},
                 {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
@@ -413,8 +421,8 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': False, 'many': True},
-                {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': False, 'many': True},
-                {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False, 'many': True},
+                {'prop_name': 'email', 'prop_type': ValueTypes.EMAIL, 'required': False, 'many': True},
+                {'prop_name': 'telephone', 'prop_type': ValueTypes.TELEPHONE, 'required': False, 'many': True},
                 {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID, 'many': True,
                    'expected_class': OBClasses.CryptographicKey, 'fetch': False, 'required': False},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
