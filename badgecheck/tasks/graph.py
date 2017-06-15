@@ -93,6 +93,6 @@ def jsonld_compact_data(state, task_meta, **options):
 
     return task_result(
         True,
-        "Successfully compacted node {}".format(node_id or "with unknown id"),
+        "Successfully compacted node {}".format(node_id),
         actions
     )
