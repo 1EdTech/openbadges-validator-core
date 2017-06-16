@@ -90,10 +90,10 @@ def get_node_by_path(state, node_path):
     if len(node_path) > 1:
         paths = iter(node_path)
         try:
-            node_id = paths.next()
+            node_id = next(paths)
             node = get_node_by_id(state, node_id)
             while True:
-                prop_name = paths.next()
+                prop_name = next(paths)
                 if not isinstance(prop_name, six.string_types):
                     raise TypeError(
                         'Node property {} should be a string type to use in a path'.format(prop_name))
@@ -101,7 +101,7 @@ def get_node_by_path(state, node_path):
                 val = node[prop_name]
 
                 if isinstance(val, list):
-                    i = paths.next()
+                    i = next(paths)
                     val = val[i]
 
                 if isinstance(val, dict):
