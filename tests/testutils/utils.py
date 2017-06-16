@@ -2,7 +2,7 @@ import responses
 
 from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
 
-from testfiles.test_components import test_components
+from ..testfiles.test_components import test_components
 
 
 # Make sure to decorate calling function with @responses.activate
