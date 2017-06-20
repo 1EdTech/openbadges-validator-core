@@ -58,7 +58,7 @@ def _get_extension_actions(current_node, entry_path):
                 node_json=json.dumps(current_node)
             )]
 
-    for key in [k for k in current_node.keys() if k not in ('id', 'type',)]:
+    for key in [k for k in list(current_node.keys()) if k not in ('id', 'type',)]:
         val = current_node.get(key)
         if isinstance(val, list):
             for i in range(len(val)):

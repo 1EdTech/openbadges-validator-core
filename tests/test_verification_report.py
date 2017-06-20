@@ -11,8 +11,8 @@ try:
     from .testfiles.test_components import test_components
     from .testutils import setup_context_mock
 except (ImportError, SystemError):
-    from testfiles.test_components import test_components
-    from testutils import setup_context_mock
+    from .testfiles.test_components import test_components
+    from .testutils import setup_context_mock
 
 
 class VerificationReportTests(unittest.TestCase):

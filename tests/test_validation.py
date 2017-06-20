@@ -28,8 +28,8 @@ try:
     from .testfiles.test_components import test_components
     from .testutils import setup_context_mock
 except (ImportError, SystemError):
-    from testfiles.test_components import test_components
-    from testutils import setup_context_mock
+    from .testfiles.test_components import test_components
+    from .testutils import setup_context_mock
 
 
 class PropertyValidationTests(unittest.TestCase):
@@ -46,9 +46,9 @@ class PropertyValidationTests(unittest.TestCase):
                     'http://someexample.org',
                     'data:bad:path')
         for uri in good_uris:
-            self.assertTrue(validator(uri), u"`{}` should pass data URI validation but failed.".format(uri))
+            self.assertTrue(validator(uri), "`{}` should pass data URI validation but failed.".format(uri))
         for uri in bad_uris:
-            self.assertFalse(validator(uri), u"`{}` should fail data URI/URL validation but passed.".format(uri))
+            self.assertFalse(validator(uri), "`{}` should fail data URI/URL validation but passed.".format(uri))
 
     def test_data_uri_or_url_validation(self):
         validator = PrimitiveValueValidator(ValueTypes.DATA_URI_OR_URL)
@@ -67,9 +67,9 @@ class PropertyValidationTests(unittest.TestCase):
                     'rdar://12345', 'h://test', 'http:// shouldfail.com', ':// should fail', '', 'a',
                     'urn:uuid:129487129874982374', 'urn:uuid:9d278beb-36cf-4bc8-888d-674ff9843d72')
         for uri in good_uris:
-            self.assertTrue(validator(uri), u"`{}` should pass data URI/URL validation but failed.".format(uri))
+            self.assertTrue(validator(uri), "`{}` should pass data URI/URL validation but failed.".format(uri))
         for uri in bad_uris:
-            self.assertFalse(validator(uri), u"`{}` should fail data URI/URL validation but passed.".format(uri))
+            self.assertFalse(validator(uri), "`{}` should fail data URI/URL validation but passed.".format(uri))
 
     def test_url_validation(self):
         validator = PrimitiveValueValidator(ValueTypes.URL)
@@ -81,7 +81,7 @@ class PropertyValidationTests(unittest.TestCase):
                      'http://foo.com/blah_(wikipedia)#cite-1', 'http://a.b-c.de',
                      'http://userid:password@example.com/', "http://-.~:%40:80%2f:password@example.com",
                      'http://code.google.com/events/#&product=browser')
-        good_urls_that_fail = (u'http://✪df.ws/123', u'http://عمان.icom.museum/',)  # TODO: Discuss support for these
+        good_urls_that_fail = ('http://✪df.ws/123', 'http://عمان.icom.museum/',)  # TODO: Discuss support for these
         bad_urls = ('data:image/gif;base64,R0lGODlhyAAiALM...DfD0QAADs=', '///', '///f', '//',
                     'rdar://12345', 'h://test', 'http:// shouldfail.com', ':// should fail', '', 'a',
                     'urn:uuid:129487129874982374', 'urn:uuid:9d278beb-36cf-4bc8-888d-674ff9843d72')
@@ -89,9 +89,9 @@ class PropertyValidationTests(unittest.TestCase):
                                           'http://f', 'http://-error-.invalid/', 'http://.www.foo.bar./',)
 
         for url in good_urls:
-            self.assertTrue(validator(url), u"`{}` should pass URL validation but failed.".format(url))
+            self.assertTrue(validator(url), "`{}` should pass URL validation but failed.".format(url))
         for url in bad_urls:
-            self.assertFalse(validator(url), u"`{}` should fail URL validation but passed.".format(url))
+            self.assertFalse(validator(url), "`{}` should fail URL validation but passed.".format(url))
 
     def test_iri_validation(self):
         validator = PrimitiveValueValidator(ValueTypes.IRI)
@@ -106,9 +106,9 @@ class PropertyValidationTests(unittest.TestCase):
         bad_iris_that_pass = ()
 
         for url in good_iris:
-            self.assertTrue(validator(url), u"`{}` should pass IRI validation but failed.".format(url))
+            self.assertTrue(validator(url), "`{}` should pass IRI validation but failed.".format(url))
         for url in bad_iris:
-            self.assertFalse(validator(url), u"`{}` should fail IRI validation but passed.".format(url))
+            self.assertFalse(validator(url), "`{}` should fail IRI validation but passed.".format(url))
 
 
 class PropertyValidationTaskTests(unittest.TestCase):

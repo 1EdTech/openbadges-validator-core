@@ -230,7 +230,7 @@ def validate_property(state, task_meta, **options):
                 prop_name, node_class, node_id)
             )
 
-    if not isinstance(prop_value, (list, tuple,)):
+    if not isinstance(prop_value, (list, tuple)):
         values_to_test = [prop_value]
     else:
         values_to_test = prop_value
@@ -322,7 +322,7 @@ def validate_rdf_type_property(state, task_meta, **options):
         actions.append(patch_node(node_id, {'type': default}))
         return task_result(True, prop_result[1], actions)
 
-    if not isinstance(prop_value, (list, tuple,)):
+    if not isinstance(prop_value, (list, tuple)):
         values_to_test = [prop_value]
     else:
         values_to_test = prop_value

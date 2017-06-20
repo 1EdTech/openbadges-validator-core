@@ -18,11 +18,11 @@ def task_result(success=True, message='', actions=None):
 
 
 def is_empty_list(value):
-    return isinstance(value, (tuple, list,)) and len(value) == 0
+    return isinstance(value, (tuple, list)) and len(value) == 0
 
 
 def is_null_list(value):
-    return isinstance(value, (tuple, list,)) and all(val is None for val in value)
+    return isinstance(value, (tuple, list)) and all(val is None for val in value)
 
 
 def abbreviate_value(value):
@@ -66,6 +66,6 @@ def filter_tasks(state, **kwargs):
     tasks = state.get('tasks', [])
 
     def _matches(val):
-        return all([val.get(kwarg) == kwargs[kwarg] for kwarg in kwargs.keys()])
+        return all([val.get(kwarg) == kwargs[kwarg] for kwarg in list(kwargs.keys())])
 
-    return filter(_matches, tasks)
+    return list(filter(_matches, tasks))

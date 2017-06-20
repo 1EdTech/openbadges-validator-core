@@ -9,8 +9,8 @@ try:
     from .testfiles.test_components import test_components
     from .testutils import setup_context_mock
 except (ImportError, SystemError):
-    from testfiles.test_components import test_components
-    from testutils import setup_context_mock
+    from .testfiles.test_components import test_components
+    from .testutils import setup_context_mock
 
 
 class DocumentLoaderTests(unittest.TestCase):
@@ -57,7 +57,7 @@ class DocumentLoaderTests(unittest.TestCase):
             assertion_data, context_url, options={'documentLoader': loadurl})
         # in order to have 'HostedBadge' as the verification type, the assertion_data
         # needs to have gone through compaction against the openbadges context document
-        self.assertEqual(first_compacted['verification']['type'], u'HostedBadge')
+        self.assertEqual(first_compacted['verification']['type'], 'HostedBadge')
         # second compaction should have built from the cache
         self.assertEqual(first_compacted['verification']['type'],
                          second_compacted['verification']['type'])

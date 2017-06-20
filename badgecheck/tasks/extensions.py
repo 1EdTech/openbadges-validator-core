@@ -69,7 +69,7 @@ def validate_extension_node(state, task_meta, **options):
         types_to_test = [task_meta['type_to_test']]
     except KeyError:
         types_to_test = []
-        for t in ALL_KNOWN_EXTENSIONS.keys():
+        for t in list(ALL_KNOWN_EXTENSIONS.keys()):
             if t in node_type:
                 types_to_test.append(t)
 

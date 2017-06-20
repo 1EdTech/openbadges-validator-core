@@ -16,7 +16,7 @@ from badgecheck.verifier import verification_store
 try:
     from .testfiles.test_components import test_components
 except (ImportError, SystemError):
-    from testfiles.test_components import test_components
+    from .testfiles.test_components import test_components
 
 
 class RecipientProfileVerificationTests(unittest.TestCase):

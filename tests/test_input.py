@@ -15,8 +15,8 @@ try:
     from .testfiles.test_components import test_components
     from .testutils import setup_context_mock
 except (ImportError, SystemError):
-    from testfiles.test_components import test_components
-    from testutils import setup_context_mock
+    from .testfiles.test_components import test_components
+    from .testutils import setup_context_mock
 
 
 class InputReducerTests(unittest.TestCase):
@@ -76,7 +76,7 @@ class InputTaskTests(unittest.TestCase):
         the input as json
         """
         assertion_dict = json.loads(test_components['2_0_basic_assertion'])
-        assertion_dict['id'] = assertion_dict['badge'] = u'urn:org:example:badges:robotics:beth'
+        assertion_dict['id'] = assertion_dict['badge'] = 'urn:org:example:badges:robotics:beth'
         json_input = json.dumps(assertion_dict)
         state = INITIAL_STATE.copy()
         state['input']['value'] = json_input

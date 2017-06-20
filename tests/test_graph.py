@@ -14,7 +14,7 @@ from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
 try:
     from .testfiles.test_components import test_components
 except (ImportError, SystemError):
-    from testfiles.test_components import test_components
+    from .testfiles.test_components import test_components
 
 
 class HttpFetchingTests(unittest.TestCase):
