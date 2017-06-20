@@ -5,11 +5,13 @@ import jws
 from pydux import create_store
 import responses
 import unittest
+import sys
 
 from badgecheck.actions.input import set_input_type, store_input
 from badgecheck.reducers import main_reducer
 from badgecheck.state import INITIAL_STATE
 from badgecheck.tasks.input import detect_input_type
+from badgecheck.utils import make_string_from_bytes
 
 try:
     from .testfiles.test_components import test_components
@@ -120,7 +122,17 @@ class InputJwsTests(unittest.TestCase):
         header = {'alg': 'RS256'}
         payload = self.assertion_data
         signature = jws.sign(header, payload, self.private_key)
-        self.signed_assertion = '.'.join((b64encode(json.dumps(header)), b64encode(json.dumps(payload)), signature))
+
+        encoded_separator = '.'
+        if sys.version[:3] < '3':
+            encoded_header = b64encode(json.dumps(header))
+            encoded_payload = b64encode(json.dumps(payload))
+        else:
+            encoded_separator = '.'.encode()
+            encoded_header = b64encode(json.dumps(header).encode())
+            encoded_payload = b64encode(json.dumps(payload).encode())
+
+        self.signed_assertion = encoded_separator.join((encoded_header, encoded_payload, signature))
 
         self.state = {
             'graph': [self.signing_key_doc, self.issuer_data, self.badgeclass,

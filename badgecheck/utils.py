@@ -68,3 +68,9 @@ def identity_hash(identfier, salt='', alg='sha256'):
     elif alg == 'md5':
         return alg + '$' + hashlib.md5(identfier + salt).hexdigest()
     raise ValueError("Alg {} not supported.".format(alg))
+
+
+def make_string_from_bytes(input_value):
+    if isinstance(input_value,bytes):
+        return input_value.decode()
+    return input_value
