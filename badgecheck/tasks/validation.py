@@ -77,7 +77,7 @@ class ValueTypes(object):
     TEXT = 'TEXT'
     URL = 'URL'
 
-    PRIMITIVES = (BOOLEAN, DATETIME, ID, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TELEPHONE, TEXT, URL)
+    PRIMITIVES = (BOOLEAN, DATA_URI_OR_URL, DATETIME, ID, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TELEPHONE, TEXT, URL)
 
 
 class PrimitiveValueValidator(object):
@@ -267,11 +267,15 @@ def validate_property(state, task_meta, **options):
                     raise ValidationError("{} property {} value {} not valid in {} {}".format(
                         prop_type, prop_name, abv(val), node_class, abv_node(node_id, node_path)))
         else:
-            for val in values_to_test:
+            for i in range(len(values_to_test)):
+                val = values_to_test[i]
                 if isinstance(val, dict):
+                    if isinstance(prop_value, (list, tuple,)):
+                        value_to_test_path = [node_id, prop_name, i]
+                    else:
+                        value_to_test_path = [node_id, prop_name]
                     actions.append(
-                        # TODO make sure node_id is set
-                        add_task(VALIDATE_EXPECTED_NODE_CLASS, node_path=[node_id, prop_name],
+                        add_task(VALIDATE_EXPECTED_NODE_CLASS, node_path=value_to_test_path,
                                  expected_class=task_meta.get('expected_class')))
                     continue
                 elif not PrimitiveValueValidator(ValueTypes.IRI)(val):
@@ -513,6 +517,8 @@ def _get_validation_actions(node_class, node_id=None, node_path=None):
             action = add_task(VALIDATE_PROPERTY, **validator)
         elif validator.get('task_type') in CLASS_VALIDATION_TASKS:
             action = add_task(validator['task_type'], **validator)
+        else:
+            continue
 
         if node_id:
             action['node_id'] = node_id
@@ -601,11 +607,11 @@ def criteria_property_dependencies(state, task_meta, **options):
             node = get_node_by_id(state, node_id)
         else:
             node = get_node_by_path(state, node_path)
-    except (IndexError, TypeError, KeyError):
+            node_id = node.get('id', '')
+    except (IndexError, KeyError, TypeError):
         raise TaskPrerequisitesError()
 
-    is_blank_id_node = bool(re.match(r'_:b\d+$', node.get('id', task_meta.get('node_id', ''))))
-
+    is_blank_id_node = bool(re.match(r'_:b\d+$', node_id))
     if is_blank_id_node and not node.get('narrative'):
         return task_result(False,
             "Criteria node {} has no narrative. Either external id or narrative is required.".format(

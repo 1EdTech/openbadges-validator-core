@@ -690,6 +690,42 @@ class IDPropertyValidationTests(unittest.TestCase):
         self.assertFalse(result, "Many values should be rejected when many is not present")
         self.assertTrue('has more than the single allowed value' in message, "Error should mention many violation")
 
+    def test_many_nested_validation_for_id_property(self):
+        """
+        When detect_and_validate_node_class (through _get_validation_actions)
+        queue up actions, some configs may have many=True. This means single or multiple
+        values should be accepted. If optional, empty lists should also be accepted.
+        """
+        first_node = {
+            'id': '_:b0',
+            'type': 'BadgeClass',
+            'alignment': [
+                {
+                    'targetName': 'Alignment One',
+                    'targetUrl': 'http://example.org/alignment1'
+                }
+            ]
+        }
+        state = {'graph': [first_node]}
+        required = True
+
+        task = add_task(
+            VALIDATE_PROPERTY, node_id=first_node['id'], node_class=OBClasses.BadgeClass,
+            prop_name='alignment', prop_type=ValueTypes.ID, required=required, many=True, fetch=False,
+            expected_class=OBClasses.AlignmentObject, allow_remote_url=False
+        )
+        result, message, actions = validate_property(state, task)
+        self.assertTrue(result, "Task the queues up individual class validators is successful")
+        self.assertEqual(len(actions), 1)
+
+        result, message, actions = task_named(actions[0]['name'])(state, actions[0])
+        self.assertTrue(result)
+        for a in actions:
+            self.assertEqual(a['node_path'], [first_node['id'], 'alignment', 0])
+            next_result, next_message, next_actions = task_named(a['name'])(state, a)
+            self.assertTrue(next_result)
+
+
 
 class NodeTypeDetectionTasksTests(unittest.TestCase):
     def detect_assertion_type_from_node(self):
@@ -821,7 +857,7 @@ class ClassValidationTaskTests(unittest.TestCase):
                 actions.extend(new_actions)
             self.assertTrue(result)
 
-        self.assertEqual(len(actions), 7)
+        self.assertEqual(len(actions), 5)
         self.assertTrue(CRITERIA_PROPERTY_DEPENDENCIES in [a.get('name') for a in actions])
 
     def test_run_criteria_task_discovery_and_validation_embedded(self):
@@ -849,7 +885,7 @@ class ClassValidationTaskTests(unittest.TestCase):
                 actions.extend(new_actions)
             self.assertTrue(result)
 
-        self.assertEqual(len(actions), 7)
+        self.assertEqual(len(actions), 5)
         self.assertTrue(CRITERIA_PROPERTY_DEPENDENCIES in [a.get('name') for a in actions])
 
     def test_many_criteria_disallowed(self):

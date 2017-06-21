@@ -105,7 +105,7 @@ def get_node_by_path(state, node_path):
 
                 return get_node_by_path(state, [val] + list(paths))  # Recurse with remaining path
         except StopIteration:
-            if isinstance(val, dict):
+            if isinstance(val, (dict, list)):
                 return val
             raise TypeError("Node path {} not properly formed.")
 
