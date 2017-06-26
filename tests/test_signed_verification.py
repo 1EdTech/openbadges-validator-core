@@ -4,6 +4,7 @@ import json
 import jws
 import responses
 import unittest
+import sys
 
 from badgecheck.actions.graph import patch_node
 from badgecheck.actions.tasks import add_task
@@ -55,7 +56,17 @@ class JwsVerificationTests(unittest.TestCase):
         header = {'alg': 'RS256'}
         payload = self.assertion_data
         signature = jws.sign(header, payload, self.private_key)
-        self.signed_assertion = '.'.join((b64encode(json.dumps(header)), b64encode(json.dumps(payload)), signature))
+
+        encoded_separator = '.'
+        if sys.version[:3] < '3':
+            encoded_header = b64encode(json.dumps(header))
+            encoded_payload = b64encode(json.dumps(payload))
+        else:
+            encoded_separator = '.'.encode()
+            encoded_header = b64encode(json.dumps(header).encode())
+            encoded_payload = b64encode(json.dumps(payload).encode())
+
+        self.signed_assertion = encoded_separator.join((encoded_header, encoded_payload, signature))
 
         self.state = {
             'graph': [self.signing_key_doc, self.issuer_data, self.badgeclass,
@@ -75,6 +86,12 @@ class JwsVerificationTests(unittest.TestCase):
                              node_id=self.assertion_data['id'])
 
         success, message, actions = verify_jws_signature(self.state, task_meta)
+        print("TEST CAN VERIFY JWS : success:")
+        print(success)
+        print("TEST CAN VERIFY JWS : message:")
+        print(message)
+        print("TEST CAN VERIFY JWS : actions:")
+        print(actions)
         self.assertTrue(success)
         self.assertEqual(len(actions), 2)
 
