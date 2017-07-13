@@ -14,9 +14,12 @@ MESSAGE_LEVELS = (MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING, MESSAGE_LEVEL_INFO
 
 
 class CachableDocumentLoader(object):
-    def __init__(self, use_cache=False, backend='memory', expire_after=300):
+    def __init__(self, use_cache=False, backend='memory', expire_after=300, session=None):
         self.use_cache = use_cache
-        if self.use_cache:
+
+        if session is not None:
+            self.session = session
+        elif self.use_cache:
             self.session = requests_cache.CachedSession(backend=backend, expire_after=expire_after)
         else:
             self.session = requests.Session()

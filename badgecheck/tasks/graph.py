@@ -4,7 +4,7 @@ import requests
 import requests_cache
 
 from ..actions.graph import add_node
-from ..actions.input import store_original_json
+from ..actions.input import store_original_resource
 from ..actions.tasks import add_task
 from ..exceptions import TaskPrerequisitesError, ValidationError
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
@@ -33,11 +33,13 @@ def fetch_http_node(state, task_meta, **options):
         json.loads(result.text)
     except ValueError:
         if result.headers.get('Content-Type', 'UNKNOWN') in ['image/png', 'image/svg+xml']:
-            return task_result(message='Successfully fetched image from {}'.format(url))
+            return task_result(
+                True, 'Successfully fetched image from {}'.format(url),
+                store_original_resource(node_id=url, data=result.content))
         return task_result(success=False, message="Response could not be interpreted from url {}".format(url))
 
     actions = [
-        store_original_json(data=result.text, node_id=url),
+        store_original_resource(node_id=url, data=result.text),
         add_task(JSONLD_COMPACT_DATA, data=result.text, node_id=url,
                  expected_class=task_meta.get('expected_class'))]
     return task_result(message="Successfully fetched JSON data from {}".format(url), actions=actions)

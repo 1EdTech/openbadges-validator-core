@@ -26,7 +26,7 @@ from badgecheck.utils import MESSAGE_LEVEL_WARNING
 from badgecheck.verifier import call_task, verify
 
 from testfiles.test_components import test_components
-from tests.utils import setUpContextMock
+from tests.utils import set_up_context_mock, set_up_image_mock
 
 
 class PropertyValidationTests(unittest.TestCase):
@@ -1058,7 +1058,7 @@ class ClassValidationTaskTests(unittest.TestCase):
 class RdfTypeValidationTests(unittest.TestCase):
     @responses.activate
     def test_validate_in_context_string_type(self):
-        setUpContextMock()
+        set_up_context_mock()
         input_value = {
             '@context': OPENBADGES_CONTEXT_V2_DICT,
             'id': 'http://example.com/badge1',
@@ -1301,10 +1301,11 @@ class BadgeClassInputValidationTests(unittest.TestCase):
             'email': 'me@example.com',
             'url': 'http://example.com'
         }
+        set_up_image_mock(badgeclass['image'])
 
         responses.add(responses.GET, badgeclass['id'], json=badgeclass)
         responses.add(responses.GET, issuer['id'], json=issuer)
-        setUpContextMock()
+        set_up_context_mock()
 
         results = verify('http://example.com/badgeclass1')
         self.assertTrue(results['report']['valid'])
