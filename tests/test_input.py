@@ -13,7 +13,7 @@ from badgecheck.tasks.input import detect_input_type
 
 from testfiles.test_components import test_components
 
-from tests.utils import setUpContextMock
+from tests.utils import set_up_context_mock
 
 
 class InputReducerTests(unittest.TestCase):
@@ -126,7 +126,7 @@ class InputJwsTests(unittest.TestCase):
 
     @responses.activate
     def test_detect_jws_signed_input_type(self):
-        setUpContextMock()
+        set_up_context_mock()
         # responses.add(responses.GET, badgeclass_data['id'], json=badgeclass_data, status=200)
         # responses.add(responses.GET, issuer_data['id'], json=issuer_data, status=200)
         # responses.add(responses.GET, signing_key['id'], json=signing_key, status=200)

@@ -16,7 +16,7 @@ from ..utils import list_of, MESSAGE_LEVEL_WARNING
 from .task_types import (ASSERTION_TIMESTAMP_CHECKS, ASSERTION_VERIFICATION_CHECK,
                          ASSERTION_VERIFICATION_DEPENDENCIES, CLASS_VALIDATION_TASKS,
                          CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE, HOSTED_ID_IN_VERIFICATION_SCOPE,
-                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, ISSUER_PROPERTY_DEPENDENCIES,
+                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, IMAGE_VALIDATION, ISSUER_PROPERTY_DEPENDENCIES,
                          VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,
                          VALIDATE_REVOCATIONLIST_ENTRIES, VERIFY_RECIPIENT_IDENTIFIER)
 from .utils import (abbreviate_value as abv,
@@ -231,7 +231,7 @@ def validate_property(state, task_meta, **options):
         if not required:
             return task_result(
                 True, "Optional property {} not present in {} {}".format(
-                prop_name, node_class, abv_node(node_id, node_path))
+                    prop_name, node_class, abv_node(node_id, node_path))
             )
         return task_result(
             False, "Required property {} not present in {} {}".format(
@@ -278,6 +278,10 @@ def validate_property(state, task_meta, **options):
                         add_task(VALIDATE_EXPECTED_NODE_CLASS, node_path=value_to_test_path,
                                  expected_class=task_meta.get('expected_class')))
                     continue
+                elif task_meta.get('allow_data_uri', False) and not PrimitiveValueValidator(ValueTypes.DATA_URI_OR_URL)(val):
+                    raise ValidationError("ID-type property {} had value `{}` that isn't URI or DATA URI in {}.".format(
+                        prop_name, abv(val), abv_node(node_id, node_path))
+                    )
                 elif not PrimitiveValueValidator(ValueTypes.IRI)(val):
                     raise ValidationError(
                         "ID-type property {} had value `{}` not embedded node or in IRI format in {}.".format(
@@ -364,12 +368,15 @@ class ClassValidators(OBClasses):
                     'expected_class': OBClasses.VerificationObjectAssertion, 'required': True},
                 {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
                 {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},
+                {'prop_name': 'image', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
+                 'expected_class': OBClasses.Image, 'fetch': False, 'allow_data_uri': True},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 {'prop_name': 'evidence', 'prop_type': ValueTypes.ID, 'allow_remote_url': True,
                     'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, 'required': False},
                 {'task_type': ASSERTION_VERIFICATION_DEPENDENCIES, 'prerequisites': ISSUER_PROPERTY_DEPENDENCIES},
-                {'task_type': ASSERTION_TIMESTAMP_CHECKS}
+                {'task_type': ASSERTION_TIMESTAMP_CHECKS},
+                {'task_type': IMAGE_VALIDATION, 'prop_name': 'image', 'node_class': OBClasses.Assertion,
+                    'required': False, 'many': False}
             )
         elif class_name == OBClasses.BadgeClass:
             self.validators = (
@@ -380,13 +387,16 @@ class ClassValidators(OBClasses):
                     'expected_class': OBClasses.Profile, 'fetch': True, 'required': True},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': True},
-                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
+                {'prop_name': 'image', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
+                 'expected_class': OBClasses.Image, 'fetch': False, 'allow_data_uri': True},
                 {'prop_name': 'criteria', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.Criteria, 'fetch': False,
                     'required': True, 'allow_remote_url': True},
                 {'prop_name': 'alignment', 'prop_type': ValueTypes.ID,
-                   'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, 'required': False},
+                    'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, 'required': False},
                 {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
+                {'task_type': IMAGE_VALIDATION, 'prop_name': 'image', 'node_class': OBClasses.BadgeClass,
+                    'required': True, 'many': False}
             )
         elif class_name == OBClasses.CryptographicKey:
             self.validators = (
@@ -405,7 +415,8 @@ class ClassValidators(OBClasses):
                     'many': True, 'must_contain_one': ['Issuer', 'Profile']},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
+                {'prop_name': 'image', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
+                 'expected_class': OBClasses.Image, 'fetch': False, 'allow_data_uri': True},
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': True},
                 {'prop_name': 'email', 'prop_type': ValueTypes.EMAIL, 'required': True},
                 {'prop_name': 'telephone', 'prop_type': ValueTypes.TELEPHONE, 'required': False},
@@ -423,7 +434,8 @@ class ClassValidators(OBClasses):
                  'must_contain_one': ['Issuer', 'Profile'], 'default': OBClasses.Profile},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
+                {'prop_name': 'image', 'prop_type': ValueTypes.ID, 'required': False,
+                 'expected_class': OBClasses.Image, 'fetch': False, 'allow_data_uri': True},
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': False, 'many': True},
                 {'prop_name': 'email', 'prop_type': ValueTypes.EMAIL, 'required': False, 'many': True},
                 {'prop_name': 'telephone', 'prop_type': ValueTypes.TELEPHONE, 'required': False, 'many': True},
@@ -477,7 +489,8 @@ class ClassValidators(OBClasses):
                     'required': False, 'default': 'schema:ImageObject'},
                 {'prop_name': 'id', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
                 {'prop_name': 'caption', 'prop_type': ValueTypes.TEXT, 'required': False},
-                {'prop_name': 'author', 'prop_type': ValueTypes.IRI, 'required': False}
+                {'prop_name': 'author', 'prop_type': ValueTypes.IRI, 'required': False},
+                {'task_type': IMAGE_VALIDATION, 'prop_name': 'id'}
             )
         elif class_name == OBClasses.VerificationObjectAssertion:
             self.validators = (

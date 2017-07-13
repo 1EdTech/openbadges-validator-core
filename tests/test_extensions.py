@@ -11,8 +11,9 @@ from badgecheck.tasks.extensions import validate_extension_node
 from badgecheck.tasks.graph import _get_extension_actions
 from badgecheck.tasks import task_named
 from badgecheck.tasks.task_types import JSONLD_COMPACT_DATA, VALIDATE_EXTENSION_NODE
+from badgecheck.utils import jsonld_no_cache
 
-from tests.utils import setUpContextMock
+from tests.utils import set_up_context_mock
 
 
 class CompactJsonExtensionDiscoveryTests(unittest.TestCase):
@@ -203,7 +204,7 @@ class ComplexExtensionNodeValdiationTests(unittest.TestCase):
         }
         state = {'graph': graph_reducer([], add_node(node['id'], node))}
 
-        setUpContextMock()
+        set_up_context_mock()
 
         responses.add(
             responses.GET,
@@ -212,7 +213,7 @@ class ComplexExtensionNodeValdiationTests(unittest.TestCase):
             status=200,
             content_type='application/ld+json')
 
-        compact_task = add_task(JSONLD_COMPACT_DATA, data=json.dumps(node))
+        compact_task = add_task(JSONLD_COMPACT_DATA, data=json.dumps(node), jsonld_options=jsonld_no_cache)
 
         result, message, actions = task_named(JSONLD_COMPACT_DATA)(state, compact_task)
         self.assertTrue(result, "JSON-LD Compact is successful.")

@@ -14,6 +14,7 @@ from badgecheck.tasks.verification import verify_recipient_against_trusted_profi
 from badgecheck.verifier import verification_store
 
 from testfiles.test_components import test_components
+from tests.utils import set_up_image_mock
 
 
 class RecipientProfileVerificationTests(unittest.TestCase):
@@ -41,6 +42,7 @@ class RecipientProfileVerificationTests(unittest.TestCase):
             responses.GET, url, body=json.dumps(assertion), status=200,
             content_type='application/ld+json'
         )
+        set_up_image_mock('https://example.org/beths-robot-badge.png')
         responses.add(
             responses.GET, 'https://w3id.org/openbadges/v2',
             body=test_components['openbadges_context'], status=200,
@@ -51,6 +53,7 @@ class RecipientProfileVerificationTests(unittest.TestCase):
             body=test_components['2_0_basic_badgeclass'], status=200,
             content_type='application/ld+json'
         )
+        set_up_image_mock('https://example.org/robotics-badge.png')
         responses.add(
             responses.GET, 'https://example.org/organization.json',
             body=test_components['2_0_basic_issuer'], status=200,
