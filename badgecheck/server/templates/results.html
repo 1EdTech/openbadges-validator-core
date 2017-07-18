@@ -3,7 +3,21 @@
 {% block main %}
 <p>The results returned by the validator are shown in the box below. Please report any bugs or issues to the <a href="https://github.com/openbadges/badgecheck/issues">development team</a>.</p>
 
-<form id="results">
+<div class="alert {% if is_valid %}alert-success{% else %}alert-danger{% endif %}">
+	<div class="row">
+		<div class="col-md-2">
+			<strong>Valid</strong>
+		</div>
+		<div class="col-md-10">{{ is_valid }}</div>
+	</div>
+	<div class="row">
+		<div class="col-md-2">
+			<strong>Error Count</strong>
+		</div>
+		<div class="col-md-10">{{ error_count }}</div>
+	</div>
+</div>
+<div id="results">
 	<textarea id="data" rows="30">{{ results }}</textarea>
-</form>
+</div>
 {% endblock %}
