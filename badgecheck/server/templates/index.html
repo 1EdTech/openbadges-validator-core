@@ -1,12 +1,40 @@
 {% extends "base.html" %}
 
 {% block main %}
-<form action="/results" method="post" id="submit" enctype="multipart/form-data">
-	<p>Paste an <a href="https://www.imsglobal.org/sites/default/files/Badges/OBv2p0/index.html">Open Badges 2.0</a>
-		assertion URL or JSON-LD payload in the text field below, or upload a baked image file. If an image
-		is used, if will take precedence over text data. </p>
-	<input type="text" id="input-name" name="data" placeholder="URL or JSON-LD" />
-	<input type="file" id="input-file" name="image" />
-	<input type="submit" value="Submit" id="input-submit" />
+<form class="form-horizontal badgeform" action="/results" method="post" id="submit" enctype="multipart/form-data">
+<!-- Form Name -->
+<legend>Open Badges Verification Request</legend>
+<fieldset>
+
+<!-- Text input-->
+<div class="form-group">
+	<label class="col-md-4 control-label" for="data">Badge Object Reference Data</label>
+	<div class="col-md-8">
+		<input id="data" name="data" type="text" placeholder="http://example.org/assertions/abc..." class="badgeforminput form-control input-md">
+		<span class="help-block badgeforminput">Paste the URL of a badge object or its JSON or signed JWS data directly</span>
+	</div>
+</div>
+	<div class="col-md-4"></div><div class="col-md-8">--Or--</div>
+<div class="form-group">
+	<label class="col-md-4 control-label" for="data">Badge Image</label>
+	<div class="col-md-8">
+		<input name="image" class="btn btn-default badgeforminput" type="file" />
+		<span class="help-block badgeforminput">You may upload a baked badge image instead of pasting text input above.</span>
+	</div>
+</div>
+</fieldset>
+
+<fieldset>
+<!-- Textarea -->
+<div class="form-group">
+	<label class="col-md-4 control-label" for="profile">Expected Profile JSON (optional)</label>
+	<div class="col-md-8">
+		<textarea class="form-control badgeforminput" id="profile" name="profile" ></textarea>
+		<span class="help-block badgeforminput">If you would like to check a recipient, enter a with keys for each identifier type you want to check. Multiple values for each type accepted.</span>
+	</div>
+</div>
+</fieldset>
+
+<input type="submit" class="btn btn-success" value="Submit" id="input-submit" style="float:right;" />
 </form>
 {% endblock %}

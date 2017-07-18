@@ -20,24 +20,38 @@ def home():
 
 
 @app.route("/results", methods=['GET'])
-def resultGetRedirect():
+def result_get_redirect():
     return redirect('/')
 
 
 @app.route("/results", methods=['POST'])
 def results():
-    if isinstance(request.form['data'], six.string_types) or request.files:
+    data = request.get_json()
+    user_input = data.get('data')
+    profile = None
+    if not data and isinstance(request.form['data'], six.string_types) or request.files:
         user_input = request.form['data']
         if 'image' in request.files and len(request.files['image'].filename):
             user_input = request.files['image']
-        verification_results = verify(user_input)
 
-        if request_wants_json():
-            return (json.dumps(verification_results, indent=4), 200, {'Content-Type': 'application/json'},)
-        return render_template(
-            'results.html', results=json.dumps(verification_results, indent=4))
+        try:
+            profile = json.loads(request.form['profile'])
+        except (TypeError, ValueError):
+            profile = None
+    elif data:
+        try:
+            profile = data['profile']
+            if isinstance(profile, six.string_types):
+                profile = json.loads(profile)
+        except (TypeError, ValueError, KeyError):
+            pass
 
-    return redirect('/')
+    verification_results = verify(user_input, recipient_profile=profile)
+
+    if request_wants_json():
+        return json.dumps(verification_results, indent=4), 200, {'Content-Type': 'application/json'}
+    return render_template(
+        'results.html', results=json.dumps(verification_results, indent=4))
 
 
 if __name__ == "__main__":
