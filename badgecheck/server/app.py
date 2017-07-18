@@ -27,7 +27,6 @@ def result_get_redirect():
 @app.route("/results", methods=['POST'])
 def results():
     data = request.get_json()
-    user_input = data.get('data')
     profile = None
     if not data and isinstance(request.form['data'], six.string_types) or request.files:
         user_input = request.form['data']
@@ -39,6 +38,7 @@ def results():
         except (TypeError, ValueError):
             profile = None
     elif data:
+        user_input = data.get('data')
         try:
             profile = data['profile']
             if isinstance(profile, six.string_types):
@@ -51,7 +51,9 @@ def results():
     if request_wants_json():
         return json.dumps(verification_results, indent=4), 200, {'Content-Type': 'application/json'}
     return render_template(
-        'results.html', results=json.dumps(verification_results, indent=4))
+        'results.html', is_valid=verification_results.get('report', {}).get('valid'),
+        error_count=verification_results.get('report', {}).get('errorCount'),
+        results=json.dumps(verification_results, indent=4))
 
 
 if __name__ == "__main__":
