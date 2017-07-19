@@ -21,8 +21,8 @@ def set_input_type(type_string):
     :param input_type: string
     :return: dict
     """
-    if type_string not in ['url', 'json', 'jws']:
-        raise TypeError("Only 'url', 'json', or 'jws' input types supported.")
+    if type_string not in ['file', 'json', 'jws', 'url']:
+        raise TypeError("Only 'file', 'json', 'jws' or 'url' input types supported.")
 
     return {
         'type': SET_INPUT_TYPE,
