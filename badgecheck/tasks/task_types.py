@@ -10,8 +10,17 @@ GRAPH Tasks:
 Fetch, store, and process nodes in the graph related to validation input.
 """
 FETCH_HTTP_NODE = 'FETCH_HTTP_NODE'
+INTAKE_JSON = 'INTAKE_JSON'
 JSONLD_COMPACT_DATA = 'JSONLD_COMPACT_DATA'
 PROCESS_JWS_INPUT = 'PROCESS_JWS_INPUT'
+
+
+"""
+OPENBADGES OBJECT Tasks
+"""
+UPGRADE_1_1_NODE = 'UPGRADE_1_1_NODE'
+UPGRADE_1_0_NODE = 'UPGRADE_1_0_NODE'
+
 
 """
 VALIDATION Tasks:

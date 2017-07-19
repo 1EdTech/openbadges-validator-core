@@ -8,7 +8,7 @@ from badgecheck.actions.tasks import add_task
 from badgecheck.reducers.graph import graph_reducer
 from badgecheck.state import get_node_by_id
 from badgecheck.tasks.graph import fetch_http_node, jsonld_compact_data
-from badgecheck.tasks.task_types import FETCH_HTTP_NODE, JSONLD_COMPACT_DATA
+from badgecheck.tasks.task_types import FETCH_HTTP_NODE, INTAKE_JSON, JSONLD_COMPACT_DATA
 from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
 
 from testfiles.test_components import test_components
@@ -31,7 +31,7 @@ class HttpFetchingTests(unittest.TestCase):
         self.assertTrue(success)
         self.assertEqual(len(actions), 2)
         self.assertEqual(actions[0]['type'], STORE_ORIGINAL_RESOURCE)
-        self.assertEqual(actions[1]['name'], JSONLD_COMPACT_DATA)
+        self.assertEqual(actions[1]['name'], INTAKE_JSON)
 
 
 class NodeStorageTests(unittest.TestCase):

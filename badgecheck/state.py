@@ -21,7 +21,7 @@ def filter_active_tasks(state):
 
         prerequisites = list_of(task.get('prerequisites', []))
         for prereq in prerequisites:
-            prereq_tasks = [pt for pt in tasks if pt.get('name') == prereq]
+            prereq_tasks = [pt for pt in tasks if pt.get('name') == prereq or pt.get('task_key') == prereq]
             if not prereq_tasks or not all(task.get('complete') for task in prereq_tasks):
                 return False
 
