@@ -3,7 +3,7 @@ from .crypto import (process_jws_input, verify_jws_signature, verify_key_ownersh
 from .extensions import validate_extension_node
 from .images import validate_image
 from .input import detect_input_type
-from .graph import fetch_http_node, intake_json, jsonld_compact_data
+from .graph import fetch_http_node, flatten_refetch_embedded_resource, intake_json, jsonld_compact_data
 from .object_upgrades import upgrade_1_1_node
 from .validation import (assertion_timestamp_checks, assertion_verification_dependencies,
                          criteria_property_dependencies, detect_and_validate_node_class,
@@ -22,6 +22,7 @@ FUNCTIONS = {
     DETECT_INPUT_TYPE:                         detect_input_type,
     CRITERIA_PROPERTY_DEPENDENCIES:            criteria_property_dependencies,
     FETCH_HTTP_NODE:                           fetch_http_node,
+    FLATTEN_EMBEDDED_RESOURCE:                 flatten_refetch_embedded_resource,
     HOSTED_ID_IN_VERIFICATION_SCOPE:           hosted_id_in_verification_scope,
     JSONLD_COMPACT_DATA:                       jsonld_compact_data,
     IDENTITY_OBJECT_PROPERTY_DEPENDENCIES:     identity_object_property_dependencies,

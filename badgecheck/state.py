@@ -111,3 +111,11 @@ def get_node_by_path(state, node_path):
 
     else:
         return get_node_by_id(state, node_path[0])
+
+
+def node_match_exists(state, node_id):
+    try:
+        get_node_by_id(state, node_id)
+    except IndexError:
+        return False
+    return True

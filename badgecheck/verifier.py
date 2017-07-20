@@ -1,10 +1,12 @@
 import json
 from openbadges_bakery import unbake
 from pydux import create_store
+import traceback
 
 from .actions.input import set_input_type, store_input
 from .actions.tasks import add_task, resolve_task, trigger_condition
 from .exceptions import SkipTask, TaskPrerequisitesError
+from .logger import logger
 from .openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from .reducers import main_reducer
 from .state import (filter_active_tasks, filter_messages_for_report, format_message,
@@ -13,6 +15,7 @@ import tasks
 from tasks.task_types import JSONLD_COMPACT_DATA
 from tasks.validation import OBClasses
 from .utils import list_of, CachableDocumentLoader, jsonld_use_cache
+
 
 
 DEFAULT_OPTIONS = {
@@ -62,6 +65,7 @@ def call_task(task_func, task_meta, store, options=DEFAULT_OPTIONS):
         message = "Task could not run due to unmet prerequisites."
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
     except Exception as e:
+        logger.error(traceback.format_exc())
         message = "{} {}".format(e.__class__, e.message)
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
     else:
