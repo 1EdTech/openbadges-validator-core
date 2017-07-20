@@ -4,7 +4,7 @@ from .extensions import validate_extension_node
 from .images import validate_image
 from .input import detect_input_type
 from .graph import fetch_http_node, flatten_refetch_embedded_resource, intake_json, jsonld_compact_data
-from .object_upgrades import upgrade_1_1_node
+from .object_upgrades import upgrade_1_0_node, upgrade_1_1_node
 from .validation import (assertion_timestamp_checks, assertion_verification_dependencies,
                          criteria_property_dependencies, detect_and_validate_node_class,
                          identity_object_property_dependencies, issuer_property_dependencies, placeholder_task,
@@ -29,6 +29,7 @@ FUNCTIONS = {
     INTAKE_JSON:                               intake_json,
     ISSUER_PROPERTY_DEPENDENCIES:              issuer_property_dependencies,
     PROCESS_JWS_INPUT:                         process_jws_input,
+    UPGRADE_1_0_NODE:                          upgrade_1_0_node,
     UPGRADE_1_1_NODE:                          upgrade_1_1_node,
     VALIDATE_EXPECTED_NODE_CLASS:              validate_expected_node_class,
     VALIDATE_EXTENSION_NODE:                   validate_extension_node,

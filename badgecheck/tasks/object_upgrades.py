@@ -4,8 +4,11 @@ import json
 import pytz
 
 from ..actions.graph import patch_node
+from ..actions.tasks import add_task
 from ..exceptions import TaskPrerequisitesError
+from ..openbadges_context import OPENBADGES_CONTEXT_V1_URI
 from ..state import get_node_by_id
+from ..tasks.task_types import JSONLD_COMPACT_DATA, UPGRADE_1_1_NODE
 
 from .utils import task_result
 from .validation import OBClasses, ValueTypes, PrimitiveValueValidator
@@ -75,3 +78,66 @@ def upgrade_1_1_node(state, task_meta, **options):
         return task_result(True, "Node {} upgraded from v1.1 to 2.0".format(node_id), actions)
     else:
         return task_result(True, "Node {} needed no content upgrades from v1.1 to 2.0".format(node_id))
+
+
+def upgrade_1_0_node(state, task_meta, **options):
+    try:
+        json_data = task_meta['data']
+        node_id = task_meta.get('node_id')
+        data = json.loads(json_data)
+        expected_class = task_meta.get('expected_class')
+    except (KeyError, TypeError, ValueError):
+        raise TaskPrerequisitesError()
+
+    actions = []
+
+    if expected_class == OBClasses.Assertion or data.get('recipient') is not None:
+        expected_class = OBClasses.Assertion
+        # Populate 'id' field
+        if data.get('id') is None and node_id is None:
+            verification_type = data.get('verify', {}).get('type')
+            if verification_type == 'hosted':
+                node_id = data['verify'].get('url')
+            elif verification_type == 'signed' and data.get('uid') is not None:
+                node_id = 'uid:{}'.format(data['uid'])
+
+        if node_id:
+            data['id'] = node_id
+        else:
+            return task_result(False, "Could not determine 'id' for Assertion data to upgrade to v1.1+")
+
+        data['type'] = OBClasses.Assertion
+
+    elif expected_class == OBClasses.BadgeClass or data.get('criteria') is not None:
+        expected_class = OBClasses.BadgeClass
+        if data.get('id') is None and node_id is None:
+            # This should not be the case for 1.0 badges, because we should always fetch them from their hosted URLs.
+            return task_result(False, "Could not determine 'id' for BadgeClass to upgrade to v1.1+")
+
+        elif node_id is not None:
+            data['id'] = node_id
+
+        data['type'] = OBClasses.BadgeClass
+
+    elif expected_class in [OBClasses.Issuer, OBClasses.Profile] or data.get('url') is not None:
+        expected_class = OBClasses.Issuer
+        if data.get('id') is None and node_id is None:
+            # This should not be the case for 1.0 badges, because we should always fetch them from their hosted URLs.
+            return task_result(False, "Could not determine 'id' for Issuer to upgrade to v1.1+")
+
+        elif node_id is not None:
+            data['id'] = node_id
+
+        data['type'] = OBClasses.Issuer
+
+    data['@context'] = OPENBADGES_CONTEXT_V1_URI
+
+    compact_action = add_task(
+        JSONLD_COMPACT_DATA, node_id=node_id, expected_class=expected_class, data=json.dumps(data))
+    actions.append(compact_action)
+    actions.append(add_task(
+        UPGRADE_1_1_NODE, node_id=node_id, expected_class=expected_class,
+        prerequisites=[compact_action['task_key']]
+    ))
+
+    return task_result(True, "Upgraded node {} to 1.1".format(node_id), actions)

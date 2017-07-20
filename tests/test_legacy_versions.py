@@ -1,4 +1,5 @@
 import json
+import os
 import responses
 import unittest
 
@@ -8,6 +9,8 @@ from badgecheck.reducers import main_reducer
 from badgecheck.tasks.task_types import INTAKE_JSON, JSONLD_COMPACT_DATA, UPGRADE_1_0_NODE, UPGRADE_1_1_NODE
 from badgecheck.tasks import task_named
 from badgecheck.state import INITIAL_STATE
+from badgecheck.tasks.validation import OBClasses
+from badgecheck.verifier import generate_report, verification_store
 
 from testfiles.test_components import test_components
 
@@ -91,7 +94,7 @@ class TestV1_1Detection(unittest.TestCase):
         self.assertEqual(len(actions), 1)
         state = main_reducer(state, actions[0])
 
-
+    @responses.activate
     def test_upgrade_1_1_badgeclass(self):
         self.setUpContextCache()
         json_data = test_components['1_1_basic_badgeclass']
@@ -115,3 +118,110 @@ class TestV1_1Detection(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(len(actions), 1)
 
+    def test_upgrade_1_0_assertion(self):
+        json_data = test_components['1_0_basic_assertion']
+        state = INITIAL_STATE
+        task = add_task(INTAKE_JSON, node_id='http://a.com/instance', data=json_data)
+
+        result, message, actions = task_named(INTAKE_JSON)(state, task)
+        for action in actions:
+            state = main_reducer(state, action)
+
+        task = state.get('tasks')[0]
+        result, message, actions = task_named(task['name'])(state, task)
+        self.assertTrue(result)
+        self.assertEqual(len(actions), 2)
+        for action in actions:
+            state = main_reducer(state, action)
+
+        self.assertEqual(len(state.get('tasks')), 3)
+        modified_data = json.loads(state.get('tasks')[1]['data'])
+        self.assertEqual(modified_data['@context'], OPENBADGES_CONTEXT_V1_URI)
+        self.assertEqual(modified_data['id'], modified_data['verify']['url'])
+        self.assertEqual(modified_data['type'], OBClasses.Assertion)
+
+    def test_upgrade_1_0_badgeclass(self):
+        json_data = test_components['1_0_basic_badgeclass']
+        node_id = 'http://a.com/badgeclass'
+        state = INITIAL_STATE
+        task = add_task(INTAKE_JSON, node_id=node_id, data=json_data)
+
+        result, message, actions = task_named(INTAKE_JSON)(state, task)
+        for action in actions:
+            state = main_reducer(state, action)
+
+        task = state.get('tasks')[0]
+        result, message, actions = task_named(task['name'])(state, task)
+        self.assertTrue(result)
+        self.assertEqual(len(actions), 2)
+        for action in actions:
+            state = main_reducer(state, action)
+
+        self.assertEqual(len(state.get('tasks')), 3)
+        modified_data = json.loads(state.get('tasks')[1]['data'])
+        self.assertEqual(modified_data['@context'], OPENBADGES_CONTEXT_V1_URI)
+        self.assertEqual(modified_data['id'], node_id)
+        self.assertEqual(modified_data['type'], OBClasses.BadgeClass)
+
+    def test_upgrade_1_0_issuer(self):
+        json_data = test_components['1_0_basic_issuer']
+        node_id = 'http://a.com/issuer'
+        state = INITIAL_STATE
+        task = add_task(INTAKE_JSON, node_id=node_id, data=json_data)
+
+        result, message, actions = task_named(INTAKE_JSON)(state, task)
+        for action in actions:
+            state = main_reducer(state, action)
+
+        task = state.get('tasks')[0]
+        result, message, actions = task_named(task['name'])(state, task)
+        self.assertTrue(result)
+        self.assertEqual(len(actions), 2)
+        for action in actions:
+            state = main_reducer(state, action)
+
+        self.assertEqual(len(state.get('tasks')), 3)
+        modified_data = json.loads(state.get('tasks')[1]['data'])
+        self.assertEqual(modified_data['@context'], OPENBADGES_CONTEXT_V1_URI)
+        self.assertEqual(modified_data['id'], node_id)
+        self.assertEqual(modified_data['type'], OBClasses.Issuer)
+
+    @responses.activate
+    def full_validate_1_0_to_2_0_conversion(self):
+        self.setUpContextCache()
+        assertion_data = json.loads(test_components['1_0_basic_assertion_with_extra_properties'])
+        badgeclass_data = json.loads(test_components['1_0_basic_badgeclass'])
+        issuer_data = json.loads(test_components['1_0_basic_issuer'])
+
+        responses.add(
+            responses.GET, assertion_data['verify']['url'],
+            json=assertion_data
+        )
+        responses.add(
+            responses.GET, assertion_data['badge'],
+            json=badgeclass_data
+        )
+        responses.add(
+            responses.GET, badgeclass_data['issuer'],
+            json=issuer_data
+        )
+        png_badge = os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart.png')
+        with open(png_badge, 'rb') as image:
+            responses.add(
+                responses.GET, badgeclass_data['image'], body=image.read(), status=200, content_type='image/png'
+            )
+
+        store = verification_store(assertion_data['verify']['url'])
+        state = store.get_state()
+        report = generate_report(store)
+
+        self.assertTrue(report['report']['valid'])
+        assertion_node = state['graph'][0]
+        badgeclass_node = state['graph'][1]
+        issuer_node = state['graph'][2]
+
+        self.assertEqual(assertion_node['id'], assertion_data['verify']['url'])
+        self.assertEqual(badgeclass_node['@context'], OPENBADGES_CONTEXT_V2_URI)
+        self.assertEqual(issuer_node['type'], OBClasses.Issuer)
+
+        self.assertEqual(report['report']['openBadgesVersion'], '1.0')
