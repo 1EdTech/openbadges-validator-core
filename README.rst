@@ -1,16 +1,16 @@
 badgecheck
 ==========
 
-Badgecheck is a python package designed to verify the validity of Open Badges
-based on a variety of input sources and present a useful interface for
-accessing their properties and validation information. Python and command line
-APIs are provided.
+Badgecheck (codename for Open Badges Validator Core) is a python package
+designed to verify the validity of Open Badges based on a variety of input
+sources and present a useful interface for accessing their properties and
+validation information. Python and command line APIs are provided.
 
 **Note - Badgecheck is in *early beta* stage. The results provided *cannot*
 be used as a reliable indicator of the validity of an Open Badge, and *cannot*
-be used as proof to claim implementation conformance.** 
+be used as proof to claim implementation conformance.**
 
-If you want to validate 1.0 or 1.1 badges in the meanwhile, please use 
+If you want to validate 1.0 or 1.1 badges in the meanwhile, please use
 https://badgecheck.io.
 
 Badgecheck was originated by Concentric Sky. https://concentricsky.com
