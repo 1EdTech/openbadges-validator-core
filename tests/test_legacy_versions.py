@@ -118,6 +118,25 @@ class TestV1_1Detection(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(len(actions), 1)
 
+    def test_upgrade_1_1_issuer(self):
+        self.setUpContextCache()
+        data = json.loads(test_components['1_1_basic_issuer'])
+        data['type'] = 'IssuerOrg'  # Test alias that was accepted in v1.1 context
+        json_data = json.dumps(data)
+        state = INITIAL_STATE
+        task = add_task(INTAKE_JSON, node_id='https://example.org/organization.json', data=json_data)
+
+        result, message, actions = task_named(INTAKE_JSON)(state, task)
+        for action in actions:
+            state = main_reducer(state, action)
+        for task in state.get('tasks'):
+            result, message, actions = task_named(task['name'])(state, task)
+            for action in actions:
+                state = main_reducer(state, action)
+
+        self.assertTrue(result)
+        self.assertEqual(state['graph'][0]['type'], OBClasses.Issuer)
+
     def test_upgrade_1_0_assertion(self):
         json_data = test_components['1_0_basic_assertion']
         state = INITIAL_STATE
