@@ -90,4 +90,5 @@ OPENBADGES_CONTEXT_V2_DICT = {
   }
 }
 
+OPENBADGES_CONTEXT_V1_URI = "https://w3id.org/openbadges/v1"
 OPENBADGES_CONTEXT_V2_URI = "https://w3id.org/openbadges/v2"

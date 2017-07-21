@@ -1,5 +1,7 @@
-from action_types import ADD_TASK, DELETE_TASK, REPORT_MESSAGE, RESOLVE_TASK, TRIGGER_CONDITION, UPDATE_TASK
 from ..utils import MESSAGE_LEVEL_INFO, MESSAGE_LEVELS
+
+from .utils import generate_task_key
+from .action_types import ADD_TASK, DELETE_TASK, REPORT_MESSAGE, RESOLVE_TASK, TRIGGER_CONDITION, UPDATE_TASK
 
 
 def add_task(task_name, **kwargs):
@@ -9,7 +11,8 @@ def add_task(task_name, **kwargs):
 
     task = {
         'type': ADD_TASK,
-        'name': task_name
+        'name': task_name,
+        'task_key': kwargs.get('task_key', generate_task_key())
     }
     task.update(**kwargs)
     return task

@@ -21,7 +21,7 @@ def filter_active_tasks(state):
 
         prerequisites = list_of(task.get('prerequisites', []))
         for prereq in prerequisites:
-            prereq_tasks = [pt for pt in tasks if pt.get('name') == prereq]
+            prereq_tasks = [pt for pt in tasks if pt.get('name') == prereq or pt.get('task_key') == prereq]
             if not prereq_tasks or not all(task.get('complete') for task in prereq_tasks):
                 return False
 
@@ -111,3 +111,11 @@ def get_node_by_path(state, node_path):
 
     else:
         return get_node_by_id(state, node_path[0])
+
+
+def node_match_exists(state, node_id):
+    try:
+        get_node_by_id(state, node_id)
+    except IndexError:
+        return False
+    return True

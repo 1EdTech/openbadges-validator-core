@@ -2,6 +2,8 @@ import re
 import rfc3986
 import six
 
+URN_REGEX = r'^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+
 
 def task_result(success=True, message='', actions=None):
     """
@@ -42,11 +44,10 @@ def abbreviate_node_id(node_id=None, node_path=None):
 
 
 def is_iri(value):
-    urn_regex = r'^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
     return bool(
         is_url(value) or
         re.match(r'_:b\d+$', value) or
-        re.match(urn_regex, value, re.IGNORECASE)
+        re.match(URN_REGEX, value, re.IGNORECASE)
     )
 
 

@@ -15,10 +15,11 @@ from ..utils import list_of, MESSAGE_LEVEL_WARNING
 
 from .task_types import (ASSERTION_TIMESTAMP_CHECKS, ASSERTION_VERIFICATION_CHECK,
                          ASSERTION_VERIFICATION_DEPENDENCIES, CLASS_VALIDATION_TASKS,
-                         CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE, HOSTED_ID_IN_VERIFICATION_SCOPE,
-                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, IMAGE_VALIDATION, ISSUER_PROPERTY_DEPENDENCIES,
-                         VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,
-                         VALIDATE_REVOCATIONLIST_ENTRIES, VERIFY_RECIPIENT_IDENTIFIER)
+                         CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE, FLATTEN_EMBEDDED_RESOURCE,
+                         HOSTED_ID_IN_VERIFICATION_SCOPE, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
+                         IMAGE_VALIDATION, ISSUER_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
+                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY, VALIDATE_REVOCATIONLIST_ENTRIES,
+                         VERIFY_RECIPIENT_IDENTIFIER)
 from .utils import (abbreviate_value as abv,
                     abbreviate_node_id as abv_node,
                     is_empty_list, is_null_list, is_iri, is_url, task_result,)
@@ -362,7 +363,7 @@ class ClassValidators(OBClasses):
                     'many': True, 'must_contain_one': ['Assertion']},
                 {'prop_name': 'recipient', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.IdentityObject, 'required': True},
-                {'prop_name': 'badge', 'prop_type': ValueTypes.ID,
+                {'prop_name': 'badge', 'prop_type': ValueTypes.ID, 'prerequisites': 'ASN_FLATTEN_BC',
                     'expected_class': OBClasses.BadgeClass, 'fetch': True, 'required': True},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.VerificationObjectAssertion, 'required': True},
@@ -376,14 +377,16 @@ class ClassValidators(OBClasses):
                 {'task_type': ASSERTION_VERIFICATION_DEPENDENCIES, 'prerequisites': ISSUER_PROPERTY_DEPENDENCIES},
                 {'task_type': ASSERTION_TIMESTAMP_CHECKS},
                 {'task_type': IMAGE_VALIDATION, 'prop_name': 'image', 'node_class': OBClasses.Assertion,
-                    'required': False, 'many': False}
+                    'required': False, 'many': False},
+                {'task_type': FLATTEN_EMBEDDED_RESOURCE, 'prop_name': 'badge', 'node_class': OBClasses.Assertion,
+                    'task_key': 'ASN_FLATTEN_BC'}
             )
         elif class_name == OBClasses.BadgeClass:
             self.validators = (
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True,
                     'many': True, 'must_contain_one': ['BadgeClass']},
-                {'prop_name': 'issuer', 'prop_type': ValueTypes.ID,
+                {'prop_name': 'issuer', 'prop_type': ValueTypes.ID, 'prerequisites': 'BC_FLATTEN_ISS',
                     'expected_class': OBClasses.Profile, 'fetch': True, 'required': True},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': True},
@@ -396,7 +399,9 @@ class ClassValidators(OBClasses):
                     'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, 'required': False},
                 {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
                 {'task_type': IMAGE_VALIDATION, 'prop_name': 'image', 'node_class': OBClasses.BadgeClass,
-                    'required': True, 'many': False}
+                    'required': True, 'many': False},
+                {'task_type': FLATTEN_EMBEDDED_RESOURCE, 'prop_name': 'issuer', 'node_class': OBClasses.BadgeClass,
+                    'task_key': 'BC_FLATTEN_ISS'}
             )
         elif class_name == OBClasses.CryptographicKey:
             self.validators = (
