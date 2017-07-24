@@ -69,9 +69,13 @@ def verify_jws_signature(state, task_meta, **options):
 
     try:
         header_data = b64decode(header)
+        if not isinstance(header_data,str):
+            header_data = header_data.decode('utf-8')
         print("VERIFY JWS SIGNATURE : header_data:")
         print(header_data)
         payload_data = b64decode(payload)
+        if not isinstance(payload_data,str):
+            payload_data = payload_data.decode('utf-8')
         print("VERIFY JWS SIGNATURE : payload_data:")
         print(payload_data)
     except TypeError:
@@ -80,9 +84,9 @@ def verify_jws_signature(state, task_meta, **options):
 
     try:
         jws.verify(header_data, payload_data, signature, public_pem, is_json=True)
-    except (jws.exceptions.SignatureError, TypeError):
+    except (jws.exceptions.SignatureError, TypeError) as e:
         return task_result(
-            False, "Signature for node {} failed verification".format(node_id), actions)
+            False, "Signature for node {} failed verification".format(node_id) + " :: " + str(e), actions)
 
     return task_result(
         True, "Signature for node {} passed verification".format(node_id), actions)
