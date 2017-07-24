@@ -99,9 +99,23 @@ class JwsVerificationTests(unittest.TestCase):
         header = {'alg': 'RS256'}
         signature = jws.sign(header, self.assertion_data, self.private_key)
         self.assertion_data['evidence'] = 'http://hahafakeinserteddata.com'
+
+        encoded_separator = '.'
+        if sys.version[:3] < '3':
+            encoded_header = b64encode(json.dumps(header))
+            encoded_payload = b64encode(json.dumps(self.assertion_data))
+        else:
+            encoded_separator = '.'.encode()
+            encoded_header = b64encode(json.dumps(header).encode())
+            encoded_payload = b64encode(json.dumps(self.assertion_data).encode())
+
+        self.signed_assertion = encoded_separator.join((encoded_header, encoded_payload, signature))
+
+        """
         self.signed_assertion = '.'.join(
-            (b64encode(json.dumps(header)), b64encode(json.dumps(self.assertion_data)), signature)
+            (b64encode(json.dumps(header).encode()), b64encode(json.dumps(self.assertion_data).encode()), signature)
         )
+        """
         task_meta = add_task(VERIFY_JWS, data=self.signed_assertion,
                              node_id=self.assertion_data['id'])
 
