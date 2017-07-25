@@ -62,7 +62,7 @@ def detect_input_type(state, task_meta=None, **options):
         new_actions.append(set_input_type(detected_type))
         if detected_type == 'url':
             new_actions.append(add_task(FETCH_HTTP_NODE, url=id_url))
-            new_actions.append(set_validation_subject(input_value))
+            new_actions.append(set_validation_subject(id_url))
     elif input_is_jws(input_value):
         detected_type = 'jws'
         new_actions.append(set_input_type(detected_type))

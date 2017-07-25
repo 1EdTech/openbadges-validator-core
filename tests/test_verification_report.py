@@ -1,3 +1,5 @@
+import os
+from openbadges_bakery import bake
 import responses
 import unittest
 from pydux import create_store
@@ -50,6 +52,15 @@ class VerificationReportTests(unittest.TestCase):
         store = verification_store(url)
         report = generate_report(store)
         self.assertEqual(report['report']['validationSubject'], url)
+
+    @responses.activate
+    def test_subject_set_from_badge_image(self):
+        with open(os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart.png'), 'r') as f:
+            image = bake(f, test_components['2_0_basic_assertion'])
+            self.set_response_mocks()
+            store = verification_store(image)
+            report = generate_report(store)
+            self.assertEqual(report['report']['validationSubject'], 'https://example.org/beths-robotics-badge.json')
 
     @responses.activate
     def test_confirmed_recipient_profile_reported(self):
