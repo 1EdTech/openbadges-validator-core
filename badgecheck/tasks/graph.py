@@ -2,6 +2,7 @@ import json
 from pyld import jsonld
 import requests
 import requests_cache
+import sys
 
 from ..actions.graph import add_node
 from ..actions.input import store_original_json
@@ -71,7 +72,10 @@ def _get_extension_actions(current_node, entry_path):
 
 def jsonld_compact_data(state, task_meta, **options):
     try:
-        input_data = json.loads(task_meta.get('data'))
+        data = task_meta.get('data')
+        if data and not sys.version[:3] < '3' and not isinstance(data,str):
+            data = data.decode()
+        input_data = json.loads(data)
     except TypeError:
         return task_result(False, "Could not load data")
 
