@@ -111,11 +111,6 @@ class JwsVerificationTests(unittest.TestCase):
 
         self.signed_assertion = encoded_separator.join((encoded_header, encoded_payload, signature))
 
-        """
-        self.signed_assertion = '.'.join(
-            (b64encode(json.dumps(header).encode()), b64encode(json.dumps(self.assertion_data).encode()), signature)
-        )
-        """
         task_meta = add_task(VERIFY_JWS, data=self.signed_assertion,
                              node_id=self.assertion_data['id'])
 
@@ -207,12 +202,13 @@ class JwsFullVerifyTests(unittest.TestCase):
         input_issuer['publicKey'] = input_assertion['verification']['creator']
 
         private_key = RSA.generate(2048)
+
         cryptographic_key_doc = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
             'id': input_assertion['verification']['creator'],
             'type': 'CryptographicKey',
             'owner': input_issuer['id'],
-            'publicKeyPem': private_key.publickey().exportKey('PEM')
+            'publicKeyPem': private_key.publickey().exportKey('PEM').decode()
         }
 
         setup_context_mock()
@@ -221,13 +217,30 @@ class JwsFullVerifyTests(unittest.TestCase):
 
         header = json.dumps({'alg': 'RS256'})
         payload = json.dumps(input_assertion)
-        signature = '.'.join([
-            b64encode(header),
-            b64encode(payload),
-            jws.sign(header, payload, private_key, is_json=True)
+
+
+
+        encoded_separator = '.'
+        if not sys.version[:3] < '3':
+            encoded_separator = '.'.encode()
+            encoded_header = b64encode(header.encode())
+            encoded_payload = b64encode(payload.encode())
+        else:
+            encoded_header = b64encode(header)
+            encoded_payload = b64encode(payload)
+
+        signature = encoded_separator.join([
+            encoded_header,
+            encoded_payload,
+            jws.sign(header,payload,private_key, is_json=True)
         ])
 
+
         response = verify(signature, use_cache=False)
+
+        print("TEST CAN FULLY VERIFY JWS SIGNED ASSERTION : response:")
+        print(response['report'])
+
         self.assertTrue(response['report']['valid'])
 
     @responses.activate
@@ -247,12 +260,14 @@ class JwsFullVerifyTests(unittest.TestCase):
         input_issuer['publicKey'] = input_assertion['verification']['creator']
 
         private_key = RSA.generate(2048)
+        print("PKEY")
+        print(private_key.publickey().exportKey('PEM').decode())
         cryptographic_key_doc = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
             'id': input_assertion['verification']['creator'],
             'type': 'CryptographicKey',
             'owner': input_issuer['id'],
-            'publicKeyPem': private_key.publickey().exportKey('PEM')
+            'publicKeyPem': private_key.publickey().exportKey('PEM').decode()
         }
 
         setup_context_mock()
@@ -268,6 +283,7 @@ class JwsFullVerifyTests(unittest.TestCase):
         ])
 
         response = verify(signature, use_cache=False)
+
         self.assertTrue(response['report']['valid'])
 
     @responses.activate
