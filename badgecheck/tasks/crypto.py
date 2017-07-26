@@ -12,7 +12,7 @@ from ..state import get_node_by_id, get_node_by_path
 from ..utils import list_of, make_string_from_bytes
 
 from .utils import task_result
-from .task_types import (ISSUER_PROPERTY_DEPENDENCIES, JSONLD_COMPACT_DATA, SIGNING_KEY_FETCHED, VERIFY_JWS,
+from .task_types import (ISSUER_PROPERTY_DEPENDENCIES, INTAKE_JSON, SIGNING_KEY_FETCHED, VERIFY_JWS,
                          VERIFY_KEY_OWNERSHIP, VALIDATE_PROPERTY, VALIDATE_REVOCATIONLIST_ENTRIES,
                          VERIFY_SIGNED_ASSERTION_NOT_REVOKED)
 from .validation import OBClasses, ValueTypes
@@ -31,7 +31,7 @@ def process_jws_input(state, task_meta, **options):
     node_id = task_meta.get('node_id', node_data.get('id'))
 
     actions = [
-        add_task(JSONLD_COMPACT_DATA, data=node_json, node_id=node_id),
+        add_task(INTAKE_JSON, data=node_json, node_id=node_id),
         add_task(VERIFY_JWS, node_id=node_id, data=data, prerequisites=SIGNING_KEY_FETCHED)
     ]
     if node_id:

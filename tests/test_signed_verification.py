@@ -19,10 +19,10 @@ from badgecheck.verifier import verify
 
 try:
     from .testfiles.test_components import test_components
-    from .testutils import setup_context_mock
+    from .testutils import set_up_context_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
-    from .testutils import setup_context_mock
+    from .testutils import set_up_context_mock
 
 
 class JwsVerificationTests(unittest.TestCase):
@@ -195,8 +195,10 @@ class JwsFullVerifyTests(unittest.TestCase):
         """
         input_assertion = json.loads(test_components['2_0_basic_assertion'])
         input_assertion['verification'] = {'type': 'signed', 'creator': 'http://example.org/key1'}
+        set_up_image_mock(u'https://example.org/beths-robot-badge.png')
 
         input_badgeclass = json.loads(test_components['2_0_basic_badgeclass'])
+        set_up_image_mock(input_badgeclass['image'])
 
         input_issuer = json.loads(test_components['2_0_basic_issuer'])
         input_issuer['publicKey'] = input_assertion['verification']['creator']
@@ -211,7 +213,7 @@ class JwsFullVerifyTests(unittest.TestCase):
             'publicKeyPem': private_key.publickey().exportKey('PEM').decode()
         }
 
-        setup_context_mock()
+        set_up_context_mock()
         for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 
@@ -247,8 +249,10 @@ class JwsFullVerifyTests(unittest.TestCase):
     def test_can_full_verify_with_revocation_check(self):
         input_assertion = json.loads(test_components['2_0_basic_assertion'])
         input_assertion['verification'] = {'type': 'signed', 'creator': 'http://example.org/key1'}
+        set_up_image_mock(u'https://example.org/beths-robot-badge.png')
 
         input_badgeclass = json.loads(test_components['2_0_basic_badgeclass'])
+        set_up_image_mock(input_badgeclass['image'])
 
         revocation_list = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
@@ -270,7 +274,7 @@ class JwsFullVerifyTests(unittest.TestCase):
             'publicKeyPem': private_key.publickey().exportKey('PEM').decode()
         }
 
-        setup_context_mock()
+        set_up_context_mock()
         for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc, revocation_list]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 
@@ -316,7 +320,7 @@ class JwsFullVerifyTests(unittest.TestCase):
             'publicKeyPem': private_key.publickey().exportKey('PEM')
         }
 
-        setup_context_mock()
+        set_up_context_mock()
         for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc, revocation_list]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 
