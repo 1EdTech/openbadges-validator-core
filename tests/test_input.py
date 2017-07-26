@@ -15,7 +15,7 @@ from badgecheck.utils import make_string_from_bytes
 
 try:
     from .testfiles.test_components import test_components
-from tests.utils import set_up_context_mock
+    from tests.utils import set_up_context_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
     from .testutils import set_up_context_mock

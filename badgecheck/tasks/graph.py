@@ -4,6 +4,7 @@ import re
 import requests
 import requests_cache
 import six
+import sys
 
 from ..actions.graph import add_node, patch_node
 from ..actions.input import store_original_resource

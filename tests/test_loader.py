@@ -8,7 +8,7 @@ from badgecheck.utils import CachableDocumentLoader
 
 try:
     from .testfiles.test_components import test_components
-    from .testutils import set_up_context_mock
+    from tests.utils import set_up_context_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
     from .testutils import set_up_context_mock

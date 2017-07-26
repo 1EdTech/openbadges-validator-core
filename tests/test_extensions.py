@@ -1,6 +1,7 @@
 import json
 import responses
 import unittest
+import sys
 
 from badgecheck.actions.graph import add_node
 from badgecheck.actions.tasks import add_task

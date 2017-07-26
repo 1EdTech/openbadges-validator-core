@@ -27,7 +27,7 @@ from badgecheck.verifier import call_task, verify
 
 try:
     from .testfiles.test_components import test_components
-    from .testutils import set_up_context_mock
+    from tests.utils import set_up_context_mock,set_up_image_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
     from .testutils import set_up_context_mock
