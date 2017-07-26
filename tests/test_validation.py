@@ -30,7 +30,7 @@ try:
     from tests.utils import set_up_context_mock,set_up_image_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
-    from .testutils import set_up_context_mock
+    from tests.utils import set_up_context_mock,set_up_image_mock
 
 
 class PropertyValidationTests(unittest.TestCase):
@@ -1034,6 +1034,7 @@ class ClassValidationTaskTests(unittest.TestCase):
 
         self._run(task, True, 'Single embedded complete alignment node passes', test_task=None)
 
+    @responses.activate
     def test_basic_badgeclass_validation(self):
         first_node = {
             '@context': OPENBADGES_CONTEXT_V2_DICT,
@@ -1046,6 +1047,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             'issuer': 'http://example.com/issuer',
             'tags': ['important', 'learning']
         }
+        set_up_image_mock(first_node['image'])
         second_node = {'id': '_:b0', 'narrative': 'Do the important learning.'}
         state = {'graph': [first_node, second_node]}
 
@@ -1056,6 +1058,8 @@ class ClassValidationTaskTests(unittest.TestCase):
                 results.append(
                     task_named(action['name'])(state, action)
                 )
+        print("RESULTS")
+        print(results)
         self.assertTrue(all(i[0] for i in results))
 
 
