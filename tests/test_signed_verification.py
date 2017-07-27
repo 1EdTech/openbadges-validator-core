@@ -16,6 +16,7 @@ from badgecheck.tasks.crypto import (process_jws_input, verify_key_ownership, ve
 from badgecheck.tasks.task_types import (PROCESS_JWS_INPUT, VERIFY_JWS, VERIFY_KEY_OWNERSHIP,
                                          VERIFY_SIGNED_ASSERTION_NOT_REVOKED,)
 from badgecheck.verifier import verify
+from badgecheck.utils import make_string_from_bytes
 
 try:
     from .testfiles.test_components import test_components
@@ -280,9 +281,19 @@ class JwsFullVerifyTests(unittest.TestCase):
 
         header = json.dumps({'alg': 'RS256'})
         payload = json.dumps(input_assertion)
-        signature = '.'.join([
-            b64encode(header),
-            b64encode(payload),
+
+        encoded_separator = '.'
+        if not sys.version[:3] < '3':
+            encoded_separator = '.'.encode()
+            encoded_header = b64encode(header.encode())
+            encoded_payload = b64encode(payload.encode())
+        else:
+            encoded_header = b64encode(header)
+            encoded_payload = b64encode(payload)
+
+        signature = encoded_separator.join([
+            encoded_header,
+            encoded_payload,
             jws.sign(header, payload, private_key, is_json=True)
         ])
 
@@ -317,7 +328,7 @@ class JwsFullVerifyTests(unittest.TestCase):
             'id': input_assertion['verification']['creator'],
             'type': 'CryptographicKey',
             'owner': input_issuer['id'],
-            'publicKeyPem': private_key.publickey().exportKey('PEM')
+            'publicKeyPem': make_string_from_bytes(private_key.publickey().exportKey('PEM'))
         }
 
         set_up_context_mock()
@@ -326,11 +337,22 @@ class JwsFullVerifyTests(unittest.TestCase):
 
         header = json.dumps({'alg': 'RS256'})
         payload = json.dumps(input_assertion)
-        signature = '.'.join([
-            b64encode(header),
-            b64encode(payload),
+
+        encoded_separator = '.'
+        if not sys.version[:3] < '3':
+            encoded_separator = '.'.encode()
+            encoded_header = b64encode(header.encode())
+            encoded_payload = b64encode(payload.encode())
+        else:
+            encoded_header = b64encode(header)
+            encoded_payload = b64encode(payload)
+
+        signature = encoded_separator.join([
+            encoded_header,
+            encoded_payload,
             jws.sign(header, payload, private_key, is_json=True)
         ])
+
 
         response = verify(signature, use_cache=False)
         self.assertFalse(response['report']['valid'])

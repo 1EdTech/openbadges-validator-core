@@ -14,7 +14,7 @@ from ..exceptions import TaskPrerequisitesError
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..reducers.graph import get_next_blank_node_id
 from ..state import get_node_by_id, node_match_exists
-from ..utils import list_of, jsonld_use_cache
+from ..utils import list_of, jsonld_use_cache,make_string_from_bytes
 
 from .task_types import (DETECT_AND_VALIDATE_NODE_CLASS, FETCH_HTTP_NODE, INTAKE_JSON, JSONLD_COMPACT_DATA,
                          UPGRADE_1_0_NODE, UPGRADE_1_1_NODE, VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_EXTENSION_NODE, )
@@ -74,9 +74,9 @@ def intake_json(state, task_meta, **options):
     actions = []
 
     try:
-        data = json.loads(input_data)
-    except TypeError:
-        return task_result(False, "Could not load JSON from data")
+        data = json.loads(make_string_from_bytes(input_data))
+    except TypeError as e:
+        return task_result(False, "Could not load JSON from data: " + str(e))
 
     openbadges_version = _detect_openbadges_version(data)
     actions.append(set_openbadges_version(openbadges_version))
