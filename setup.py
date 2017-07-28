@@ -58,7 +58,7 @@ setup(
         'validators==0.11.2',
     ],
     dependency_links=[
-        'https://github.com/kasbah/pydux/tarball/fix-python3#egg=fix-python3'
+        'https://github.com/kasbah/pydux/tarball/fix-python3#egg=pydux'
     ],
     extras_require={
         'server':  ["Flask==0.12.1", 'gunicorn==19.7.1'],
