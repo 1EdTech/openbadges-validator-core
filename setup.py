@@ -35,6 +35,8 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Education',
         'Topic :: Utilities',
@@ -47,13 +49,16 @@ setup(
         'jws==0.1.3',
         'openbadges-bakery>=1.0.0b1',
         'pycrypto==2.6.1',
-        'pydux==0.2.1',
+        #'pydux==0.2.1',
         'PyLD==0.7.1',
         'pytz==2017.2',
         'requests >= 2.13',
         'requests_cache==0.4.13',
         'rfc3986==0.4.1',
         'validators==0.11.2',
+    ],
+    dependency_links=[
+        'https://github.com/kasbah/pydux/tarball/fix-python3#egg=fix-python3'
     ],
     extras_require={
         'server':  ["Flask==0.12.1", 'gunicorn==19.7.1'],
