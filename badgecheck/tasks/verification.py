@@ -23,11 +23,14 @@ def _default_verification_policy(issuer_node):
 
 
 def hosted_id_in_verification_scope(state, task_meta, **options):
-    assertion_id = task_meta.get('node_id')
-    assertion_node = get_node_by_id(state, assertion_id)
+    try:
+        assertion_id = task_meta.get('node_id')
+        assertion_node = get_node_by_id(state, assertion_id)
 
-    badgeclass_node = get_node_by_id(state, assertion_node['badge'])
-    issuer_node = get_node_by_id(state, badgeclass_node['issuer'])
+        badgeclass_node = get_node_by_id(state, assertion_node['badge'])
+        issuer_node = get_node_by_id(state, badgeclass_node['issuer'])
+    except IndexError:
+        raise TaskPrerequisitesError()
 
     try:
         verification_policy = get_node_by_id(state, issuer_node.get('verification'))

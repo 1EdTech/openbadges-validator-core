@@ -13,7 +13,7 @@ from .task_types import VALIDATE_EXTENSION_NODE
 from .utils import abbreviate_value as abv, abbreviate_node_id as abv_node, is_iri, filter_tasks, task_result
 
 
-def _validate_single_extension(node, extension_type, node_json=None, **options):
+def _validate_single_extension(node, extension_type, node_json=None, node_id_string=None, **options):
     # Load extension
     extension = ALL_KNOWN_EXTENSIONS[extension_type]
 
@@ -22,6 +22,9 @@ def _validate_single_extension(node, extension_type, node_json=None, **options):
         node_data = json.loads(node_json)
     else:
         node_data = node.copy()
+
+    if node_id_string is None:
+        node_id_string = node.get('id', 'unknown node')
 
     # Validate against JSON-schema
     context = extension.context_json
@@ -39,7 +42,7 @@ def _validate_single_extension(node, extension_type, node_json=None, **options):
     except jsonschema.ValidationError as e:
         return task_result(
             False, "Extension {} did not validate on node {}: {}".format(
-                extension_type, node.get('id'), e.message
+                extension_type, node_id_string, e.message
             )
         )
         # Issue: Schema that expect a nested result won't be able to
@@ -47,7 +50,7 @@ def _validate_single_extension(node, extension_type, node_json=None, **options):
         # to reassemble the node?
 
     return task_result(True, "Extension {} validated on node {}".format(
-        extension_type, node.get('id')
+        extension_type, node_id_string
     ))
 
 
@@ -87,4 +90,5 @@ def validate_extension_node(state, task_meta, **options):
                 abv(types_to_test), abv_node(node_id, node_path)
             ), actions)
     else:
-        return _validate_single_extension(node, types_to_test[0], node_json=node_json, **options)
+        return _validate_single_extension(
+            node, types_to_test[0], node_json=node_json, node_id_string=abv_node(node_id, node_path), **options)

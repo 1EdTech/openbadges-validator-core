@@ -24,7 +24,6 @@ def _task_to_add_exists(state, action):
                 action.get('url') == t.get('url')
             ][0]
 
-
         else:
             return False
     except IndexError:

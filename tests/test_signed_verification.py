@@ -16,13 +16,14 @@ from badgecheck.tasks.crypto import (process_jws_input, verify_key_ownership, ve
 from badgecheck.tasks.task_types import (PROCESS_JWS_INPUT, VERIFY_JWS, VERIFY_KEY_OWNERSHIP,
                                          VERIFY_SIGNED_ASSERTION_NOT_REVOKED,)
 from badgecheck.verifier import verify
+from badgecheck.utils import make_string_from_bytes
 
 try:
     from .testfiles.test_components import test_components
-    from .testutils import setup_context_mock
+    from tests.utils import set_up_context_mock,set_up_image_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
-    from .testutils import setup_context_mock
+    from .testutils import set_up_context_mock
 
 
 class JwsVerificationTests(unittest.TestCase):
@@ -111,11 +112,6 @@ class JwsVerificationTests(unittest.TestCase):
 
         self.signed_assertion = encoded_separator.join((encoded_header, encoded_payload, signature))
 
-        """
-        self.signed_assertion = '.'.join(
-            (b64encode(json.dumps(header).encode()), b64encode(json.dumps(self.assertion_data).encode()), signature)
-        )
-        """
         task_meta = add_task(VERIFY_JWS, data=self.signed_assertion,
                              node_id=self.assertion_data['id'])
 
@@ -200,42 +196,64 @@ class JwsFullVerifyTests(unittest.TestCase):
         """
         input_assertion = json.loads(test_components['2_0_basic_assertion'])
         input_assertion['verification'] = {'type': 'signed', 'creator': 'http://example.org/key1'}
+        set_up_image_mock(u'https://example.org/beths-robot-badge.png')
 
         input_badgeclass = json.loads(test_components['2_0_basic_badgeclass'])
+        set_up_image_mock(input_badgeclass['image'])
 
         input_issuer = json.loads(test_components['2_0_basic_issuer'])
         input_issuer['publicKey'] = input_assertion['verification']['creator']
 
         private_key = RSA.generate(2048)
+
         cryptographic_key_doc = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
             'id': input_assertion['verification']['creator'],
             'type': 'CryptographicKey',
             'owner': input_issuer['id'],
-            'publicKeyPem': private_key.publickey().exportKey('PEM')
+            'publicKeyPem': private_key.publickey().exportKey('PEM').decode()
         }
 
-        setup_context_mock()
+        set_up_context_mock()
         for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 
         header = json.dumps({'alg': 'RS256'})
         payload = json.dumps(input_assertion)
-        signature = '.'.join([
-            b64encode(header),
-            b64encode(payload),
-            jws.sign(header, payload, private_key, is_json=True)
+
+
+
+        encoded_separator = '.'
+        if not sys.version[:3] < '3':
+            encoded_separator = '.'.encode()
+            encoded_header = b64encode(header.encode())
+            encoded_payload = b64encode(payload.encode())
+        else:
+            encoded_header = b64encode(header)
+            encoded_payload = b64encode(payload)
+
+        signature = encoded_separator.join([
+            encoded_header,
+            encoded_payload,
+            jws.sign(header,payload,private_key, is_json=True)
         ])
 
+
         response = verify(signature, use_cache=False)
+
+        print("TEST CAN FULLY VERIFY JWS SIGNED ASSERTION : response:")
+        print(response['report'])
+
         self.assertTrue(response['report']['valid'])
 
     @responses.activate
     def test_can_full_verify_with_revocation_check(self):
         input_assertion = json.loads(test_components['2_0_basic_assertion'])
         input_assertion['verification'] = {'type': 'signed', 'creator': 'http://example.org/key1'}
+        set_up_image_mock(u'https://example.org/beths-robot-badge.png')
 
         input_badgeclass = json.loads(test_components['2_0_basic_badgeclass'])
+        set_up_image_mock(input_badgeclass['image'])
 
         revocation_list = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
@@ -247,27 +265,40 @@ class JwsFullVerifyTests(unittest.TestCase):
         input_issuer['publicKey'] = input_assertion['verification']['creator']
 
         private_key = RSA.generate(2048)
+        print("PKEY")
+        print(private_key.publickey().exportKey('PEM').decode())
         cryptographic_key_doc = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
             'id': input_assertion['verification']['creator'],
             'type': 'CryptographicKey',
             'owner': input_issuer['id'],
-            'publicKeyPem': private_key.publickey().exportKey('PEM')
+            'publicKeyPem': private_key.publickey().exportKey('PEM').decode()
         }
 
-        setup_context_mock()
+        set_up_context_mock()
         for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc, revocation_list]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 
         header = json.dumps({'alg': 'RS256'})
         payload = json.dumps(input_assertion)
-        signature = '.'.join([
-            b64encode(header),
-            b64encode(payload),
+
+        encoded_separator = '.'
+        if not sys.version[:3] < '3':
+            encoded_separator = '.'.encode()
+            encoded_header = b64encode(header.encode())
+            encoded_payload = b64encode(payload.encode())
+        else:
+            encoded_header = b64encode(header)
+            encoded_payload = b64encode(payload)
+
+        signature = encoded_separator.join([
+            encoded_header,
+            encoded_payload,
             jws.sign(header, payload, private_key, is_json=True)
         ])
 
         response = verify(signature, use_cache=False)
+
         self.assertTrue(response['report']['valid'])
 
     @responses.activate
@@ -297,20 +328,31 @@ class JwsFullVerifyTests(unittest.TestCase):
             'id': input_assertion['verification']['creator'],
             'type': 'CryptographicKey',
             'owner': input_issuer['id'],
-            'publicKeyPem': private_key.publickey().exportKey('PEM')
+            'publicKeyPem': make_string_from_bytes(private_key.publickey().exportKey('PEM'))
         }
 
-        setup_context_mock()
+        set_up_context_mock()
         for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc, revocation_list]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 
         header = json.dumps({'alg': 'RS256'})
         payload = json.dumps(input_assertion)
-        signature = '.'.join([
-            b64encode(header),
-            b64encode(payload),
+
+        encoded_separator = '.'
+        if not sys.version[:3] < '3':
+            encoded_separator = '.'.encode()
+            encoded_header = b64encode(header.encode())
+            encoded_payload = b64encode(payload.encode())
+        else:
+            encoded_header = b64encode(header)
+            encoded_payload = b64encode(payload)
+
+        signature = encoded_separator.join([
+            encoded_header,
+            encoded_payload,
             jws.sign(header, payload, private_key, is_json=True)
         ])
+
 
         response = verify(signature, use_cache=False)
         self.assertFalse(response['report']['valid'])

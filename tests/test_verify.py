@@ -5,7 +5,7 @@ import unittest
 from pydux import create_store
 
 from badgecheck import verify
-from badgecheck.actions.input import store_original_json
+from badgecheck.actions.input import store_original_resource
 from badgecheck.verifier import generate_report
 from badgecheck.actions.tasks import report_message
 from badgecheck.reducers import main_reducer
@@ -17,6 +17,8 @@ try:
     from .testfiles.test_components import test_components
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
+
+from tests.utils import set_up_image_mock
 
 
 class InitializationTests(unittest.TestCase):
@@ -33,6 +35,7 @@ class InitializationTests(unittest.TestCase):
             responses.GET, url, body=test_components['2_0_basic_assertion'], status=200,
             content_type='application/ld+json'
         )
+        set_up_image_mock('https://example.org/beths-robot-badge.png')
         responses.add(
             responses.GET, 'https://w3id.org/openbadges/v2',
             body=test_components['openbadges_context'], status=200,
@@ -43,6 +46,7 @@ class InitializationTests(unittest.TestCase):
             body=test_components['2_0_basic_badgeclass'], status=200,
             content_type='application/ld+json'
         )
+        set_up_image_mock(u'https://example.org/robotics-badge.png')
         responses.add(
             responses.GET, 'https://example.org/organization.json',
             body=test_components['2_0_basic_issuer'], status=200,
@@ -64,6 +68,7 @@ class InitializationTests(unittest.TestCase):
             responses.GET, url, body=test_components['2_0_basic_assertion'], status=200,
             content_type='application/ld+json'
         )
+        set_up_image_mock(u'https://example.org/beths-robot-badge.png')
         responses.add(
             responses.GET, 'https://w3id.org/openbadges/v2',
             body=test_components['openbadges_context'], status=200,
@@ -74,6 +79,7 @@ class InitializationTests(unittest.TestCase):
             body=test_components['2_0_basic_badgeclass'], status=200,
             content_type='application/ld+json'
         )
+        set_up_image_mock(u'https://example.org/robotics-badge.png')
         responses.add(
             responses.GET, 'https://example.org/organization.json',
             body=test_components['2_0_basic_issuer'], status=200,
@@ -120,7 +126,7 @@ class MessagesTests(unittest.TestCase):
 class ResultReportTests(unittest.TestCase):
     def test_original_json_option(self):
         store = create_store(main_reducer, INITIAL_STATE)
-        store.dispatch(store_original_json('{"data": "test data"}', 'http://example.org/1'))
+        store.dispatch(store_original_resource('http://example.org/1', '{"data": "test data"}'))
 
         report = generate_report(store)
         self.assertNotIn('original_json', list(report['input'].keys()))

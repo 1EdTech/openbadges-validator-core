@@ -20,16 +20,17 @@ from badgecheck.tasks.validation import (_get_validation_actions, assertion_time
 from badgecheck.tasks.verification import (_default_verification_policy, hosted_id_in_verification_scope,)
 from badgecheck.tasks.task_types import (ASSERTION_TIMESTAMP_CHECKS, CRITERIA_PROPERTY_DEPENDENCIES,
                                          DETECT_AND_VALIDATE_NODE_CLASS, HOSTED_ID_IN_VERIFICATION_SCOPE,
-                                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, VALIDATE_RDF_TYPE_PROPERTY,
-                                         VALIDATE_PROPERTY, VALIDATE_EXPECTED_NODE_CLASS)
+                                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, ISSUER_PROPERTY_DEPENDENCIES,
+                                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY, VALIDATE_EXPECTED_NODE_CLASS)
+from badgecheck.utils import MESSAGE_LEVEL_WARNING
 from badgecheck.verifier import call_task, verify
 
 try:
     from .testfiles.test_components import test_components
-    from .testutils import setup_context_mock
+    from tests.utils import set_up_context_mock,set_up_image_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
-    from .testutils import setup_context_mock
+    from tests.utils import set_up_context_mock,set_up_image_mock
 
 
 class PropertyValidationTests(unittest.TestCase):
@@ -156,6 +157,62 @@ class PropertyValidationTaskTests(unittest.TestCase):
         task['required'] = True
         result, message, actions = validate_property(state, task)
         self.assertFalse(result, "Required property is not present; validation should fail.")
+
+    def test_basic_telephone_property_validation(self):
+        first_node = {
+            'id': 'http://example.com'
+        }
+        state = {
+            'graph': [first_node]
+        }
+        task = add_task(
+            VALIDATE_PROPERTY,
+            node_id=first_node['id'],
+            prop_name='tel',
+            required=True,
+            prop_type=ValueTypes.TELEPHONE
+        )
+
+        good_values = ["+64010", "+15417522845", "+18006664358", "+18006662344;ext=666"]
+        bad_values = ["1-800-666-DEVIL", "1 (555) 555-5555", "+99 55 22 1234", "+18006664343 x666"]
+
+        for tel_value in good_values:
+            first_node['tel'] = tel_value
+            result, message, actions = validate_property(state, task)
+            self.assertTrue(result)
+
+        for tel_value in bad_values:
+            first_node['tel'] = tel_value
+            result, message, actions = validate_property(state, task)
+            self.assertFalse(result)
+
+    def test_basic_email_property_validation(self):
+        first_node = {
+            'id': 'http://example.com'
+        }
+        state = {
+            'graph': [first_node]
+        }
+        task = add_task(
+            VALIDATE_PROPERTY,
+            node_id=first_node['id'],
+            prop_name='email',
+            required=True,
+            prop_type=ValueTypes.EMAIL
+        )
+
+        good_values = ["abc@localhost", "cool+uncool@example.org"]
+        bad_values = [" spacey@gmail.com", "steveman [at] gee mail dot com"]
+
+        for val in good_values:
+            first_node['email'] = val
+            result, message, actions = validate_property(state, task)
+            self.assertTrue(result, "{} should be marked a valid email".format(val))
+
+        for val in bad_values:
+            first_node['email'] = val
+            result, message, actions = validate_property(state, task)
+            self.assertFalse(result, "{} should be marked an invalid email".format(val))
 
     def test_basic_boolean_property_validation(self):
         first_node = {'id': 'http://example.com/1'}
@@ -637,6 +694,42 @@ class IDPropertyValidationTests(unittest.TestCase):
         self.assertFalse(result, "Many values should be rejected when many is not present")
         self.assertTrue('has more than the single allowed value' in message, "Error should mention many violation")
 
+    def test_many_nested_validation_for_id_property(self):
+        """
+        When detect_and_validate_node_class (through _get_validation_actions)
+        queue up actions, some configs may have many=True. This means single or multiple
+        values should be accepted. If optional, empty lists should also be accepted.
+        """
+        first_node = {
+            'id': '_:b0',
+            'type': 'BadgeClass',
+            'alignment': [
+                {
+                    'targetName': 'Alignment One',
+                    'targetUrl': 'http://example.org/alignment1'
+                }
+            ]
+        }
+        state = {'graph': [first_node]}
+        required = True
+
+        task = add_task(
+            VALIDATE_PROPERTY, node_id=first_node['id'], node_class=OBClasses.BadgeClass,
+            prop_name='alignment', prop_type=ValueTypes.ID, required=required, many=True, fetch=False,
+            expected_class=OBClasses.AlignmentObject, allow_remote_url=False
+        )
+        result, message, actions = validate_property(state, task)
+        self.assertTrue(result, "Task the queues up individual class validators is successful")
+        self.assertEqual(len(actions), 1)
+
+        result, message, actions = task_named(actions[0]['name'])(state, actions[0])
+        self.assertTrue(result)
+        for a in actions:
+            self.assertEqual(a['node_path'], [first_node['id'], 'alignment', 0])
+            next_result, next_message, next_actions = task_named(a['name'])(state, a)
+            self.assertTrue(next_result)
+
+
 
 class NodeTypeDetectionTasksTests(unittest.TestCase):
     def detect_assertion_type_from_node(self):
@@ -768,7 +861,35 @@ class ClassValidationTaskTests(unittest.TestCase):
                 actions.extend(new_actions)
             self.assertTrue(result)
 
-        self.assertEqual(len(actions), 7)
+        self.assertEqual(len(actions), 5)
+        self.assertTrue(CRITERIA_PROPERTY_DEPENDENCIES in [a.get('name') for a in actions])
+
+    def test_run_criteria_task_discovery_and_validation_embedded(self):
+        badgeclass_node = {'id': 'http://example.com/badgeclass', 'type': 'BadgeClass'}
+        state = {
+            'graph': [badgeclass_node]
+        }
+        actions = [add_task(
+            VALIDATE_PROPERTY,
+            node_id=badgeclass_node['id'],
+            prop_name="criteria",
+            required=False,
+            prop_type=ValueTypes.ID,
+            expected_class=OBClasses.Criteria
+        )]
+        badgeclass_node['criteria'] = {
+            'narrative': 'Do the important things.'
+        }
+
+        for task in actions:
+            if not task.get('type') == 'ADD_TASK':
+                continue
+            result, message, new_actions = task_named(task['name'])(state, task)
+            if new_actions:
+                actions.extend(new_actions)
+            self.assertTrue(result)
+
+        self.assertEqual(len(actions), 5)
         self.assertTrue(CRITERIA_PROPERTY_DEPENDENCIES in [a.get('name') for a in actions])
 
     def test_many_criteria_disallowed(self):
@@ -913,6 +1034,7 @@ class ClassValidationTaskTests(unittest.TestCase):
 
         self._run(task, True, 'Single embedded complete alignment node passes', test_task=None)
 
+    @responses.activate
     def test_basic_badgeclass_validation(self):
         first_node = {
             '@context': OPENBADGES_CONTEXT_V2_DICT,
@@ -925,6 +1047,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             'issuer': 'http://example.com/issuer',
             'tags': ['important', 'learning']
         }
+        set_up_image_mock(first_node['image'])
         second_node = {'id': '_:b0', 'narrative': 'Do the important learning.'}
         state = {'graph': [first_node, second_node]}
 
@@ -935,13 +1058,15 @@ class ClassValidationTaskTests(unittest.TestCase):
                 results.append(
                     task_named(action['name'])(state, action)
                 )
+        print("RESULTS")
+        print(results)
         self.assertTrue(all(i[0] for i in results))
 
 
 class RdfTypeValidationTests(unittest.TestCase):
     @responses.activate
     def test_validate_in_context_string_type(self):
-        setup_context_mock()
+        set_up_context_mock()
         input_value = {
             '@context': OPENBADGES_CONTEXT_V2_DICT,
             'id': 'http://example.com/badge1',
@@ -1184,10 +1309,11 @@ class BadgeClassInputValidationTests(unittest.TestCase):
             'email': 'me@example.com',
             'url': 'http://example.com'
         }
+        set_up_image_mock(badgeclass['image'])
 
         responses.add(responses.GET, badgeclass['id'], json=badgeclass)
         responses.add(responses.GET, issuer['id'], json=issuer)
-        setup_context_mock()
+        set_up_context_mock()
 
         results = verify('http://example.com/badgeclass1')
         self.assertTrue(results['report']['valid'])
@@ -1211,5 +1337,25 @@ class IssuerClassValidationTests(unittest.TestCase):
         self.assertTrue(result)
 
         task_meta = add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=issuer['id'])
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        self.assertTrue(result)
+
+    def test_issuer_warn_on_non_https_id(self):
+        issuer = {
+            '@context': OPENBADGES_CONTEXT_V2_DICT,
+            'id': 'urn:uuid:2d391246-6e0d-4dab-906c-b29770bd7aa6',
+            'type': 'Issuer',
+            'url': 'http://example.com'
+        }
+        state = {'graph': [issuer]}
+        task_meta = add_task(ISSUER_PROPERTY_DEPENDENCIES, node_id=issuer['id'],
+                             messageLevel=MESSAGE_LEVEL_WARNING)
+
+        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        self.assertFalse(result)
+        self.assertIn('HTTP', message)
+
+        issuer['id'] = 'http://example.org/issuer1'
+        task_meta['node_id'] = issuer['id']
         result, message, actions = task_named(task_meta['name'])(state, task_meta)
         self.assertTrue(result)

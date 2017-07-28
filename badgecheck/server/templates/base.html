@@ -4,24 +4,33 @@
 	<meta charset="utf-8" />
 	<title>IMS Global Open Badges 2.0 Validator BETA</title>
 	<link rel="stylesheet" type="text/css" href="/static/screen.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 </head>
 
 <body>
-<header>
-    <a id="logo" href="https://www.imsglobal.org">
-        <img src="https://www.imsglobal.org/sites/default/files/imslogo.png" alt="IMS Global Homepage">
-    </a>
+<main class="container">
+<header class="row">
+    <div class="col-md-8"></div>
+    <div class="col-md-4">
+        <a id="logo" href="https://www.imsglobal.org">
+            <img src="https://www.imsglobal.org/sites/default/files/imslogo.png" alt="IMS Global Homepage">
+        </a>
+    </div>
 </header>
 
 <h1>IMS Global Open Badges Validator 2.0 BETA</h1>
 
-<section id="notice">
-    <h2 >Notice</h2>
-    <p>
-        This service is currently in <strong>early beta</strong> stage. The results provided by the service cannot
-        be used as a reliable indicator of the validity of an Open Badge, and can not not be used as proof to claim
-        implementation conformance. Also read the <a href="#disclaimer">disclaimer</a> below.
-    </p>
+<section id="notice" class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        <h2 >Notice</h2>
+        <p>
+            This service is currently in <strong>early beta</strong> stage. The results provided by the service cannot
+            be used as a reliable indicator of the validity of an Open Badge, and can not not be used as proof to claim
+            implementation conformance. Also read the <a href="#disclaimer">disclaimer</a> below.
+        </p>
+    </div>
+    <div class="col-md-2"></div>
 </section>
 
 {% block main %}{% endblock %}
@@ -35,5 +44,6 @@
     </p>
 </footer>
 
+</main>
 </body>
 </html>

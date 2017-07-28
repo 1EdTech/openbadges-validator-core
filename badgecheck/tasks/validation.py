@@ -7,21 +7,22 @@ import rfc3986
 import six
 
 from ..actions.graph import patch_node
-from ..actions.tasks import add_task
+from ..actions.tasks import add_task, report_message
 from ..exceptions import TaskPrerequisitesError, ValidationError
 from ..state import get_node_by_id, get_node_by_path
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_DICT
-from ..utils import list_of
+from ..utils import list_of, MESSAGE_LEVEL_WARNING
 
 from .task_types import (ASSERTION_TIMESTAMP_CHECKS, ASSERTION_VERIFICATION_CHECK,
                          ASSERTION_VERIFICATION_DEPENDENCIES, CLASS_VALIDATION_TASKS,
-                         CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE, HOSTED_ID_IN_VERIFICATION_SCOPE,
-                         IDENTITY_OBJECT_PROPERTY_DEPENDENCIES, ISSUER_PROPERTY_DEPENDENCIES,
-                         VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY,
-                         VALIDATE_REVOCATIONLIST_ENTRIES, VERIFY_RECIPIENT_IDENTIFIER)
+                         CRITERIA_PROPERTY_DEPENDENCIES, FETCH_HTTP_NODE, FLATTEN_EMBEDDED_RESOURCE,
+                         HOSTED_ID_IN_VERIFICATION_SCOPE, IDENTITY_OBJECT_PROPERTY_DEPENDENCIES,
+                         IMAGE_VALIDATION, ISSUER_PROPERTY_DEPENDENCIES, VALIDATE_EXPECTED_NODE_CLASS,
+                         VALIDATE_RDF_TYPE_PROPERTY, VALIDATE_PROPERTY, VALIDATE_REVOCATIONLIST_ENTRIES,
+                         VERIFY_RECIPIENT_IDENTIFIER)
 from .utils import (abbreviate_value as abv,
                     abbreviate_node_id as abv_node,
-                    is_empty_list, is_null_list, is_iri, is_url, task_result)
+                    is_empty_list, is_null_list, is_iri, is_url, task_result,)
 
 
 class OBClasses(object):
@@ -73,10 +74,11 @@ class ValueTypes(object):
     IRI = 'IRI'
     MARKDOWN_TEXT = 'MARKDOWN_TEXT'
     RDF_TYPE = 'RDF_TYPE'
+    TELEPHONE = 'TELEPHONE'
     TEXT = 'TEXT'
     URL = 'URL'
 
-    PRIMITIVES = (BOOLEAN, DATETIME, ID, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TEXT, URL)
+    PRIMITIVES = (BOOLEAN, DATA_URI_OR_URL, DATETIME, ID, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TELEPHONE, TEXT, URL)
 
 
 class PrimitiveValueValidator(object):
@@ -93,10 +95,12 @@ class PrimitiveValueValidator(object):
             ValueTypes.DATA_URI: self._validate_data_uri,
             ValueTypes.DATA_URI_OR_URL: self._validate_data_uri_or_url,
             ValueTypes.DATETIME: self._validate_datetime,
+            ValueTypes.EMAIL: self._validate_email,
             ValueTypes.IDENTITY_HASH: self._validate_identity_hash,
             ValueTypes.IRI: self._validate_iri,
             ValueTypes.MARKDOWN_TEXT: self._validate_markdown_text,
             ValueTypes.RDF_TYPE: self._validate_rdf_type,
+            ValueTypes.TELEPHONE: self._validate_tel,
             ValueTypes.TEXT: self._validate_text,
             ValueTypes.URL: self._validate_url
         }
@@ -144,7 +148,7 @@ class PrimitiveValueValidator(object):
 
     @staticmethod
     def _validate_email(value):
-        return bool(re.match(r'(^[^@]+@[^@]+$)', value))
+        return bool(re.match(r'(^[^@\s]+@[^@\s]+$)', value))
 
     @staticmethod
     def is_hashed_identity_hash(value):
@@ -190,6 +194,11 @@ class PrimitiveValueValidator(object):
         return True
 
     @staticmethod
+    def _validate_tel(value):
+        """ Validates whether item passes E.164 validation (allows extensions)"""
+        return bool(re.match(r'^\+?[1-9]\d{1,14}(;ext=\d+)?$', value))
+
+    @staticmethod
     def _validate_text(value):
         return isinstance(value, six.string_types)
 
@@ -223,11 +232,11 @@ def validate_property(state, task_meta, **options):
         if not required:
             return task_result(
                 True, "Optional property {} not present in {} {}".format(
-                prop_name, node_class, node_id)
+                    prop_name, node_class, abv_node(node_id, node_path))
             )
         return task_result(
             False, "Required property {} not present in {} {}".format(
-                prop_name, node_class, node_id)
+                prop_name, node_class, abv_node(node_id, node_path))
             )
 
     if not isinstance(prop_value, (list, tuple)):
@@ -259,13 +268,21 @@ def validate_property(state, task_meta, **options):
                     raise ValidationError("{} property {} value {} not valid in {} {}".format(
                         prop_type, prop_name, abv(val), node_class, abv_node(node_id, node_path)))
         else:
-            for val in values_to_test:
+            for i in range(len(values_to_test)):
+                val = values_to_test[i]
                 if isinstance(val, dict):
+                    if isinstance(prop_value, (list, tuple,)):
+                        value_to_test_path = [node_id, prop_name, i]
+                    else:
+                        value_to_test_path = [node_id, prop_name]
                     actions.append(
-                        # TODO make sure node_id is set
-                        add_task(VALIDATE_EXPECTED_NODE_CLASS, node_path=[node_id, prop_name],
+                        add_task(VALIDATE_EXPECTED_NODE_CLASS, node_path=value_to_test_path,
                                  expected_class=task_meta.get('expected_class')))
                     continue
+                elif task_meta.get('allow_data_uri', False) and not PrimitiveValueValidator(ValueTypes.DATA_URI_OR_URL)(val):
+                    raise ValidationError("ID-type property {} had value `{}` that isn't URI or DATA URI in {}.".format(
+                        prop_name, abv(val), abv_node(node_id, node_path))
+                    )
                 elif not PrimitiveValueValidator(ValueTypes.IRI)(val):
                     raise ValidationError(
                         "ID-type property {} had value `{}` not embedded node or in IRI format in {}.".format(
@@ -346,35 +363,45 @@ class ClassValidators(OBClasses):
                     'many': True, 'must_contain_one': ['Assertion']},
                 {'prop_name': 'recipient', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.IdentityObject, 'required': True},
-                {'prop_name': 'badge', 'prop_type': ValueTypes.ID,
+                {'prop_name': 'badge', 'prop_type': ValueTypes.ID, 'prerequisites': 'ASN_FLATTEN_BC',
                     'expected_class': OBClasses.BadgeClass, 'fetch': True, 'required': True},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.VerificationObjectAssertion, 'required': True},
                 {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
                 {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.URL, 'required': False},
+                {'prop_name': 'image', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
+                 'expected_class': OBClasses.Image, 'fetch': False, 'allow_data_uri': True},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 {'prop_name': 'evidence', 'prop_type': ValueTypes.ID, 'allow_remote_url': True,
                     'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, 'required': False},
                 {'task_type': ASSERTION_VERIFICATION_DEPENDENCIES, 'prerequisites': ISSUER_PROPERTY_DEPENDENCIES},
-                {'task_type': ASSERTION_TIMESTAMP_CHECKS}
+                {'task_type': ASSERTION_TIMESTAMP_CHECKS},
+                {'task_type': IMAGE_VALIDATION, 'prop_name': 'image', 'node_class': OBClasses.Assertion,
+                    'required': False, 'many': False},
+                {'task_type': FLATTEN_EMBEDDED_RESOURCE, 'prop_name': 'badge', 'node_class': OBClasses.Assertion,
+                    'task_key': 'ASN_FLATTEN_BC'}
             )
         elif class_name == OBClasses.BadgeClass:
             self.validators = (
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True,
                     'many': True, 'must_contain_one': ['BadgeClass']},
-                {'prop_name': 'issuer', 'prop_type': ValueTypes.ID,
+                {'prop_name': 'issuer', 'prop_type': ValueTypes.ID, 'prerequisites': 'BC_FLATTEN_ISS',
                     'expected_class': OBClasses.Profile, 'fetch': True, 'required': True},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': True},
-                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
+                {'prop_name': 'image', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
+                 'expected_class': OBClasses.Image, 'fetch': False, 'allow_data_uri': True},
                 {'prop_name': 'criteria', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.Criteria, 'fetch': False,
                     'required': True, 'allow_remote_url': True},
                 {'prop_name': 'alignment', 'prop_type': ValueTypes.ID,
-                   'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, 'required': False},
+                    'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, 'required': False},
                 {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
+                {'task_type': IMAGE_VALIDATION, 'prop_name': 'image', 'node_class': OBClasses.BadgeClass,
+                    'required': True, 'many': False},
+                {'task_type': FLATTEN_EMBEDDED_RESOURCE, 'prop_name': 'issuer', 'node_class': OBClasses.BadgeClass,
+                    'task_key': 'BC_FLATTEN_ISS'}
             )
         elif class_name == OBClasses.CryptographicKey:
             self.validators = (
@@ -393,15 +420,16 @@ class ClassValidators(OBClasses):
                     'many': True, 'must_contain_one': ['Issuer', 'Profile']},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': True},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
+                {'prop_name': 'image', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
+                 'expected_class': OBClasses.Image, 'fetch': False, 'allow_data_uri': True},
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': True},
-                {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': True},
-                {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False},
+                {'prop_name': 'email', 'prop_type': ValueTypes.EMAIL, 'required': True},
+                {'prop_name': 'telephone', 'prop_type': ValueTypes.TELEPHONE, 'required': False},
                 {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
                  'expected_class': OBClasses.VerificationObjectIssuer, 'fetch': False, 'required': False},
-                {'task_type': ISSUER_PROPERTY_DEPENDENCIES}
+                {'task_type': ISSUER_PROPERTY_DEPENDENCIES, 'messageLevel': MESSAGE_LEVEL_WARNING}
             )
         elif class_name == OBClasses.ExpectedRecipientProfile:
             # For ephemeral profiles representing recipients, there are few required properties.
@@ -411,10 +439,11 @@ class ClassValidators(OBClasses):
                  'must_contain_one': ['Issuer', 'Profile'], 'default': OBClasses.Profile},
                 {'prop_name': 'name', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
-                {'prop_name': 'image', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': False},
+                {'prop_name': 'image', 'prop_type': ValueTypes.ID, 'required': False,
+                 'expected_class': OBClasses.Image, 'fetch': False, 'allow_data_uri': True},
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': False, 'many': True},
-                {'prop_name': 'email', 'prop_type': ValueTypes.TEXT, 'required': False, 'many': True},
-                {'prop_name': 'telephone', 'prop_type': ValueTypes.TEXT, 'required': False, 'many': True},
+                {'prop_name': 'email', 'prop_type': ValueTypes.EMAIL, 'required': False, 'many': True},
+                {'prop_name': 'telephone', 'prop_type': ValueTypes.TELEPHONE, 'required': False, 'many': True},
                 {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID, 'many': True,
                    'expected_class': OBClasses.CryptographicKey, 'fetch': False, 'required': False},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
@@ -465,7 +494,8 @@ class ClassValidators(OBClasses):
                     'required': False, 'default': 'schema:ImageObject'},
                 {'prop_name': 'id', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
                 {'prop_name': 'caption', 'prop_type': ValueTypes.TEXT, 'required': False},
-                {'prop_name': 'author', 'prop_type': ValueTypes.IRI, 'required': False}
+                {'prop_name': 'author', 'prop_type': ValueTypes.IRI, 'required': False},
+                {'task_type': IMAGE_VALIDATION, 'prop_name': 'id'}
             )
         elif class_name == OBClasses.VerificationObjectAssertion:
             self.validators = (
@@ -505,6 +535,8 @@ def _get_validation_actions(node_class, node_id=None, node_path=None):
             action = add_task(VALIDATE_PROPERTY, **validator)
         elif validator.get('task_type') in CLASS_VALIDATION_TASKS:
             action = add_task(validator['task_type'], **validator)
+        else:
+            continue
 
         if node_id:
             action['node_id'] = node_id
@@ -535,7 +567,7 @@ def detect_and_validate_node_class(state, task_meta, **options):
     actions = _get_validation_actions(node_class, node_id, node_path)
 
     return task_result(
-        True, "Declared type on node {} is {}".format(node_id, declared_node_type),
+        True, "Declared type on node {} is {}".format(abv_node(node_id, node_path), declared_node_type),
         actions
     )
 
@@ -549,7 +581,7 @@ def validate_expected_node_class(state, task_meta, **options):
 
     return task_result(
         True, "Queued property validations for class {} instance {}".format(
-            node_class, abv(task_meta.get('node_id', task_meta.get('node_path')))),
+            node_class, abv_node(node_id, node_path)),
         actions
     )
 
@@ -586,25 +618,36 @@ def identity_object_property_dependencies(state, task_meta, **options):
 
 
 def criteria_property_dependencies(state, task_meta, **options):
-    node_id = task_meta.get('node_id')
-    node = get_node_by_id(state, node_id)
-    is_blank_id_node = bool(re.match(r'_:b\d+$', node_id))
+    try:
+        node_id = task_meta.get('node_id')
+        node_path = task_meta.get('node_path')
+        if node_id:
+            node = get_node_by_id(state, node_id)
+        else:
+            node = get_node_by_path(state, node_path)
+            node_id = node.get('id', '')
+    except (IndexError, KeyError, TypeError):
+        raise TaskPrerequisitesError()
 
+    is_blank_id_node = bool(re.match(r'_:b\d+$', node_id))
     if is_blank_id_node and not node.get('narrative'):
         return task_result(False,
-            "Criteria node {} has no narrative. Either external id or narrative is required.".format(node_id)
+            "Criteria node {} has no narrative. Either external id or narrative is required.".format(
+                abv_node(node_id, node_path))
         )
     elif is_blank_id_node:
         return task_result(
-            True, "Criteria node {} is a narrative-based piece of evidence.".format(node_id)
+            True, "Criteria node {} is a narrative-based piece of evidence.".format(
+                abv_node(node_id, node_path)
+            )
         )
     elif not is_blank_id_node and node.get('narrative'):
         return task_result(
-            True, "Criteria node {} has a URL and narrative."
+            True, "Criteria node {} has a URL and narrative.".format(abv_node(node_id, node_path))
         )
     # Case to handle no narrative but other props preventing compaction down to simple id string:
     # {'id': 'http://example.com/1', 'name': 'Criteria Name'}
-    return task_result(True, "Criteria node {} has a URL.")
+    return task_result(True, "Criteria node {} has a URL.".format(abv_node(node_id, node_path)))
 
 
 def assertion_verification_dependencies(state, task_meta, **options):
@@ -633,7 +676,7 @@ def assertion_verification_dependencies(state, task_meta, **options):
 
     return task_result(
         True, '{} Assertion {} verification dependencies noted.'.format(
-            node.get('type'), node_id),
+            node.get('type'), assertion_id),
         actions
     )
 
@@ -664,6 +707,20 @@ def assertion_timestamp_checks(state, task_meta, **options):
 
     return task_result(
         True, "Assertion {} was issued and has not expired.".format(node_id))
+
+
+def issuer_property_dependencies(state, task_meta, **options):
+    try:
+        node_id = task_meta['node_id']
+        issuer_node = get_node_by_id(state, node_id)
+    except (IndexError, KeyError,):
+        raise TaskPrerequisitesError()
+
+    if not bool(re.match('^http(s)?://', node_id)):
+        return task_result(
+            False, "Issuer Profile {} not hosted with HTTP-based identifier.".format(node_id) +
+                  "Many platforms can only handle HTTP(s)-hosted issuers.")
+    return task_result(True, "Issuer profile id meets expectations.")
 
 
 def placeholder_task(state, task_meta, **options):
