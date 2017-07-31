@@ -42,6 +42,9 @@ setup(
         'Topic :: Utilities',
         'Intended Audience :: Developers'
     ],
+    dependency_links=[
+        'https://github.com/kasbah/pydux/tarball/fix-python3#egg=pydux'
+    ],
     install_requires=[
         'aniso8601>=1.2.0',
         'future==0.16.0',
@@ -56,9 +59,6 @@ setup(
         'requests_cache==0.4.13',
         'rfc3986==0.4.1',
         'validators==0.11.2',
-    ],
-    dependency_links=[
-        'https://github.com/kasbah/pydux/tarball/fix-python3#egg=pydux'
     ],
     extras_require={
         'server':  ["Flask==0.12.1", 'gunicorn==19.7.1'],
