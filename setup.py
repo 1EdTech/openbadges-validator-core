@@ -43,7 +43,7 @@ setup(
         'Intended Audience :: Developers'
     ],
     dependency_links=[
-        'https://github.com/kasbah/pydux/tarball/fix-python3#egg=pydux'
+        'git+https://github.com/kasbah/pydux.git@fix-python3#egg=pydux-0.2.1'
     ],
     install_requires=[
         'aniso8601>=1.2.0',
