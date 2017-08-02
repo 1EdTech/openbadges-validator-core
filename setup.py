@@ -52,6 +52,7 @@ setup(
         'jws==0.1.3',
         'openbadges-bakery>=1.0.0b1',
         'pycrypto==2.6.1',
+        'pydux==0.2.1',
         'PyLD==0.7.1',
         'pytz==2017.2',
         'requests >= 2.13',
