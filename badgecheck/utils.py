@@ -3,17 +3,30 @@ install_aliases()
 
 import hashlib
 import string
-from urllib.parse import urlparse
+import sys
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 
 import requests
 import requests_cache
 from pyld.jsonld import JsonLdError
 
 
+MESSAGE_LEVEL_ERROR = 'ERROR'
+MESSAGE_LEVEL_WARNING = 'WARNING'
+MESSAGE_LEVEL_INFO = 'INFO'
+MESSAGE_LEVELS = (MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING, MESSAGE_LEVEL_INFO,)
+
+
 class CachableDocumentLoader(object):
-    def __init__(self, use_cache=False, backend='memory', expire_after=300):
+    def __init__(self, use_cache=False, backend='memory', expire_after=300, session=None):
         self.use_cache = use_cache
-        if self.use_cache:
+
+        if session is not None:
+            self.session = session
+        elif self.use_cache:
             self.session = requests_cache.CachedSession(backend=backend, expire_after=expire_after)
         else:
             self.session = requests.Session()
@@ -63,8 +76,18 @@ def list_of(value):
 
 
 def identity_hash(identfier, salt='', alg='sha256'):
+
+    if not sys.version[:3] < '3':
+        identfier = identfier.encode()
+        salt = salt.encode()
     if alg == 'sha256':
         return alg + '$' + hashlib.sha256(identfier + salt).hexdigest()
     elif alg == 'md5':
         return alg + '$' + hashlib.md5(identfier + salt).hexdigest()
     raise ValueError("Alg {} not supported.".format(alg))
+
+
+def make_string_from_bytes(input_value):
+    if isinstance(input_value,bytes):
+        return input_value.decode()
+    return input_value

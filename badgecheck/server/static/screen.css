@@ -1,6 +1,5 @@
 body {
 	margin: 5%;
-	text-align: center;
 	font-family: sans-serif;
 	color:rgb(80,80,80);
 	background-color: rgb(255,255,255);
@@ -10,17 +9,14 @@ body {
     box-sizing: border-box;
 /*	margin-top:5% */
 }
-
-a#logo {
-	display: block;
-	position: absolute;
-	right: 5%;
-	top: 5%;
+.container {
+	max-width: 1024px;
 }
 
 h1 {
 	margin-top: 6em;
 	margin-bottom:5%;
+	text-align: center;
 }
 
 #notice {
@@ -37,15 +33,15 @@ form#submit {
 	border: 1px solid rgb(190,190,190);
 }
 
-form#results textarea {
-	font-family:monospace;
-	width:80%;
-	height:auto;
+#results textarea {
+	font-family: monospace;
+	width: 100%;
+	height: auto;
 	border: 1px solid rgb(190,190,190);
 }
 
-input[type="text"] {
-    width: 80%;
+.badgeform .badgeforminput {
+    width: 100%;
 }
 
 footer {

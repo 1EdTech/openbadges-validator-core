@@ -1,27 +1,24 @@
 import json
 from pyld import jsonld
 import re
-import validators
 
 from ..actions.input import set_input_type, store_input
 from ..actions.tasks import add_task
 from ..actions.validation_report import set_validation_subject
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
-from ..utils import CachableDocumentLoader, jsonld_use_cache
-from .task_types import FETCH_HTTP_NODE, PROCESS_JWS_INPUT
+from ..tasks.utils import is_url
+from ..utils import CachableDocumentLoader, jsonld_use_cache,make_string_from_bytes
+from ..tasks.task_types import FETCH_HTTP_NODE, PROCESS_JWS_INPUT
 from .utils import task_result
 
 
 """
 Helpful utils
 """
-def input_is_url(user_input):
-    return validators.url(user_input)
-
 
 def input_is_json(user_input):
     try:
-        value = json.loads(user_input)
+        value = json.loads(make_string_from_bytes(user_input))
         return True
     except ValueError:
         return False
@@ -29,7 +26,7 @@ def input_is_json(user_input):
 
 def input_is_jws(user_input):
     jws_regex = re.compile(r'^[A-z0-9\-=]+.[A-z0-9\-=]+.[A-z0-9\-_=]+$')
-    return bool(jws_regex.match(user_input))
+    return bool(jws_regex.match(make_string_from_bytes(user_input)))
 
 
 def find_id_in_jsonld(json_string, jsonld_options):
@@ -50,14 +47,14 @@ def detect_input_type(state, task_meta=None, **options):
     detected_type = None
     new_actions = []
 
-    if input_is_url(input_value):
+    if is_url(input_value):
         detected_type = 'url'
         new_actions.append(set_input_type(detected_type))
         new_actions.append(add_task(FETCH_HTTP_NODE, url=input_value))
         new_actions.append(set_validation_subject(input_value))
     elif input_is_json(input_value):
         id_url = find_id_in_jsonld(input_value, options.get('jsonld_options', jsonld_use_cache))
-        if input_is_url(id_url):
+        if is_url(id_url):
             detected_type = 'url'
             new_actions.append(store_input(id_url))
         else:

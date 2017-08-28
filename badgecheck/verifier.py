@@ -1,10 +1,12 @@
 import json
 from openbadges_bakery import unbake
 from pydux import create_store
+import traceback
 
-from .actions.input import store_input
+from .actions.input import set_input_type, store_input
 from .actions.tasks import add_task, resolve_task, trigger_condition
 from .exceptions import SkipTask, TaskPrerequisitesError
+from .logger import logger
 from .openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from .reducers import main_reducer
 from .state import (filter_active_tasks, filter_messages_for_report, format_message,
@@ -13,6 +15,7 @@ from . import tasks
 from .tasks.task_types import JSONLD_COMPACT_DATA
 from .tasks.validation import OBClasses
 from .utils import list_of, CachableDocumentLoader, jsonld_use_cache
+
 
 
 DEFAULT_OPTIONS = {
@@ -62,6 +65,7 @@ def call_task(task_func, task_meta, store, options=DEFAULT_OPTIONS):
         message = "Task could not run due to unmet prerequisites."
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
     except Exception as e:
+        logger.error(traceback.format_exc())
         message = "{} {}".format(e.__class__, e.message)
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
     else:
@@ -80,17 +84,24 @@ def call_task(task_func, task_meta, store, options=DEFAULT_OPTIONS):
 def verification_store(badge_input, recipient_profile=None, store=None, options=DEFAULT_OPTIONS):
     if store is None:
         store = create_store(main_reducer, INITIAL_STATE)
-
-    if hasattr(badge_input, 'read') and hasattr(badge_input, 'seek'):
-        badge_input.seek(0)
-        badge_data = unbake(badge_input)
-        if not badge_data:
-            raise ValueError("Files as badge input must be baked images.")
+    try:
+        if hasattr(badge_input, 'read') and hasattr(badge_input, 'seek'):
+            badge_input.seek(0)
+            badge_data = unbake(badge_input)
+            if not badge_data:
+                raise ValueError("Could not find Open Badges metadata in file.")
+        else:
+            badge_data = badge_input
+    except ValueError as e:
+        # Could not obtain badge data from input. Set the result as a failed DETECT_INPUT_TYPE task.
+        store.dispatch(store_input(badge_input.name))
+        store.dispatch(add_task(tasks.DETECT_INPUT_TYPE))
+        store.dispatch(set_input_type('file'))
+        task = store.get_state()['tasks'][0]
+        store.dispatch(resolve_task(task.get('task_id'), success=False, result=e.message))
     else:
-        badge_data = badge_input
-
-    store.dispatch(store_input(badge_data))
-    store.dispatch(add_task(tasks.DETECT_INPUT_TYPE))
+        store.dispatch(store_input(badge_data))
+        store.dispatch(add_task(tasks.DETECT_INPUT_TYPE))
 
     if recipient_profile:
         profile_id = recipient_profile.get('id')

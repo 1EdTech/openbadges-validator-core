@@ -35,10 +35,15 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Education',
         'Topic :: Utilities',
         'Intended Audience :: Developers'
+    ],
+    dependency_links=[
+        'git+https://github.com/kasbah/pydux.git@6bfddaf6d961a3ed395476dd7c1b50edb5473b32#egg=pydux-0.2.1'
     ],
     install_requires=[
         'aniso8601>=1.2.0',

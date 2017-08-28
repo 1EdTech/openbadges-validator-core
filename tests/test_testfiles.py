@@ -4,7 +4,7 @@ import unittest
 try:
     from .testfiles.test_components import test_components
 except (ImportError, SystemError):
-    from testfiles.test_components import test_components
+    from .testfiles.test_components import test_components
 
 
 class TestLoadComponents(unittest.TestCase):

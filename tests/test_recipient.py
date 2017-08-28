@@ -15,8 +15,10 @@ from badgecheck.verifier import verification_store
 
 try:
     from .testfiles.test_components import test_components
+    from tests.utils import set_up_image_mock
 except (ImportError, SystemError):
-    from testfiles.test_components import test_components
+    from .testfiles.test_components import test_components
+    from tests.utils import set_up_image_mock
 
 
 class RecipientProfileVerificationTests(unittest.TestCase):
@@ -38,12 +40,13 @@ class RecipientProfileVerificationTests(unittest.TestCase):
         url = 'https://example.org/beths-robotics-badge.json'
         assertion = json.loads(test_components['2_0_basic_assertion'])
         assertion['recipient']['identity'] = 'sha256$' + hashlib.sha256(
-            recipient_profile['email'] + assertion['recipient']['salt']).hexdigest()
+            recipient_profile['email'].encode('utf8') + assertion['recipient']['salt'].encode('utf8')).hexdigest()
 
         responses.add(
             responses.GET, url, body=json.dumps(assertion), status=200,
             content_type='application/ld+json'
         )
+        set_up_image_mock('https://example.org/beths-robot-badge.png')
         responses.add(
             responses.GET, 'https://w3id.org/openbadges/v2',
             body=test_components['openbadges_context'], status=200,
@@ -54,6 +57,7 @@ class RecipientProfileVerificationTests(unittest.TestCase):
             body=test_components['2_0_basic_badgeclass'], status=200,
             content_type='application/ld+json'
         )
+        set_up_image_mock('https://example.org/robotics-badge.png')
         responses.add(
             responses.GET, 'https://example.org/organization.json',
             body=test_components['2_0_basic_issuer'], status=200,
@@ -88,7 +92,7 @@ class RecipientProfileVerificationTests(unittest.TestCase):
             'type': 'email',
             'hashed': True,
             'salt': 'Maldon',
-            'identity': 'sha256$' + hashlib.sha256(recipient_profile['email'] + 'Maldon').hexdigest()
+            'identity': 'sha256$' + hashlib.sha256(recipient_profile['email'].encode('utf8') + 'Maldon'.encode('utf8')).hexdigest()
         }
 
         state = {'graph': [recipient_profile, assertion, identity_object]}
@@ -111,7 +115,7 @@ class RecipientProfileVerificationTests(unittest.TestCase):
             'hashed': True,
             'salt': 'HimalayanPink',
             'identity': 'sha256$' + hashlib.sha256(
-                recipient_profile['schema:duns'] + 'HimalayanPink').hexdigest()
+                recipient_profile['schema:duns'].encode('utf8') + 'HimalayanPink'.encode('utf8')).hexdigest()
         }
 
         state = {'graph': [recipient_profile, assertion, identity_object]}

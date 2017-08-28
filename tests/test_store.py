@@ -11,7 +11,7 @@ from badgecheck.state import (filter_active_tasks, INITIAL_STATE, get_node_by_id
 try:
     from .testfiles.test_components import test_components
 except (ImportError, SystemError):
-    from testfiles.test_components import test_components
+    from .testfiles.test_components import test_components
 
 
 class InitializationTests(unittest.TestCase):

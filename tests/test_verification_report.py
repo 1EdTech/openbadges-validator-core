@@ -9,17 +9,17 @@ from badgecheck.verifier import generate_report, verification_store
 
 try:
     from .testfiles.test_components import test_components
-    from .testutils import setup_context_mock
+    from tests.utils import set_up_context_mock
 except (ImportError, SystemError):
-    from testfiles.test_components import test_components
-    from testutils import setup_context_mock
+    from .testfiles.test_components import test_components
+    from .testutils import set_up_context_mock
 
 
 class VerificationReportTests(unittest.TestCase):
     @staticmethod
     def set_response_mocks():
         # Make sure to add @responses.activate decorator in calling method
-        setup_context_mock()
+        set_up_context_mock()
         responses.add(
             responses.GET, 'https://example.org/beths-robotics-badge.json',
             body=test_components['2_0_basic_assertion'], status=200,

@@ -22,4 +22,5 @@ class ValidationError(Exception):
     """
     This exception is used in tasks to indicate that a requirement has not been met.
     """
-    pass
+    def __init__(self, message=None):
+        self.message = message

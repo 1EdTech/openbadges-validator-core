@@ -2,6 +2,8 @@ import re
 import rfc3986
 import six
 
+URN_REGEX = r'^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+
 
 def task_result(success=True, message='', actions=None):
     """
@@ -18,11 +20,11 @@ def task_result(success=True, message='', actions=None):
 
 
 def is_empty_list(value):
-    return isinstance(value, (tuple, list,)) and len(value) == 0
+    return isinstance(value, (tuple, list)) and len(value) == 0
 
 
 def is_null_list(value):
-    return isinstance(value, (tuple, list,)) and all(val is None for val in value)
+    return isinstance(value, (tuple, list)) and all(val is None for val in value)
 
 
 def abbreviate_value(value):
@@ -42,11 +44,10 @@ def abbreviate_node_id(node_id=None, node_path=None):
 
 
 def is_iri(value):
-    urn_regex = r'^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
     return bool(
         is_url(value) or
         re.match(r'_:b\d+$', value) or
-        re.match(urn_regex, value, re.IGNORECASE)
+        re.match(URN_REGEX, value, re.IGNORECASE)
     )
 
 
@@ -66,6 +67,6 @@ def filter_tasks(state, **kwargs):
     tasks = state.get('tasks', [])
 
     def _matches(val):
-        return all([val.get(kwarg) == kwargs[kwarg] for kwarg in kwargs.keys()])
+        return all([val.get(kwarg) == kwargs[kwarg] for kwarg in list(kwargs.keys())])
 
-    return filter(_matches, tasks)
+    return list(filter(_matches, tasks))

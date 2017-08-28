@@ -1,6 +1,6 @@
 import six
 
-from .utils import list_of
+from .utils import list_of, MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_INFO, MESSAGE_LEVEL_WARNING
 
 INITIAL_STATE = {
     'input': {},
@@ -8,11 +8,6 @@ INITIAL_STATE = {
     'tasks': [],
     'validationReport': {}
 }
-
-MESSAGE_LEVEL_ERROR = 'ERROR'
-MESSAGE_LEVEL_WARNING = 'WARNING'
-MESSAGE_LEVEL_INFO = 'INFO'
-MESSAGE_LEVELS = (MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING, MESSAGE_LEVEL_INFO,)
 
 
 # Tasks
@@ -26,7 +21,7 @@ def filter_active_tasks(state):
 
         prerequisites = list_of(task.get('prerequisites', []))
         for prereq in prerequisites:
-            prereq_tasks = [pt for pt in tasks if pt.get('name') == prereq]
+            prereq_tasks = [pt for pt in tasks if pt.get('name') == prereq or pt.get('task_key') == prereq]
             if not prereq_tasks or not all(task.get('complete') for task in prereq_tasks):
                 return False
 
@@ -43,7 +38,7 @@ def filter_failed_tasks(state):
 def filter_messages_for_report(state):
     messages = []
     for t in state.get('tasks'):
-        if not t.get('success') or t.get('messageLevel') in [MESSAGE_LEVEL_INFO, MESSAGE_LEVEL_WARNING]:
+        if not t.get('success') or t.get('messageLevel') == MESSAGE_LEVEL_INFO:
             messages.append(t)
     return messages
 
@@ -90,10 +85,10 @@ def get_node_by_path(state, node_path):
     if len(node_path) > 1:
         paths = iter(node_path)
         try:
-            node_id = paths.next()
+            node_id = next(paths)
             node = get_node_by_id(state, node_id)
             while True:
-                prop_name = paths.next()
+                prop_name = next(paths)
                 if not isinstance(prop_name, six.string_types):
                     raise TypeError(
                         'Node property {} should be a string type to use in a path'.format(prop_name))
@@ -101,7 +96,7 @@ def get_node_by_path(state, node_path):
                 val = node[prop_name]
 
                 if isinstance(val, list):
-                    i = paths.next()
+                    i = next(paths)
                     val = val[i]
 
                 if isinstance(val, dict):
@@ -110,9 +105,17 @@ def get_node_by_path(state, node_path):
 
                 return get_node_by_path(state, [val] + list(paths))  # Recurse with remaining path
         except StopIteration:
-            if isinstance(val, dict):
+            if isinstance(val, (dict, list)):
                 return val
             raise TypeError("Node path {} not properly formed.")
 
     else:
         return get_node_by_id(state, node_path[0])
+
+
+def node_match_exists(state, node_id):
+    try:
+        get_node_by_id(state, node_id)
+    except IndexError:
+        return False
+    return True

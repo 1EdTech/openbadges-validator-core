@@ -47,7 +47,10 @@ def graph_reducer(state=None, action=None):
         new_nodes = [new_node]
         state.extend(new_nodes)
     elif action.get('type') == UPDATE_NODE:
-        raise NotImplementedError("TODO: Implement updating nodes.")
+        existing_node = get_node_by_id({'graph': state}, action.get('node_id'))
+        updated_node = action.get('data')
+        state = [node for node in state if node is not existing_node]
+        state.append(updated_node)
     elif action.get('type') == PATCH_NODE:
         try:
             existing_node = get_node_by_id({'graph': state}, action.get('node_id'))
