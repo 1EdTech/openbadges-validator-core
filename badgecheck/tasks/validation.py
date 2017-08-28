@@ -279,11 +279,11 @@ def validate_property(state, task_meta, **options):
                         add_task(VALIDATE_EXPECTED_NODE_CLASS, node_path=value_to_test_path,
                                  expected_class=task_meta.get('expected_class')))
                     continue
-                elif task_meta.get('allow_data_uri', False) and not PrimitiveValueValidator(ValueTypes.DATA_URI_OR_URL)(val):
+                elif task_meta.get('allow_data_uri') and not PrimitiveValueValidator(ValueTypes.DATA_URI_OR_URL)(val):
                     raise ValidationError("ID-type property {} had value `{}` that isn't URI or DATA URI in {}.".format(
                         prop_name, abv(val), abv_node(node_id, node_path))
                     )
-                elif not PrimitiveValueValidator(ValueTypes.IRI)(val):
+                elif not task_meta.get('allow_data_uri', False) and not PrimitiveValueValidator(ValueTypes.IRI)(val):
                     raise ValidationError(
                         "ID-type property {} had value `{}` not embedded node or in IRI format in {}.".format(
                             prop_name, abv(val), abv_node(node_id, node_path))
@@ -293,6 +293,8 @@ def validate_property(state, task_meta, **options):
                 except IndexError:
                     if not task_meta.get('fetch', False):
                         if task_meta.get('allow_remote_url') and PrimitiveValueValidator(ValueTypes.URL)(val):
+                            continue
+                        if task_meta.get('allow_data_uri') and PrimitiveValueValidator(ValueTypes.DATA_URI)(val):
                             continue
                         raise ValidationError(
                             'Node {} has {} property value `{}` that appears not to be in URI format'.format(
