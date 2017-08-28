@@ -59,7 +59,7 @@ class VerificationReportTests(unittest.TestCase):
 
     @responses.activate
     def test_subject_set_from_badge_image(self):
-        with open(os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart.png'), 'r') as f:
+        with open(os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart.png'), 'rb') as f:
             image = bake(f, test_components['2_0_basic_assertion'])
             self.set_response_mocks()
             store = verification_store(image)
