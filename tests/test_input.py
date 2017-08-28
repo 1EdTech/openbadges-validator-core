@@ -5,15 +5,20 @@ import jws
 from pydux import create_store
 import responses
 import unittest
+import sys
 
 from badgecheck.actions.input import set_input_type, store_input
 from badgecheck.reducers import main_reducer
 from badgecheck.state import INITIAL_STATE
 from badgecheck.tasks.input import detect_input_type
+from badgecheck.utils import make_string_from_bytes
 
-from testfiles.test_components import test_components
-
-from tests.utils import set_up_context_mock
+try:
+    from .testfiles.test_components import test_components
+    from tests.utils import set_up_context_mock
+except (ImportError, SystemError):
+    from .testfiles.test_components import test_components
+    from .testutils import set_up_context_mock
 
 
 class InputReducerTests(unittest.TestCase):
@@ -73,7 +78,7 @@ class InputTaskTests(unittest.TestCase):
         the input as json
         """
         assertion_dict = json.loads(test_components['2_0_basic_assertion'])
-        assertion_dict['id'] = assertion_dict['badge'] = u'urn:org:example:badges:robotics:beth'
+        assertion_dict['id'] = assertion_dict['badge'] = 'urn:org:example:badges:robotics:beth'
         json_input = json.dumps(assertion_dict)
         state = INITIAL_STATE.copy()
         state['input']['value'] = json_input
@@ -117,7 +122,17 @@ class InputJwsTests(unittest.TestCase):
         header = {'alg': 'RS256'}
         payload = self.assertion_data
         signature = jws.sign(header, payload, self.private_key)
-        self.signed_assertion = '.'.join((b64encode(json.dumps(header)), b64encode(json.dumps(payload)), signature))
+
+        encoded_separator = '.'
+        if sys.version[:3] < '3':
+            encoded_header = b64encode(json.dumps(header))
+            encoded_payload = b64encode(json.dumps(payload))
+        else:
+            encoded_separator = '.'.encode()
+            encoded_header = b64encode(json.dumps(header).encode())
+            encoded_payload = b64encode(json.dumps(payload).encode())
+
+        self.signed_assertion = encoded_separator.join((encoded_header, encoded_payload, signature))
 
         self.state = {
             'graph': [self.signing_key_doc, self.issuer_data, self.badgeclass,

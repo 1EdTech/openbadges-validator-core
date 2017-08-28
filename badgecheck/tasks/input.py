@@ -7,9 +7,9 @@ from ..actions.tasks import add_task
 from ..actions.validation_report import set_validation_subject
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..tasks.utils import is_url
-from ..utils import CachableDocumentLoader, jsonld_use_cache
-from task_types import FETCH_HTTP_NODE, PROCESS_JWS_INPUT
-from utils import task_result
+from ..utils import CachableDocumentLoader, jsonld_use_cache,make_string_from_bytes
+from ..tasks.task_types import FETCH_HTTP_NODE, PROCESS_JWS_INPUT
+from .utils import task_result
 
 
 """
@@ -18,7 +18,7 @@ Helpful utils
 
 def input_is_json(user_input):
     try:
-        value = json.loads(user_input)
+        value = json.loads(make_string_from_bytes(user_input))
         return True
     except ValueError:
         return False
@@ -26,7 +26,7 @@ def input_is_json(user_input):
 
 def input_is_jws(user_input):
     jws_regex = re.compile(r'^[A-z0-9\-=]+.[A-z0-9\-=]+.[A-z0-9\-_=]+$')
-    return bool(jws_regex.match(user_input))
+    return bool(jws_regex.match(make_string_from_bytes(user_input)))
 
 
 def find_id_in_jsonld(json_string, jsonld_options):

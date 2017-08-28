@@ -1,14 +1,15 @@
-from base64 import b64decode
+from base64 import b64decode,b64encode
 import json
 import jws
 import six
+import sys
 
 from ..actions.graph import patch_node
 from ..actions.tasks import add_task
 from ..actions.validation_report import set_validation_subject
 from ..exceptions import TaskPrerequisitesError
 from ..state import get_node_by_id, get_node_by_path
-from ..utils import list_of
+from ..utils import list_of, make_string_from_bytes
 
 from .utils import task_result
 from .task_types import (ISSUER_PROPERTY_DEPENDENCIES, INTAKE_JSON, SIGNING_KEY_FETCHED, VERIFY_JWS,
@@ -23,10 +24,10 @@ def process_jws_input(state, task_meta, **options):
     except KeyError:
         raise TaskPrerequisitesError()
 
-    header, payload, signature = data.split('.')
+    header, payload, signature = make_string_from_bytes(data).split('.')
 
     node_json = b64decode(payload)
-    node_data = json.loads(node_json)
+    node_data = json.loads(make_string_from_bytes(node_json))
     node_id = task_meta.get('node_id', node_data.get('id'))
 
     actions = [
@@ -55,20 +56,37 @@ def verify_jws_signature(state, task_meta, **options):
             prerequisites=[ISSUER_PROPERTY_DEPENDENCIES]
         ),
     ]
-    header, payload, signature = data.split('.')
+    separator = '.'
+    if sys.version[:3] > '3':
+        separator = separator.encode('utf8')
+    header, payload, signature = data.split(separator)
+    if sys.version[:3] > '3':
+        signature = make_string_from_bytes(signature)
+    print("VERIFY JWS SIGNATURE : public_pem:")
+    print(public_pem)
+    print("VERIFY JWS SIGNATURE : signature:")
+    print(signature)
 
     try:
         header_data = b64decode(header)
+        if not isinstance(header_data,str):
+            header_data = header_data.decode('utf-8')
+        print("VERIFY JWS SIGNATURE : header_data:")
+        print(header_data)
         payload_data = b64decode(payload)
+        if not isinstance(payload_data,str):
+            payload_data = payload_data.decode('utf-8')
+        print("VERIFY JWS SIGNATURE : payload_data:")
+        print(payload_data)
     except TypeError:
         return task_result(
             False, "Signature for node {} failed to unpack into a predictable format".format(node_id))
 
     try:
         jws.verify(header_data, payload_data, signature, public_pem, is_json=True)
-    except (jws.exceptions.SignatureError, TypeError):
+    except (jws.exceptions.SignatureError, TypeError) as e:
         return task_result(
-            False, "Signature for node {} failed verification".format(node_id), actions)
+            False, "Signature for node {} failed verification".format(node_id) + " :: " + str(e), actions)
 
     return task_result(
         True, "Signature for node {} passed verification".format(node_id), actions)

@@ -12,7 +12,7 @@ from badgecheck.state import INITIAL_STATE
 from badgecheck.tasks.validation import OBClasses
 from badgecheck.verifier import generate_report, verification_store
 
-from testfiles.test_components import test_components
+from .testfiles.test_components import test_components
 
 
 class TestV1_1Detection(unittest.TestCase):

@@ -28,7 +28,7 @@ class ImageValidationTests(unittest.TestCase):
         }
         state = {'graph': [badgeclass]}
 
-        with open(os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart.png'), 'r') as f:
+        with open(os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart.png'), 'rb') as f:
             responses.add(responses.GET, badgeclass['image'], body=f.read(), content_type='image/png')
         response = session.get(badgeclass['image'])
         self.assertEqual(response.status_code, 200)

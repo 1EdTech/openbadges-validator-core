@@ -11,9 +11,9 @@ from .openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from .reducers import main_reducer
 from .state import (filter_active_tasks, filter_messages_for_report, format_message,
                     INITIAL_STATE, MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING,)
-import tasks
-from tasks.task_types import JSONLD_COMPACT_DATA
-from tasks.validation import OBClasses
+from . import tasks
+from .tasks.task_types import JSONLD_COMPACT_DATA
+from .tasks.validation import OBClasses
 from .utils import list_of, CachableDocumentLoader, jsonld_use_cache
 
 

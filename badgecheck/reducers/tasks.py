@@ -41,7 +41,7 @@ def task_reducer(state=None, action=None):
 
     if action.get('type') == ADD_TASK and not _task_to_add_exists(state, action):
         new_task = {'task_id': task_counter, 'complete': False}
-        for key in [k for k in action.keys() if k != 'type']:
+        for key in [k for k in list(action.keys()) if k != 'type']:
             new_task[key] = action[key]
         return list(state) + [new_task]
 
@@ -66,7 +66,7 @@ def task_reducer(state=None, action=None):
             return state
         else:
             update = task.copy()
-            for key in [k for k in action.keys() if k not in ('type', 'task_id',)]:
+            for key in [k for k in list(action.keys()) if k not in ('type', 'task_id',)]:
                 update[key] = action[key]
             return _new_state_with_updated_item(state, action['task_id'], update)
 

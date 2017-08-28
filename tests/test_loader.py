@@ -6,8 +6,12 @@ import unittest
 
 from badgecheck.utils import CachableDocumentLoader
 
-from testfiles.test_components import test_components
-from utils import set_up_context_mock
+try:
+    from .testfiles.test_components import test_components
+    from tests.utils import set_up_context_mock
+except (ImportError, SystemError):
+    from .testfiles.test_components import test_components
+    from .testutils import set_up_context_mock
 
 
 class DocumentLoaderTests(unittest.TestCase):
@@ -54,7 +58,7 @@ class DocumentLoaderTests(unittest.TestCase):
             assertion_data, context_url, options={'documentLoader': loadurl})
         # in order to have 'HostedBadge' as the verification type, the assertion_data
         # needs to have gone through compaction against the openbadges context document
-        self.assertEqual(first_compacted['verification']['type'], u'HostedBadge')
+        self.assertEqual(first_compacted['verification']['type'], 'HostedBadge')
         # second compaction should have built from the cache
         self.assertEqual(first_compacted['verification']['type'],
                          second_compacted['verification']['type'])
@@ -94,7 +98,6 @@ class DocumentLoaderTests(unittest.TestCase):
         second_compacted = jsonld.compact(
             assertion_data, context_url, options={'documentLoader': loadurl})
 
-        self.assertEqual(first_compacted['verification']['type'], u'HostedBadge')
         # second compaction should have built from the cache
         self.assertEqual(first_compacted['verification']['type'],
                          second_compacted['verification']['type'])

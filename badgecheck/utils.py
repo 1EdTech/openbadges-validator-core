@@ -1,6 +1,13 @@
+from future.standard_library import install_aliases
+install_aliases()
+
 import hashlib
 import string
-from urlparse import urlparse
+import sys
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 
 import requests
 import requests_cache
@@ -69,8 +76,18 @@ def list_of(value):
 
 
 def identity_hash(identfier, salt='', alg='sha256'):
+
+    if not sys.version[:3] < '3':
+        identfier = identfier.encode()
+        salt = salt.encode()
     if alg == 'sha256':
         return alg + '$' + hashlib.sha256(identfier + salt).hexdigest()
     elif alg == 'md5':
         return alg + '$' + hashlib.md5(identfier + salt).hexdigest()
     raise ValueError("Alg {} not supported.".format(alg))
+
+
+def make_string_from_bytes(input_value):
+    if isinstance(input_value,bytes):
+        return input_value.decode()
+    return input_value

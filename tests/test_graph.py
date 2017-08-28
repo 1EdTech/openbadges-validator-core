@@ -11,7 +11,10 @@ from badgecheck.tasks.graph import fetch_http_node, jsonld_compact_data
 from badgecheck.tasks.task_types import FETCH_HTTP_NODE, INTAKE_JSON, JSONLD_COMPACT_DATA
 from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
 
-from testfiles.test_components import test_components
+try:
+    from .testfiles.test_components import test_components
+except (ImportError, SystemError):
+    from .testfiles.test_components import test_components
 
 
 class HttpFetchingTests(unittest.TestCase):

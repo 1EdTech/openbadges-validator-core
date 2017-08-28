@@ -9,8 +9,12 @@ from badgecheck.reducers import main_reducer
 from badgecheck.state import INITIAL_STATE
 from badgecheck.verifier import generate_report, verification_store
 
-from testfiles.test_components import test_components
-from tests.utils import set_up_context_mock
+try:
+    from .testfiles.test_components import test_components
+    from tests.utils import set_up_context_mock
+except (ImportError, SystemError):
+    from .testfiles.test_components import test_components
+    from .testutils import set_up_context_mock
 
 
 class VerificationReportTests(unittest.TestCase):

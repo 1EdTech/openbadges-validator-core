@@ -13,7 +13,10 @@ from badgecheck.state import INITIAL_STATE
 
 from openbadges_bakery import bake
 
-from testfiles.test_components import test_components
+try:
+    from .testfiles.test_components import test_components
+except (ImportError, SystemError):
+    from .testfiles.test_components import test_components
 
 from tests.utils import set_up_image_mock
 
@@ -126,10 +129,10 @@ class ResultReportTests(unittest.TestCase):
         store.dispatch(store_original_resource('http://example.org/1', '{"data": "test data"}'))
 
         report = generate_report(store)
-        self.assertNotIn('original_json', report['input'].keys())
+        self.assertNotIn('original_json', list(report['input'].keys()))
 
         report = generate_report(store, {'include_original_json': True})
-        self.assertIn('original_json', report['input'].keys())
+        self.assertIn('original_json', list(report['input'].keys()))
 
     @responses.activate
     def test_verify_with_original_json(self):
@@ -155,6 +158,6 @@ class ResultReportTests(unittest.TestCase):
         )
 
         result = verify(url, include_original_json=True)
-        self.assertIn('original_json', result['input'].keys())
+        self.assertIn('original_json', list(result['input'].keys()))
         self.assertEqual(len(result['input']['original_json']), 3)
-        self.assertIn(url, result['input']['original_json'].keys())
+        self.assertIn(url, list(result['input']['original_json'].keys()))

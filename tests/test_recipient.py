@@ -13,8 +13,12 @@ from badgecheck.tasks.validation import OBClasses
 from badgecheck.tasks.verification import verify_recipient_against_trusted_profile
 from badgecheck.verifier import verification_store
 
-from testfiles.test_components import test_components
-from tests.utils import set_up_image_mock
+try:
+    from .testfiles.test_components import test_components
+    from tests.utils import set_up_image_mock
+except (ImportError, SystemError):
+    from .testfiles.test_components import test_components
+    from tests.utils import set_up_image_mock
 
 
 class RecipientProfileVerificationTests(unittest.TestCase):
@@ -36,7 +40,7 @@ class RecipientProfileVerificationTests(unittest.TestCase):
         url = 'https://example.org/beths-robotics-badge.json'
         assertion = json.loads(test_components['2_0_basic_assertion'])
         assertion['recipient']['identity'] = 'sha256$' + hashlib.sha256(
-            recipient_profile['email'] + assertion['recipient']['salt']).hexdigest()
+            recipient_profile['email'].encode('utf8') + assertion['recipient']['salt'].encode('utf8')).hexdigest()
 
         responses.add(
             responses.GET, url, body=json.dumps(assertion), status=200,
@@ -88,7 +92,7 @@ class RecipientProfileVerificationTests(unittest.TestCase):
             'type': 'email',
             'hashed': True,
             'salt': 'Maldon',
-            'identity': 'sha256$' + hashlib.sha256(recipient_profile['email'] + 'Maldon').hexdigest()
+            'identity': 'sha256$' + hashlib.sha256(recipient_profile['email'].encode('utf8') + 'Maldon'.encode('utf8')).hexdigest()
         }
 
         state = {'graph': [recipient_profile, assertion, identity_object]}
@@ -111,7 +115,7 @@ class RecipientProfileVerificationTests(unittest.TestCase):
             'hashed': True,
             'salt': 'HimalayanPink',
             'identity': 'sha256$' + hashlib.sha256(
-                recipient_profile['schema:duns'] + 'HimalayanPink').hexdigest()
+                recipient_profile['schema:duns'].encode('utf8') + 'HimalayanPink'.encode('utf8')).hexdigest()
         }
 
         state = {'graph': [recipient_profile, assertion, identity_object]}
