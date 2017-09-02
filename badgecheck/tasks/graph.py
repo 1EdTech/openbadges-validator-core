@@ -202,7 +202,7 @@ def flatten_refetch_embedded_resource(state, task_meta, **options):
                         embedded_node_id, abv_node(node_path=[node_id, prop_name])
                     )))
             actions.append(add_node(embedded_node_id, data=value))
-            actions.append(actions.append(patch_node(node_id, {prop_name: embedded_node_id})))
+            actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
 
     else:
         actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
