@@ -78,7 +78,7 @@ class PropertyValidationTests(unittest.TestCase):
         good_urls = ('http://www.example.com:8080/', 'http://www.example.com:8080/foo/bar',
                      'http://www.example.com/foo%20bar', 'http://www.example.com/foo/bar?a=b&c=d',
                      'http://www.example.com/foO/BaR', 'HTTPS://www.EXAMPLE.cOm/',
-                     'http://142.42.1.1:8080/', 'http://142.42.1.1/',
+                     'http://142.42.1.1:8080/', 'http://142.42.1.1/', 'http://localhost:3000/123',
                      'http://foo.com/blah_(wikipedia)#cite-1', 'http://a.b-c.de',
                      'http://userid:password@example.com/', "http://-.~:%40:80%2f:password@example.com",
                      'http://code.google.com/events/#&product=browser')
@@ -110,6 +110,36 @@ class PropertyValidationTests(unittest.TestCase):
             self.assertTrue(validator(url), "`{}` should pass IRI validation but failed.".format(url))
         for url in bad_iris:
             self.assertFalse(validator(url), "`{}` should fail IRI validation but passed.".format(url))
+
+
+class IriPropertyValidationTests(unittest.TestCase):
+    def test_validate_compacted_iri_value(self):
+        first_node = {
+            'type': 'Issuer',
+            'id': 'https://example.org/issuer1',
+            'verification': {
+                'verificationProperty': 'id'
+            }
+        }
+        state = {'graph': [first_node]}
+
+        validator = PrimitiveValueValidator(ValueTypes.COMPACT_IRI)
+        self.assertTrue(validator('id'))
+        self.assertTrue(validator('email'))
+        self.assertTrue(validator('telephone'))
+        self.assertTrue(validator('url'))
+        self.assertFalse(validator('sloths'))
+
+        task = add_task(
+            VALIDATE_PROPERTY,
+            node_path=[first_node['id'], 'verification'],
+            prop_name='verificationProperty',
+            prop_type=ValueTypes.COMPACT_IRI,
+            required=False
+        )
+
+        result, message, actions = validate_property(state, task)
+        self.assertTrue(result)
 
 
 class PropertyValidationTaskTests(unittest.TestCase):

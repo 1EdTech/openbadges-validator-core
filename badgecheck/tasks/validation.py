@@ -65,6 +65,7 @@ class OBClasses(object):
 
 class ValueTypes(object):
     BOOLEAN = 'BOOLEAN'
+    COMPACT_IRI = 'COMPACT_IRI'
     DATA_URI = 'DATA_URI'
     DATA_URI_OR_URL = 'DATA_URI_OR_URL'
     DATETIME = 'DATETIME'
@@ -98,6 +99,7 @@ class PrimitiveValueValidator(object):
             ValueTypes.EMAIL: self._validate_email,
             ValueTypes.IDENTITY_HASH: self._validate_identity_hash,
             ValueTypes.IRI: self._validate_iri,
+            ValueTypes.COMPACT_IRI: self._validate_compact_iri,
             ValueTypes.MARKDOWN_TEXT: self._validate_markdown_text,
             ValueTypes.RDF_TYPE: self._validate_rdf_type,
             ValueTypes.TELEPHONE: self._validate_tel,
@@ -113,6 +115,19 @@ class PrimitiveValueValidator(object):
     @staticmethod
     def _validate_boolean(value):
         return isinstance(value, bool)
+
+    @classmethod
+    def _validate_compact_iri(cls, value):
+        if value == 'id' or cls._validate_iri(value):
+            return True
+        try:
+            test_data = {'@context': OPENBADGES_CONTEXT_V2_DICT, value: 'TEST'}
+            expanded = jsonld.expand(test_data)
+            if len(list(expanded[0])) == 1:
+                return True
+        except (jsonld.JsonLdError, IndexError):
+            pass
+        return False
 
     @staticmethod
     def _validate_data_uri(value):
@@ -511,7 +526,7 @@ class ClassValidators(OBClasses):
             self.validators = (
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False, 'many': True,
                     'default': 'VerificationObject'},
-                {'prop_name': 'verificationProperty', 'prop_type': ValueTypes.IRI, 'required': False},
+                {'prop_name': 'verificationProperty', 'prop_type': ValueTypes.COMPACT_IRI, 'required': False},
                 {'prop_name': 'startsWith', 'prop_type': ValueTypes.URL, 'required': False},
                 {'prop_name': 'allowedOrigins', 'prop_type': ValueTypes.TEXT, 'required': False,
                  'many': True}
