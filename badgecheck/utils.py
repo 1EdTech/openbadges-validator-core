@@ -2,6 +2,7 @@ from future.standard_library import install_aliases
 install_aliases()
 
 import hashlib
+import json
 import string
 import sys
 try:
@@ -23,6 +24,7 @@ MESSAGE_LEVELS = (MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING, MESSAGE_LEVEL_INFO
 class CachableDocumentLoader(object):
     def __init__(self, use_cache=False, backend='memory', expire_after=300, session=None):
         self.use_cache = use_cache
+        self.contexts = set()
 
         if session is not None:
             self.session = session
@@ -53,6 +55,15 @@ class CachableDocumentLoader(object):
                 doc['from_cache'] = response.from_cache
                 self.session.remove_expired_responses()
 
+           # Save URL for Potential Extension contexts.
+            try:
+                data = json.loads(response.text)
+                context = data['@context']
+                if isinstance(context, dict):  # TODO Improve test to cover arrays that contain dicts.
+                    self.contexts.update([url])
+            except Exception:
+                pass
+
             return doc
 
         except JsonLdError as e:
@@ -70,7 +81,9 @@ jsonld_no_cache = {'documentLoader': CachableDocumentLoader(use_cache=False)}
 
 
 def list_of(value):
-    if isinstance(value, list):
+    if value is None:
+        return []
+    elif isinstance(value, list):
         return value
     return [value]
 

@@ -105,8 +105,10 @@ def intake_json(state, task_meta, **options):
     return task_result(True, "Processed node {}".format(node_id), actions)
 
 
-def _get_extension_actions(current_node, entry_path):
+def _get_extension_actions(current_node, entry_path, new_contexts=None):
     new_actions = []
+    if new_contexts is None:
+        new_contexts = set()
 
     if not isinstance(current_node, dict):
         return new_actions
@@ -117,16 +119,18 @@ def _get_extension_actions(current_node, entry_path):
             new_actions += [add_task(
                 VALIDATE_EXTENSION_NODE,
                 node_path=entry_path,
-                node_json=json.dumps(current_node)
+                node_json=json.dumps(current_node),
+                context_urls=list(new_contexts),
+                types_to_test=[t for t in types if t != 'Extension']
             )]
 
     for key in [k for k in current_node.keys() if k not in ('id', 'type',)]:
         val = current_node.get(key)
         if isinstance(val, list):
             for i in range(len(val)):
-                new_actions += _get_extension_actions(val[i], entry_path + [key] + [i])
+                new_actions += _get_extension_actions(val[i], entry_path + [key] + [i], new_contexts)
         else:
-            new_actions += _get_extension_actions(val, entry_path + [key])
+            new_actions += _get_extension_actions(val, entry_path + [key], new_contexts)
 
     return new_actions
 
@@ -134,19 +138,25 @@ def _get_extension_actions(current_node, entry_path):
 def jsonld_compact_data(state, task_meta, **options):
     try:
         data = task_meta.get('data')
-        if data and not sys.version[:3] < '3' and not isinstance(data,str):
+        if data and not sys.version[:3] < '3' and not isinstance(data, six.string_types):
             data = data.decode()
         input_data = json.loads(data)
     except TypeError:
         return task_result(False, "Could not load data")
 
+    selected_options = options.get('jsonld_options', jsonld_use_cache)
+    selected_options['documentLoader'].contexts = set()
+
     result = jsonld.compact(input_data, OPENBADGES_CONTEXT_V2_URI,
-                            options=options.get('jsonld_options', jsonld_use_cache))
+                            options=selected_options)
+
+    new_contexts = list(selected_options['documentLoader'].contexts.copy())
+
     node_id = result.get('id', task_meta.get('node_id', get_next_blank_node_id()))
 
     actions = [
         add_node(node_id, data=result)
-    ] + _get_extension_actions(result, [node_id])
+    ] + _get_extension_actions(result, [node_id], new_contexts)
 
     if task_meta.get('expected_class'):
         actions.append(
