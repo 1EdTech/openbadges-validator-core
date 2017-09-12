@@ -15,11 +15,12 @@ class ExampleExtension(object):
     context_json = {
       "@context": {
         "obi": "https://w3id.org/openbadges#",
+        "extensions": 'https://w3id.org/openbadges/extensions#',
         "exampleProperty": "http://schema.org/text"
       },
       "obi:validation": [
         {
-          "obi:validatesType": "obi:extensions/#ExampleExtension",
+          "obi:validatesType": "extensions:ExampleExtension",
           "obi:validationSchema": "https://w3id.org/openbadges/extensions/exampleExtension/schema.json"
         }
       ]
@@ -61,7 +62,19 @@ class ApplyLink(object):
     }
 
     validation_schema = {
-        'https://openbadgespec.org/extensions/applyLinkExtension/schema.json': {}
+        'https://w3id.org/openbadges/extensions/applyLinkExtension/schema.json': {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "title": "Apply Link",
+            "description": "An extension that allows you to add a single url to a web page providing information on how earners may apply for a badge.",
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                }
+            },
+            "required": ["url"]
+        }
     }
 
 

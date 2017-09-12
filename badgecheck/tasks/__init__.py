@@ -1,6 +1,6 @@
 from .crypto import (process_jws_input, verify_jws_signature, verify_key_ownership,
                      verify_signed_assertion_not_revoked,)
-from .extensions import validate_extension_node
+from .extensions import validate_extension_node, validate_single_extension
 from .images import validate_image
 from .input import detect_input_type
 from .graph import fetch_http_node, flatten_refetch_embedded_resource, intake_json, jsonld_compact_data
@@ -33,6 +33,7 @@ FUNCTIONS = {
     UPGRADE_1_1_NODE:                          upgrade_1_1_node,
     VALIDATE_EXPECTED_NODE_CLASS:              validate_expected_node_class,
     VALIDATE_EXTENSION_NODE:                   validate_extension_node,
+    VALIDATE_EXTENSION_SINGLE:                 validate_single_extension,
     IMAGE_VALIDATION:                          validate_image,
     VALIDATE_RDF_TYPE_PROPERTY:                validate_rdf_type_property,
     VALIDATE_PROPERTY:                         validate_property,
