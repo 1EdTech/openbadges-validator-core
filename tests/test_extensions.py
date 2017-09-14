@@ -109,7 +109,7 @@ class ExtensionNodeValidationTests(unittest.TestCase):
 
         set_up_context_mock()
         loader(OPENBADGES_CONTEXT_V2_URI)
-        schema_url = ExampleExtension.validation_schema.keys()[0]
+        schema_url = list(ExampleExtension.validation_schema)[0]
         responses.add(responses.GET, ExampleExtension.context_url, status=200, json=ExampleExtension.context_json)
         loader(ExampleExtension.context_url)
         responses.add(responses.GET, schema_url, status=200, json=ExampleExtension.validation_schema[schema_url])
@@ -155,7 +155,7 @@ class ExtensionNodeValidationTests(unittest.TestCase):
         # Load up ApplyLink schema and context
         responses.add(responses.GET, ApplyLink.context_url, status=200, json=ApplyLink.context_json)
         self.options['jsonld_options']['documentLoader'](ApplyLink.context_url)
-        schema_url = ApplyLink.validation_schema.keys()[0]
+        schema_url = list(ApplyLink.validation_schema)[0]
         responses.add(responses.GET, schema_url, status=200, json=ApplyLink.validation_schema[schema_url])
         self.options['jsonld_options']['documentLoader'].session.get(schema_url)
 
@@ -204,7 +204,7 @@ class ComplexExtensionNodeValdiationTests(unittest.TestCase):
 
         set_up_context_mock()
         loader(OPENBADGES_CONTEXT_V2_URI)
-        schema_url = GeoLocation.validation_schema.keys()[0]
+        schema_url = list(GeoLocation.validation_schema)[0]
         responses.add(responses.GET, GeoLocation.context_url, status=200, json=GeoLocation.context_json)
         loader(GeoLocation.context_url)
         responses.add(responses.GET, schema_url, status=200, json=GeoLocation.validation_schema[schema_url])
