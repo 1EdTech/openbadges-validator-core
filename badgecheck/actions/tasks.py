@@ -57,11 +57,12 @@ def update_task(task_id, task_name, **kwargs):
     return task
 
 
-def report_message(msg, message_level=MESSAGE_LEVEL_INFO):
+def report_message(msg, message_level=MESSAGE_LEVEL_INFO, success=True):
     if message_level not in MESSAGE_LEVELS:
         raise TypeError("message")
     return {
         'type': REPORT_MESSAGE,
         'message': msg,
-        'messageLevel': message_level
+        'messageLevel': message_level,
+        'success': success
     }

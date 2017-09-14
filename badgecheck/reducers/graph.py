@@ -1,6 +1,6 @@
 import copy
 
-from ..actions.action_types import ADD_NODE, PATCH_NODE, UPDATE_NODE
+from ..actions.action_types import ADD_NODE, PATCH_NODE, PATCH_NODE_REFERENCE, UPDATE_NODE
 from ..state import get_node_by_id
 from ..utils import list_of
 
@@ -56,6 +56,20 @@ def graph_reducer(state=None, action=None):
             existing_node = get_node_by_id({'graph': state}, action.get('node_id'))
             updated_node = copy.copy(existing_node)
             updated_node.update(action.get('data'))
+            state = [node for node in state if node is not existing_node]
+            state.append(updated_node)
+        except IndexError:
+            pass
+    elif action.get('type') == PATCH_NODE_REFERENCE:
+        node_path = action['node_path']
+        new_node_id = action['new_id']
+        try:
+            existing_node = get_node_by_id({'graph': state}, node_path[0])
+            updated_node = copy.copy(existing_node)
+            if len(node_path) > 2:
+                raise NotImplementedError("TODO: handle complex node paths!")
+            prop = node_path[1]
+            updated_node[prop] = new_node_id
             state = [node for node in state if node is not existing_node]
             state.append(updated_node)
         except IndexError:

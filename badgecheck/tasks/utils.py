@@ -11,7 +11,7 @@ def task_result(success=True, message='', actions=None):
     :param success: bool
     :param message: str
     :param actions: list(dict)
-    :return:
+    :return: tuple
     """
     if not actions:
         actions = []

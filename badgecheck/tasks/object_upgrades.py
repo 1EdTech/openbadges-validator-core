@@ -133,7 +133,8 @@ def upgrade_1_0_node(state, task_meta, **options):
     data['@context'] = OPENBADGES_CONTEXT_V1_URI
 
     compact_action = add_task(
-        JSONLD_COMPACT_DATA, node_id=node_id, expected_class=expected_class, data=json.dumps(data))
+        JSONLD_COMPACT_DATA, node_id=node_id, expected_class=expected_class, data=json.dumps(data),
+        source_node_path=task_meta.get('source_node_path'))
     actions.append(compact_action)
     actions.append(add_task(
         UPGRADE_1_1_NODE, node_id=node_id, expected_class=expected_class,
