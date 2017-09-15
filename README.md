@@ -18,7 +18,18 @@ You may install the validator directly from [pypi](https://pypi.python.org/pypi/
 
 ### Running the validator over the command-line
 
-TBD - Issue #163
+When installed into an activated environment, a command line script will be available.
+
+`openbadges verify --data 'https://example.org/badgeassertion'`
+
+See help with `openbadges verify --help`
+
+There are two optional positional arguments, *input_file* and *output_file*. If you don't specify an output file, results will be written to stdout.
+If you wish to provide input data, such as a URL from the command and write JSON results to an output file, you may use a `-` to skip the first input_file argument.
+`openbadges verify - results.json --data 'https://example.org/badgeassertion'`
+
+You may pass a JSON string of an expected recipient profile:
+`openbadges verify input.json --recipient '{"email": "me@example.org", "url": "http://example.org"}'
 
 ### Running the Flask server
 
@@ -143,7 +154,7 @@ The response will be delivered as a JSON object, either as the complete body of 
 | graph  |Array of objects: The unordered set of linked data objects discovered during validation of the input. Each will be compacted into the Open Badges V2 Context and  tagged with at ‘type’ and an ‘id’. |
 | report | An object summarizing the validity results and the object in the graph that is the primary subject of validation (see Report object below) |
 
-&nbsp;
+Here are the properties found within the 'report':
 
 | Report Object property | type/description |
 | --- | --- |
@@ -156,7 +167,7 @@ The response will be delivered as a JSON object, either as the complete body of 
 | validationSubject | String: the id matching the ‘id’ property of the object in the response ‘graph’ that is the primary thing validated. For example, if the URL of a hosted Assertion is the input data, this will be that URL. |
 | openBadgesVersion | A string corresponding to the detected version of the validationSubject. Possible values are “0.5”, “1.0”, “1.1” and “2.0” |
 
-&nbsp;
+Here are the properties that describe each of the 'messages' in the report:
 
 | Message Object property | type/description |
 | --- | --- |
