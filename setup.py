@@ -1,6 +1,10 @@
 import os
+import pypandoc
 from setuptools import find_packages, setup
 
+
+# Build README
+pypandoc.convert_file('README.md', 'rst', outputfile='README.rst')
 with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
     README = readme.read()
 
@@ -14,21 +18,20 @@ except NameError:
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 
-
 setup(
-    name='badgecheck',
+    name='openbadges-validator',
     version=".".join(map(str, VERSION)),
     packages=find_packages(exclude=['tests', 'tests.*']),
     include_package_data=True,
     license='Apache 2',
     description='A python module that performs verification for Open Badges.',
     long_description=README,
-    url='https://github.com/openbadges/badgecheck',
-    author='Nate Otto',
-    author_email='notto@concentricsky.com',
+    url='https://github.com/IMSGlobal/openbadges-validator-core',
+    author='IMS Global',
+    author_email='openbadgesinfo@imsglobal.org',
     classifiers=[
         'Environment :: Console',
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
