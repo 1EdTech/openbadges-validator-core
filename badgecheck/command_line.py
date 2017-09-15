@@ -30,7 +30,7 @@ def verify_badge_input(input_file, output_file, data, recipient):
     """
     if recipient is not None:
         try:
-            json.loads(recipient)
+            recipient = json.loads(recipient)
         except Exception:
             raise click.Abort("Could not interpret profile input (expected JSON).")
 
