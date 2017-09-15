@@ -47,6 +47,7 @@ setup(
     ],
     install_requires=[
         'aniso8601>=1.2.0',
+        'Click == 6.7',
         'future==0.16.0',
         'jsonschema==2.6.0',
         'jws==0.1.3',
@@ -62,5 +63,9 @@ setup(
     ],
     extras_require={
         'server':  ["Flask==0.12.1", 'gunicorn==19.7.1'],
-    }
+    },
+    entry_points="""
+        [console_scripts]
+        openbadges=badgecheck.command_line:cli
+    """
 )
