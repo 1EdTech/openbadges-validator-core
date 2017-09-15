@@ -47,3 +47,7 @@ FUNCTIONS = {
 
 def task_named(key):
     return FUNCTIONS[key]
+
+
+def run_task(state, task):
+    return task_named(task['name'])(state, task)

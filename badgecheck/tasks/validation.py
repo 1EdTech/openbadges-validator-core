@@ -285,11 +285,12 @@ def validate_property(state, task_meta, **options):
         else:
             for i in range(len(values_to_test)):
                 val = values_to_test[i]
+                if isinstance(prop_value, (list, tuple,)):
+                    value_to_test_path = [node_id, prop_name, i]
+                else:
+                    value_to_test_path = [node_id, prop_name]
+
                 if isinstance(val, dict):
-                    if isinstance(prop_value, (list, tuple,)):
-                        value_to_test_path = [node_id, prop_name, i]
-                    else:
-                        value_to_test_path = [node_id, prop_name]
                     actions.append(
                         add_task(VALIDATE_EXPECTED_NODE_CLASS, node_path=value_to_test_path,
                                  expected_class=task_meta.get('expected_class')))
@@ -318,7 +319,9 @@ def validate_property(state, task_meta, **options):
                     else:
                         actions.append(
                             add_task(FETCH_HTTP_NODE, url=val,
-                                     expected_class=task_meta.get('expected_class')))
+                                     expected_class=task_meta.get('expected_class'),
+                                     source_node_path=value_to_test_path
+                                     ))
                 else:
                     actions.append(
                         add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=val,

@@ -2,14 +2,21 @@ import json
 import responses
 import unittest
 
-from badgecheck.actions.action_types import STORE_ORIGINAL_RESOURCE
-from badgecheck.actions.graph import add_node, patch_node
+from badgecheck.actions.action_types import ADD_NODE, STORE_ORIGINAL_RESOURCE
+from badgecheck.actions.graph import add_node, patch_node, patch_node_reference
 from badgecheck.actions.tasks import add_task
 from badgecheck.reducers.graph import graph_reducer
 from badgecheck.state import get_node_by_id
 from badgecheck.tasks.graph import fetch_http_node, jsonld_compact_data
-from badgecheck.tasks.task_types import FETCH_HTTP_NODE, INTAKE_JSON, JSONLD_COMPACT_DATA
+from badgecheck.tasks import run_task
+from badgecheck.tasks.task_types import (DETECT_AND_VALIDATE_NODE_CLASS, FETCH_HTTP_NODE, INTAKE_JSON,
+                                         JSONLD_COMPACT_DATA)
 from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
+from badgecheck.utils import MESSAGE_LEVEL_WARNING
+from badgecheck.verifier import verify
+
+from .utils import set_up_context_mock, set_up_image_mock
+
 
 try:
     from .testfiles.test_components import test_components
@@ -120,6 +127,16 @@ class NodeUpdateTests(unittest.TestCase):
         """
         pass
 
+    def test_update_node_reference(self):
+        first_node = {'id': '_:b0', 'badge': 'http://example.org/old'}
+        graph_state = [first_node]
+        new_id = 'http://example.org/new'
+        action = patch_node_reference([first_node['id'], 'badge'], new_id)
+
+        graph_state = graph_reducer(graph_state, action)
+        self.assertEqual(graph_state[0]['badge'], new_id)
+
+
 
 class JsonLdCompactTests(unittest.TestCase):
     def setUpContextCache(self):
@@ -176,3 +193,96 @@ class JsonLdCompactTests(unittest.TestCase):
         self.assertEqual(len(state), 1, "Node should be added to graph")
         self.assertEqual(state[0]['name'], data['thing_we_call_you_by'])
         self.assertEqual(state[0].get('id'), '_:b100', "Node should have a blank id assigned")
+
+
+class ObjectRedirectionTests(unittest.TestCase):
+    @responses.activate
+    def test_node_has_id_different_from_fetch_url(self):
+        set_up_context_mock()
+
+        first_url = 'http://example.org/url1'
+        second_url = 'http://example.org/url2'
+        node_data = {
+            '@context': OPENBADGES_CONTEXT_V2_URI,
+            'id': first_url,
+            'name': 'Some Badge'
+        }
+
+        responses.add(responses.GET, first_url, json=node_data)
+        responses.add(responses.GET, second_url, json=node_data)
+
+        task = add_task(FETCH_HTTP_NODE, url=second_url)
+        state = {'graph': []}
+
+        result, message, actions = run_task(state, task)
+        self.assertTrue(result)
+        self.assertEqual(len(actions), 2)
+        self.assertEqual(actions[1]['name'], INTAKE_JSON)
+
+        result, message, actions = run_task(state, actions[1])  # INTAKE_JSON
+        self.assertTrue(result)
+        self.assertEqual(len(actions), 2)
+        self.assertEqual(actions[1]['name'], JSONLD_COMPACT_DATA)
+
+        result, message, actions = run_task(state, actions[1])  # JSONLD_COMPACT_DATA
+        self.assertTrue(result)
+        self.assertEqual(len(actions), 2)
+        self.assertEqual(actions[1]['name'], FETCH_HTTP_NODE)
+        self.assertEqual(actions[1]['url'], first_url)
+        self.assertEqual(actions[0]['messageLevel'], MESSAGE_LEVEL_WARNING)
+
+        # Pass 2: re-run FETCH_HTTP_NODE
+        result, message, actions = run_task(state, actions[1])
+        self.assertTrue(result)
+
+        result, message, actions = run_task(state, actions[1])  # INTAKE_JSON
+        self.assertTrue(result)
+
+        result, message, actions = run_task(state, actions[1])  # JSONLD_COMPACT_DATA
+        self.assertTrue(result)
+        self.assertEqual(len(actions), 2)
+        self.assertEqual(actions[0]['type'], ADD_NODE)
+        self.assertEqual(actions[1]['name'], DETECT_AND_VALIDATE_NODE_CLASS)
+
+    @responses.activate
+    def test_verify_with_redirection(self):
+        url = 'https://example.org/beths-robotics-badge.json'
+        assertion_data = json.loads(test_components['2_0_basic_assertion'])
+        alt_badge_url = 'http://example.org/altbadgeurl'
+        assertion_data['badge'] = alt_badge_url
+        responses.add(
+            responses.GET, url, json=assertion_data, status=200,
+            content_type='application/ld+json'
+        )
+        set_up_image_mock('https://example.org/beths-robot-badge.png')
+        responses.add(
+            responses.GET, 'https://w3id.org/openbadges/v2',
+            body=test_components['openbadges_context'], status=200,
+            content_type='application/ld+json'
+        )
+        responses.add(
+            responses.GET, 'https://example.org/robotics-badge.json',
+            body=test_components['2_0_basic_badgeclass'], status=200,
+            content_type='application/ld+json'
+        )
+        responses.add(
+            responses.GET, alt_badge_url,
+            body=test_components['2_0_basic_badgeclass'], status=200,
+            content_type='application/ld+json'
+        )
+        set_up_image_mock(u'https://example.org/robotics-badge.png')
+        responses.add(
+            responses.GET, 'https://example.org/organization.json',
+            body=test_components['2_0_basic_issuer'], status=200,
+            content_type='application/ld+json'
+        )
+
+        results = verify(url)
+
+        self.assertEqual(len(results['report']['messages']), 1,
+                         "There should be a warning about the redirection.")
+        self.assertIn('Node fetched from source', results['report']['messages'][0]['result'],
+                      "Message should be the one about the graph ID change.")
+        self.assertEqual(len(results['graph']), 3)
+        assertion_node = [n for n in results['graph'] if n['id'] == assertion_data['id']][0]
+        self.assertEqual(assertion_node['badge'], 'https://example.org/robotics-badge.json')
