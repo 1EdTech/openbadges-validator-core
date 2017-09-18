@@ -4,19 +4,19 @@ import responses
 import unittest
 import sys
 
-from badgecheck.actions.graph import add_node
-from badgecheck.actions.tasks import add_task
-from badgecheck.extensions import GeoLocation, ExampleExtension, ApplyLink
-from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
-from badgecheck.reducers import main_reducer
-from badgecheck.reducers.graph import graph_reducer
-from badgecheck.state import INITIAL_STATE
-from badgecheck.tasks.extensions import validate_extension_node
-from badgecheck.tasks.graph import _get_extension_actions
-from badgecheck.tasks import task_named
-from badgecheck.tasks.task_types import (INTAKE_JSON, JSONLD_COMPACT_DATA, VALIDATE_EXTENSION_NODE,
+from openbadges.verifier.actions.graph import add_node
+from openbadges.verifier.actions.tasks import add_task
+from openbadges.verifier.extensions import GeoLocation, ExampleExtension, ApplyLink
+from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_URI
+from openbadges.verifier.reducers import main_reducer
+from openbadges.verifier.reducers.graph import graph_reducer
+from openbadges.verifier.state import INITIAL_STATE
+from openbadges.verifier.tasks.extensions import validate_extension_node
+from openbadges.verifier.tasks.graph import _get_extension_actions
+from openbadges.verifier.tasks import task_named
+from openbadges.verifier.tasks.task_types import (INTAKE_JSON, JSONLD_COMPACT_DATA, VALIDATE_EXTENSION_NODE,
                                          VALIDATE_EXTENSION_SINGLE)
-from badgecheck.utils import jsonld_no_cache, CachableDocumentLoader
+from openbadges.verifier.utils import jsonld_no_cache, CachableDocumentLoader
 
 from tests.utils import set_up_context_mock
 

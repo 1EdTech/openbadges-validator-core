@@ -3,13 +3,13 @@ from requests_cache import CachedSession
 import responses
 import unittest
 
-from badgecheck.actions.tasks import add_task
-from badgecheck.actions.action_types import STORE_ORIGINAL_RESOURCE
-from badgecheck.reducers.input import input_reducer
-from badgecheck.tasks import task_named
-from badgecheck.tasks.validation import OBClasses
-from badgecheck.tasks.task_types import (IMAGE_VALIDATION, VALIDATE_EXPECTED_NODE_CLASS)
-from badgecheck.utils import CachableDocumentLoader
+from openbadges.verifier.actions.tasks import add_task
+from openbadges.verifier.actions.action_types import STORE_ORIGINAL_RESOURCE
+from openbadges.verifier.reducers.input import input_reducer
+from openbadges.verifier.tasks import task_named
+from openbadges.verifier.tasks.validation import OBClasses
+from openbadges.verifier.tasks.task_types import (IMAGE_VALIDATION, VALIDATE_EXPECTED_NODE_CLASS)
+from openbadges.verifier.utils import CachableDocumentLoader
 
 
 class ImageValidationTests(unittest.TestCase):

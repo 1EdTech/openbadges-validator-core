@@ -6,17 +6,17 @@ import responses
 import unittest
 import sys
 
-from badgecheck.actions.graph import patch_node
-from badgecheck.actions.tasks import add_task
-from badgecheck.exceptions import TaskPrerequisitesError
-from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
-from badgecheck.reducers.graph import graph_reducer
-from badgecheck.tasks.crypto import (process_jws_input, verify_key_ownership, verify_jws_signature,
+from openbadges.verifier.actions.graph import patch_node
+from openbadges.verifier.actions.tasks import add_task
+from openbadges.verifier.exceptions import TaskPrerequisitesError
+from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_URI
+from openbadges.verifier.reducers.graph import graph_reducer
+from openbadges.verifier.tasks.crypto import (process_jws_input, verify_key_ownership, verify_jws_signature,
                                      verify_signed_assertion_not_revoked,)
-from badgecheck.tasks.task_types import (PROCESS_JWS_INPUT, VERIFY_JWS, VERIFY_KEY_OWNERSHIP,
+from openbadges.verifier.tasks.task_types import (PROCESS_JWS_INPUT, VERIFY_JWS, VERIFY_KEY_OWNERSHIP,
                                          VERIFY_SIGNED_ASSERTION_NOT_REVOKED,)
-from badgecheck.verifier import verify
-from badgecheck.utils import make_string_from_bytes
+from openbadges.verifier.verifier import verify
+from openbadges.verifier.utils import make_string_from_bytes
 
 try:
     from .testfiles.test_components import test_components

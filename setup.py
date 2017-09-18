@@ -3,28 +3,32 @@ import pypandoc
 from setuptools import find_packages, setup
 
 
-# Build README
-pypandoc.convert_file('README.md', 'rst', outputfile='README.rst')
-with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
-    README = readme.read()
+# Build README info
+short_description = 'A python module that performs verification for Open Badges.'
+try:
+    pypandoc.convert_file('README.md', 'rst', outputfile='README.rst')
+    with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
+        README = readme.read()
+except RuntimeError:
+    README = short_description
 
 # import VERSION
 try:
-    execfile(os.path.join(os.path.dirname(__file__), 'badgecheck/version.py'))
+    execfile(os.path.join(os.path.dirname(__file__), 'openbadges/version.py'))
 except NameError:
-    exec(open(os.path.join(os.path.dirname(__file__), 'badgecheck/version.py')).read())
+    exec(open(os.path.join(os.path.dirname(__file__), 'openbadges/version.py')).read())
 
 # allow setup.py to be run from any path
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 
 setup(
-    name='openbadges-validator',
+    name='openbadges',
     version=".".join(map(str, VERSION)),
     packages=find_packages(exclude=['tests', 'tests.*']),
     include_package_data=True,
     license='Apache 2',
-    description='A python module that performs verification for Open Badges.',
+    description=short_description,
     long_description=README,
     url='https://github.com/IMSGlobal/openbadges-validator-core',
     author='IMS Global',
@@ -69,6 +73,6 @@ setup(
     },
     entry_points="""
         [console_scripts]
-        openbadges=badgecheck.command_line:cli
+        openbadges=openbadges.command_line:cli
     """
 )

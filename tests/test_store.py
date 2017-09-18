@@ -3,9 +3,9 @@ import unittest
 
 from pydux import create_store
 
-from badgecheck import verify
-from badgecheck.reducers import main_reducer
-from badgecheck.state import (filter_active_tasks, INITIAL_STATE, get_node_by_id,
+from openbadges.verifier import verify
+from openbadges.verifier.reducers import main_reducer
+from openbadges.verifier.state import (filter_active_tasks, INITIAL_STATE, get_node_by_id,
                               get_node_by_path,)
 
 try:

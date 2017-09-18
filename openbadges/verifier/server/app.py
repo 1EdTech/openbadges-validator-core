@@ -2,7 +2,7 @@ from flask import Flask, redirect, render_template, request
 import json
 import six
 
-from badgecheck.verifier import verify
+from openbadges.verifier import verify
 
 
 app = Flask(__name__)
