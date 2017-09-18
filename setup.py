@@ -1,15 +1,15 @@
 import os
-import pypandoc
 from setuptools import find_packages, setup
 
 
 # Build README info
 short_description = 'A python module that performs verification for Open Badges.'
 try:
+    import pypandoc
     pypandoc.convert_file('README.md', 'rst', outputfile='README.rst')
     with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
         README = readme.read()
-except RuntimeError:
+except (ImportError, RuntimeError):
     README = short_description
 
 # import VERSION
@@ -49,9 +49,6 @@ setup(
         'Topic :: Utilities',
         'Intended Audience :: Developers'
     ],
-    dependency_links=[
-        'git+https://github.com/kasbah/pydux.git@6bfddaf6d961a3ed395476dd7c1b50edb5473b32#egg=pydux-0.2.1'
-    ],
     install_requires=[
         'aniso8601>=1.2.0',
         'Click == 6.7',
@@ -60,7 +57,7 @@ setup(
         'jws==0.1.3',
         'openbadges-bakery>=1.0.0b1',
         'pycrypto==2.6.1',
-        'pydux==0.2.1',
+        'pydux==0.2.2',
         'PyLD==0.7.1',
         'pytz==2017.2',
         'requests >= 2.13',
