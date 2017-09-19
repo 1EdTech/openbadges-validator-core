@@ -14,7 +14,7 @@ Open Badges Validator Core is released by [IMS Global Learning Consortium](https
 
 For best results, [create and activate a local virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/).
 
-You may install the validator directly from [pypi](https://pypi.python.org/pypi/badgecheck/): `pip install badgecheck`
+You may install the validator directly from [pypi](https://pypi.python.org/pypi/openbadges/): `pip install openbadges`
 
 ### Running the validator over the command-line
 
@@ -33,7 +33,7 @@ You may pass a JSON string of an expected recipient profile:
 
 ### Running the Flask server
 
-A Flask web server is an optional component of the Open Badges validator. The necessary dependency is installed when you install from `pip install -r requirements.txt`. You may install the server using pip with the optional server flag: `pip install badgecheck [server]`
+A Flask web server is an optional component of the Open Badges validator. The necessary dependency is installed when you install from `pip install -r requirements.txt`. You may install the server using pip with the optional server flag: `pip install openbadges [server]`
 
 In order to run the server, activate your environment, navigate to the folder that was installed, and execute the following command: `python openbadges/verifier/server/app.py`
 
@@ -95,9 +95,9 @@ Applications that implement Redux have several important characteristics that to
 - This state is read-only and can only be modified by submitting “actions”, that are handled by the store one at a time, always producing a new copy of the state. Because python variables are pointers to memory space, this makes for efficient storage and comparison. Actions are simple dicts with a “type” property.
 - The mechanism for changing state occurs through “reducers”, which inspect incoming actions and return a new copy of the portion of the state they oversee.
 
-In order to verify the integrity of Open Badges, badgecheck must take input from the user, analyze that input, access the relevant Open Badges resources, ensure that each of them are well formed and that they are linked together appropriately before packaging up the results and returning them to the user. This entails the ability to handle a wide variety of different inputs and configurations of badge resources. Badgecheck takes advantage of Redux patterns to keep track of not only the badge data but also the processing tasks. All application state for a request is in a state object dict managed by a store created upon user input.
+In order to verify the integrity of Open Badges, the validator must take input from the user, analyze that input, access the relevant Open Badges resources, ensure that each of them are well formed and that they are linked together appropriately before packaging up the results and returning them to the user. This entails the ability to handle a wide variety of different inputs and configurations of badge resources. The validator takes advantage of Redux patterns to keep track of not only the badge data but also the processing tasks. All application state for a request is in a state object dict managed by a store created upon user input.
 
-Badgecheck is made up of several important components:
+Open Badges Validator Core is made up of several important components:
 
 - Action creators: These take input parameters and return an action dict that may be interpreted by the reducers. Each action creator returns a dict with a certain ‘type’ value that will be handled by one or more parts of the reducer tree.
 - Reducers: These all have the function signature reducer(state, action) and return a new copy of the state object or the current object if no change has been made. Reducers are “combined” to each only need to manage one part of the overall state tree. Reducers cannot dispatch new actions, make API calls or do anything else that introduces side effects beyond returning their portion of the application state.
