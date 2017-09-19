@@ -3,14 +3,14 @@ import os
 import responses
 import unittest
 
-from badgecheck.actions.tasks import add_task
-from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V1_URI, OPENBADGES_CONTEXT_V2_URI
-from badgecheck.reducers import main_reducer
-from badgecheck.tasks.task_types import INTAKE_JSON, JSONLD_COMPACT_DATA, UPGRADE_1_0_NODE, UPGRADE_1_1_NODE
-from badgecheck.tasks import task_named
-from badgecheck.state import INITIAL_STATE
-from badgecheck.tasks.validation import OBClasses
-from badgecheck.verifier import generate_report, verification_store
+from openbadges.verifier.actions.tasks import add_task
+from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V1_URI, OPENBADGES_CONTEXT_V2_URI
+from openbadges.verifier.reducers import main_reducer
+from openbadges.verifier.tasks.task_types import INTAKE_JSON, JSONLD_COMPACT_DATA, UPGRADE_1_0_NODE, UPGRADE_1_1_NODE
+from openbadges.verifier.tasks import task_named
+from openbadges.verifier.state import INITIAL_STATE
+from openbadges.verifier.tasks.validation import OBClasses
+from openbadges.verifier.verifier import generate_report, verification_store
 
 from .testfiles.test_components import test_components
 

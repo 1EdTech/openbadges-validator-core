@@ -1,7 +1,7 @@
 import logging
 
 # create logger
-logger = logging.getLogger('badgecheck')
+logger = logging.getLogger('openbadges.verifier')
 logger.setLevel(logging.DEBUG)
 
 # create console handler and set level to debug

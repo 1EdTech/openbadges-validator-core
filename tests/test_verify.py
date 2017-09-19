@@ -4,12 +4,12 @@ import unittest
 
 from pydux import create_store
 
-from badgecheck import verify
-from badgecheck.actions.input import store_original_resource
-from badgecheck.verifier import generate_report
-from badgecheck.actions.tasks import report_message
-from badgecheck.reducers import main_reducer
-from badgecheck.state import INITIAL_STATE
+from openbadges.verifier import verify
+from openbadges.verifier.actions.input import store_original_resource
+from openbadges.verifier.verifier import generate_report
+from openbadges.verifier.actions.tasks import report_message
+from openbadges.verifier.reducers import main_reducer
+from openbadges.verifier.state import INITIAL_STATE
 
 from openbadges_bakery import bake
 

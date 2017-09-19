@@ -2,18 +2,18 @@ import json
 import responses
 import unittest
 
-from badgecheck.actions.action_types import ADD_NODE, STORE_ORIGINAL_RESOURCE
-from badgecheck.actions.graph import add_node, patch_node, patch_node_reference
-from badgecheck.actions.tasks import add_task
-from badgecheck.reducers.graph import graph_reducer
-from badgecheck.state import get_node_by_id
-from badgecheck.tasks.graph import fetch_http_node, jsonld_compact_data
-from badgecheck.tasks import run_task
-from badgecheck.tasks.task_types import (DETECT_AND_VALIDATE_NODE_CLASS, FETCH_HTTP_NODE, INTAKE_JSON,
+from openbadges.verifier.actions.action_types import ADD_NODE, STORE_ORIGINAL_RESOURCE
+from openbadges.verifier.actions.graph import add_node, patch_node, patch_node_reference
+from openbadges.verifier.actions.tasks import add_task
+from openbadges.verifier.reducers.graph import graph_reducer
+from openbadges.verifier.state import get_node_by_id
+from openbadges.verifier.tasks.graph import fetch_http_node, jsonld_compact_data
+from openbadges.verifier.tasks import run_task
+from openbadges.verifier.tasks.task_types import (DETECT_AND_VALIDATE_NODE_CLASS, FETCH_HTTP_NODE, INTAKE_JSON,
                                          JSONLD_COMPACT_DATA)
-from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
-from badgecheck.utils import MESSAGE_LEVEL_WARNING
-from badgecheck.verifier import verify
+from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_URI
+from openbadges.verifier.utils import MESSAGE_LEVEL_WARNING
+from openbadges.verifier.verifier import verify
 
 from .utils import set_up_context_mock, set_up_image_mock
 

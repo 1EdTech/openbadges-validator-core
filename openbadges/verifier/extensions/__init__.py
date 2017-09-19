@@ -1,9 +1,6 @@
 """
-Developer Warning:
-The badgecheck.extensions package contains information about published extension contributed
-by the Open Badges community. This package will be refactored to support all general extensions, 
-after which specific information about each extension may be pulled back out. Do not import
-from this package.
+These files are present to generate test mocks only. They will be moved out of the package into the testfiles directory
+in a future 1.x release.
 """
 
 

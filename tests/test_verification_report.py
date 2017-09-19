@@ -4,10 +4,10 @@ import responses
 import unittest
 from pydux import create_store
 
-from badgecheck.actions.validation_report import set_validation_subject
-from badgecheck.reducers import main_reducer
-from badgecheck.state import INITIAL_STATE
-from badgecheck.verifier import generate_report, verification_store
+from openbadges.verifier.actions.validation_report import set_validation_subject
+from openbadges.verifier.reducers import main_reducer
+from openbadges.verifier.state import INITIAL_STATE
+from openbadges.verifier.verifier import generate_report, verification_store
 
 try:
     from .testfiles.test_components import test_components
