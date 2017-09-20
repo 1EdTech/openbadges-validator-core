@@ -14,17 +14,28 @@ Open Badges Validator Core is released by [IMS Global Learning Consortium](https
 
 For best results, [create and activate a local virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/).
 
-You may install the validator directly from [pypi](https://pypi.python.org/pypi/badgecheck/): `pip install badgecheck`
+You may install the validator directly from [pypi](https://pypi.python.org/pypi/openbadges/): `pip install openbadges`
 
 ### Running the validator over the command-line
 
-TBD - Issue #163
+When installed into an activated environment, a command line script will be available.
+
+`openbadges verify --data 'https://example.org/badgeassertion'`
+
+See help with `openbadges verify --help`
+
+There are two optional positional arguments, *input_file* and *output_file*. If you don't specify an output file, results will be written to stdout.
+If you wish to provide input data, such as a URL from the command and write JSON results to an output file, you may use a `-` to skip the first input_file argument.
+`openbadges verify - results.json --data 'https://example.org/badgeassertion'`
+
+You may pass a JSON string of an expected recipient profile:
+`openbadges verify input.json --recipient '{"email": "me@example.org", "url": "http://example.org"}'
 
 ### Running the Flask server
 
-A Flask web server is an optional component of the Open Badges validator. The necessary dependency is installed when you install from `pip install -r requirements.txt`. You may install the server using pip with the optional server flag: `pip install badgecheck [server]`
+A Flask web server is an optional component of the Open Badges validator. The necessary dependency is installed when you install from `pip install -r requirements.txt`. You may install the server using pip with the optional server flag: `pip install openbadges [server]`
 
-In order to run the server, activate your environment, navigate to the folder that was installed, and execute the following command: `python badgecheck/server/app.py`
+In order to run the server, activate your environment, navigate to the folder that was installed, and execute the following command: `python openbadges/verifier/server/app.py`
 
 A local server will start up on the development port 5000 (by default), which you can access from your browser or other HTTP client.
 
@@ -32,11 +43,13 @@ A local server will start up on the development port 5000 (by default), which yo
 
 The results returned by the validator is a JSON object. (If you are using a user interface of some kind, you may not see this.) Depending on your use case, you may only be interested in a few parts of this object. The overall structure of the returned object is
 
-     {
-         "report": {...}
-         "input": {...}
-         "graph" {...}
-     }
+```
+{
+ "report": {...}
+ "input": {...}
+ "graph" {...}
+}
+```
 
 … where the `report` object is the one you would typically be most interested in. If the `valid` property of the report object is set to `true`, it tells you that the validator did not find any errors when analyzing your badge.  If it is set to `false`, it means that your badge did contain at least one error. Check the `errorCount` property to find out how many errors there were. For each one of those errors, there will be a corresponding message (with a `messageLevel` of 'ERROR') in the `messages` array.
 
@@ -82,9 +95,9 @@ Applications that implement Redux have several important characteristics that to
 - This state is read-only and can only be modified by submitting “actions”, that are handled by the store one at a time, always producing a new copy of the state. Because python variables are pointers to memory space, this makes for efficient storage and comparison. Actions are simple dicts with a “type” property.
 - The mechanism for changing state occurs through “reducers”, which inspect incoming actions and return a new copy of the portion of the state they oversee.
 
-In order to verify the integrity of Open Badges, badgecheck must take input from the user, analyze that input, access the relevant Open Badges resources, ensure that each of them are well formed and that they are linked together appropriately before packaging up the results and returning them to the user. This entails the ability to handle a wide variety of different inputs and configurations of badge resources. Badgecheck takes advantage of Redux patterns to keep track of not only the badge data but also the processing tasks. All application state for a request is in a state object dict managed by a store created upon user input.
+In order to verify the integrity of Open Badges, the validator must take input from the user, analyze that input, access the relevant Open Badges resources, ensure that each of them are well formed and that they are linked together appropriately before packaging up the results and returning them to the user. This entails the ability to handle a wide variety of different inputs and configurations of badge resources. The validator takes advantage of Redux patterns to keep track of not only the badge data but also the processing tasks. All application state for a request is in a state object dict managed by a store created upon user input.
 
-Badgecheck is made up of several important components:
+Open Badges Validator Core is made up of several important components:
 
 - Action creators: These take input parameters and return an action dict that may be interpreted by the reducers. Each action creator returns a dict with a certain ‘type’ value that will be handled by one or more parts of the reducer tree.
 - Reducers: These all have the function signature reducer(state, action) and return a new copy of the state object or the current object if no change has been made. Reducers are “combined” to each only need to manage one part of the overall state tree. Reducers cannot dispatch new actions, make API calls or do anything else that introduces side effects beyond returning their portion of the application state.
@@ -103,7 +116,7 @@ The Open Badges Validator includes a simple Flask server application for your co
 Make a request to `/results` with either a JSON body or form/multipart. If using image, use `form/multipart`. Responses may be requested in either `text/html` or `application/json` format.
 
 | name | Expected value(s) | Required? |
-| --- | --- | --- |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
 | data | One of: a) URL string for an HTTP-hosted Open Badges Object, b) JSON string for an Open Badges Object, or c) Cryptographic signature string (JWS format) of a signed Open Badges Assertion | One of `data` or `image` is required. |
 | image | File: A baked Open Badge image in PNG or SVG format. See [Baking Specification](https://openbadgespec.org/baking/index.html). | One of `data` or `image` is required. |
 | profile | JSON string of an Open Badges Profile that is trusted by the client. If an Assertion is found in the “data” or “image” input, the profile will be checked against its recipient value. If input data is not an Assertion, profile will be ignored.  | No. |
@@ -112,24 +125,25 @@ Make a request to `/results` with either a JSON body or form/multipart. If using
 
 Here is the essential parts of an example request sent in form/multipart format.
 
+```
+Request URL: http://localhost:8000/results
+Request Method: POST
+Accept: application/json
 
-    Request URL: http://localhost:8000/results
-    Request Method: POST
-    Accept: application/json
+------WebKitFormBoundaryaBQaPAkvF3DXppQ7
+Content-Disposition: form-data; name="data"
 
-    ------WebKitFormBoundaryaBQaPAkvF3DXppQ7
-    Content-Disposition: form-data; name="data"
+https://api.badgr.io/public/assertions/Ph_r3S6jTqqkHNrQUKbqQg?v=2_0
+------WebKitFormBoundaryaBQaPAkvF3DXppQ7
+Content-Disposition: form-data; name="image"; filename=""
+Content-Type: application/octet-stream
 
-    https://api.badgr.io/public/assertions/Ph_r3S6jTqqkHNrQUKbqQg?v=2_0
-    ------WebKitFormBoundaryaBQaPAkvF3DXppQ7
-    Content-Disposition: form-data; name="image"; filename=""
-    Content-Type: application/octet-stream
+------WebKitFormBoundaryaBQaPAkvF3DXppQ7
+Content-Disposition: form-data; name="profile"
 
-    ------WebKitFormBoundaryaBQaPAkvF3DXppQ7
-    Content-Disposition: form-data; name="profile"
-
-    {"email": "nate@ottonomy.net"}
-    ------WebKitFormBoundaryaBQaPAkvF3DXppQ7--
+{"email": "nate@ottonomy.net"}
+------WebKitFormBoundaryaBQaPAkvF3DXppQ7--
+```
 
 A HTML form is available in browser by making a GET request to the root of the server. If the flask server is running on http://127.0.0.1:8000 for example, a request may be made to that URL to obtain the form in the browser.
 
@@ -138,35 +152,36 @@ A HTML form is available in browser by making a GET request to the root of the s
 The response will be delivered as a JSON object, either as the complete body of a request for “application/json” or embedded in an HTML results template.
 
 | Response property | type/description |
-| --- | --- |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | input | An object summarizing the request that was made. (Input object) |
 | graph  |Array of objects: The unordered set of linked data objects discovered during validation of the input. Each will be compacted into the Open Badges V2 Context and  tagged with at ‘type’ and an ‘id’. |
 | report | An object summarizing the validity results and the object in the graph that is the primary subject of validation (see Report object below) |
 
-&nbsp;
+Here are the properties found within the 'report':
 
 | Report Object property | type/description |
-| --- | --- |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | recipientProfile | An object describing the matching recipient identifier property of the submitted recipientProfile. For example, if a Profile with three possible email addresses was submitted and the Assertion was awarded to one of them, the recipientProfile would be an object with a single “email” property that had a single string value of the successfully confirmed address. If a “url”-type identifier was the recipient identifier property in a validated assertion, the property name in recipientProfile would be “url”. |
 | valid | Boolean: Whether the object parsed from the input passed all required verification and data validation tests. |
 | errorCount | Number (int): The number of critical verification and validation task failures (violations of MUST-level requirements in the Open Badges Specification). If this number is > 0, valid will be false. |
-| warningCount |
-| Number (int): | The number of non-critical verification and validation task failures (violations of SHOULD-level requirements). These will not cause the badge to be invalid, but consumers MAY treat Open Badge objects that fail these tasks as invalid for certain purposes. |
+| warningCount | Number (int): The number of non-critical verification and validation task failures (violations of SHOULD-level requirements). These will not cause the badge to be invalid, but consumers MAY treat Open Badge objects that fail these tasks as invalid for certain purposes. |
 | messages | Array of Message objects (see below) |
 | validationSubject | String: the id matching the ‘id’ property of the object in the response ‘graph’ that is the primary thing validated. For example, if the URL of a hosted Assertion is the input data, this will be that URL. |
 | openBadgesVersion | A string corresponding to the detected version of the validationSubject. Possible values are “0.5”, “1.0”, “1.1” and “2.0” |
 
-&nbsp;
+Here are the properties that describe each of the 'messages' in the report:
 
 | Message Object property | type/description |
-| --- | --- |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | name | A string codename for the task being reported. May not appear for “INFO” level messages. |
 | messageLevel | A string describing the severity of the message. Either “ERROR” (critical, triggering invalidity of the overall result), “WARNING” (non-critical), or “INFO” (interesting tidbit). |
 | node_id | String: the “id” matching the subject in the graph that was tested for this particular task. |
-| node_path | Array: A specialized format used by the validator to locate a node that is nested within one of the primary objects in the graph. For example [“http://foo.co/bar”, “alignment”, 0, “alignmentName”] indicates the “alignmentName” property of the object that is the first (index 0) entry in the list of “alignment” objects of the node with the id “http://foo.co/bar” in the graph.
+| node_path | Node Path Array (see note below)
 | success | Boolean: Whether the task succeeded or failed. Successful task results are omitted from the response (except “INFO” messages). |
 | result | String: A human-readable description of the problem or informative message. |
 | *other properties* | Other properties vary by task. They provide debug information to describe the information made available to the task and should typically be ignored by the client. |
+
+**Node Path Array**: A specialized Array used by the validator to locate a node that is nested within one of the primary objects in the graph. For example `[“http://foo.co/bar”, “alignment”, 0, “alignmentName”]` indicates the “alignmentName” property of the object that is the first (index 0) entry in the list of “alignment” objects of the node with the id “http://foo.co/bar” in the graph.
 
 ### Python API
 
@@ -174,18 +189,20 @@ In addition to the HTTP server included with the package, a python API is availa
 
 To make a request using the python API from within a python application, make sure the package is installed into your python environment (likely an activated virtualenv). Then import the verify method and call it:
 
-    from badgecheck import verify
-    results = verify(‘http://assertions.com/example-assertion-url’)
+```
+from openbadges import verify
+results = verify(‘http://assertions.com/example-assertion-url’)
+```
 
 If you wish to verify assertion input against an expected recipient profile, you may pass the profile dict as a second positional argument:
 
-    results = verify(assertion_json, {‘email’: [‘possible@example.com’, ‘other@example.com’]}
+`results = verify(assertion_json, {‘email’: [‘possible@example.com’, ‘other@example.com’]}`
 
 ### Using your own cache backend
 
 This package makes use of RequestsCache to reduce load on frequently used resources such as the core Open Badges context files. By default, the validator will instantiate its own in-memory cache, but it is possible to pass in a compatible RequestsCache backend of your own with higher performance in the optional “options” keyword arguments dict. This way, you can reuse the cache across multiple validation requests.
 
-    results = verify(assertion_url, options={‘cache_backend’: ‘redis’, ‘cache_expire_after’: 60 * 60 * 24})
+`results = verify(assertion_url, options={‘cache_backend’: ‘redis’, ‘cache_expire_after’: 60 * 60 * 24})`
 
 ### Running tests
 To run tests, install tox into your system's global python environment and use the command: `tox`

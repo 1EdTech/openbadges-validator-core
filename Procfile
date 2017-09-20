@@ -1,1 +1,1 @@
-web: gunicorn badgecheck.server.app:app
+web: gunicorn openbadges.verifier.server.app:app

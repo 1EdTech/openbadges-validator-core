@@ -1,8 +1,9 @@
 dist/
 build/
-badgecheck.egg-info
+*.egg-info
 .DS_STORE
 *.pyc
 .idea/
 .tox/
 .cache/
+README.rst

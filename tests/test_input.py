@@ -7,11 +7,11 @@ import responses
 import unittest
 import sys
 
-from badgecheck.actions.input import set_input_type, store_input
-from badgecheck.reducers import main_reducer
-from badgecheck.state import INITIAL_STATE
-from badgecheck.tasks.input import detect_input_type
-from badgecheck.utils import make_string_from_bytes
+from openbadges.verifier.actions.input import set_input_type, store_input
+from openbadges.verifier.reducers import main_reducer
+from openbadges.verifier.state import INITIAL_STATE
+from openbadges.verifier.tasks.input import detect_input_type
+from openbadges.verifier.utils import make_string_from_bytes
 
 try:
     from .testfiles.test_components import test_components

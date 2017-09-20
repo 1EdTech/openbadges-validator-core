@@ -3,15 +3,15 @@ import json
 import responses
 import unittest
 
-from badgecheck.actions.tasks import add_task
-from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_DICT
-from badgecheck.state import filter_failed_tasks
-from badgecheck.tasks.graph import jsonld_compact_data
-from badgecheck.tasks.task_types import JSONLD_COMPACT_DATA, VERIFY_RECIPIENT_IDENTIFIER
-from badgecheck.tasks.utils import filter_tasks
-from badgecheck.tasks.validation import OBClasses
-from badgecheck.tasks.verification import verify_recipient_against_trusted_profile
-from badgecheck.verifier import verification_store
+from openbadges.verifier.actions.tasks import add_task
+from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_DICT
+from openbadges.verifier.state import filter_failed_tasks
+from openbadges.verifier.tasks.graph import jsonld_compact_data
+from openbadges.verifier.tasks.task_types import JSONLD_COMPACT_DATA, VERIFY_RECIPIENT_IDENTIFIER
+from openbadges.verifier.tasks.utils import filter_tasks
+from openbadges.verifier.tasks.validation import OBClasses
+from openbadges.verifier.tasks.verification import verify_recipient_against_trusted_profile
+from openbadges.verifier.verifier import verification_store
 
 try:
     from .testfiles.test_components import test_components

@@ -4,19 +4,19 @@ import responses
 import unittest
 import sys
 
-from badgecheck.actions.graph import add_node
-from badgecheck.actions.tasks import add_task
-from badgecheck.extensions import GeoLocation, ExampleExtension, ApplyLink
-from badgecheck.openbadges_context import OPENBADGES_CONTEXT_V2_URI
-from badgecheck.reducers import main_reducer
-from badgecheck.reducers.graph import graph_reducer
-from badgecheck.state import INITIAL_STATE
-from badgecheck.tasks.extensions import validate_extension_node
-from badgecheck.tasks.graph import _get_extension_actions
-from badgecheck.tasks import task_named
-from badgecheck.tasks.task_types import (INTAKE_JSON, JSONLD_COMPACT_DATA, VALIDATE_EXTENSION_NODE,
+from openbadges.verifier.actions.graph import add_node
+from openbadges.verifier.actions.tasks import add_task
+from openbadges.verifier.extensions import GeoLocation, ExampleExtension, ApplyLink
+from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_URI
+from openbadges.verifier.reducers import main_reducer
+from openbadges.verifier.reducers.graph import graph_reducer
+from openbadges.verifier.state import INITIAL_STATE
+from openbadges.verifier.tasks.extensions import validate_extension_node
+from openbadges.verifier.tasks.graph import _get_extension_actions
+from openbadges.verifier.tasks import task_named
+from openbadges.verifier.tasks.task_types import (INTAKE_JSON, JSONLD_COMPACT_DATA, VALIDATE_EXTENSION_NODE,
                                          VALIDATE_EXTENSION_SINGLE)
-from badgecheck.utils import jsonld_no_cache, CachableDocumentLoader
+from openbadges.verifier.utils import jsonld_no_cache, CachableDocumentLoader
 
 from tests.utils import set_up_context_mock
 
@@ -109,7 +109,7 @@ class ExtensionNodeValidationTests(unittest.TestCase):
 
         set_up_context_mock()
         loader(OPENBADGES_CONTEXT_V2_URI)
-        schema_url = ExampleExtension.validation_schema.keys()[0]
+        schema_url = list(ExampleExtension.validation_schema)[0]
         responses.add(responses.GET, ExampleExtension.context_url, status=200, json=ExampleExtension.context_json)
         loader(ExampleExtension.context_url)
         responses.add(responses.GET, schema_url, status=200, json=ExampleExtension.validation_schema[schema_url])
@@ -155,7 +155,7 @@ class ExtensionNodeValidationTests(unittest.TestCase):
         # Load up ApplyLink schema and context
         responses.add(responses.GET, ApplyLink.context_url, status=200, json=ApplyLink.context_json)
         self.options['jsonld_options']['documentLoader'](ApplyLink.context_url)
-        schema_url = ApplyLink.validation_schema.keys()[0]
+        schema_url = list(ApplyLink.validation_schema)[0]
         responses.add(responses.GET, schema_url, status=200, json=ApplyLink.validation_schema[schema_url])
         self.options['jsonld_options']['documentLoader'].session.get(schema_url)
 
@@ -204,7 +204,7 @@ class ComplexExtensionNodeValdiationTests(unittest.TestCase):
 
         set_up_context_mock()
         loader(OPENBADGES_CONTEXT_V2_URI)
-        schema_url = GeoLocation.validation_schema.keys()[0]
+        schema_url = list(GeoLocation.validation_schema)[0]
         responses.add(responses.GET, GeoLocation.context_url, status=200, json=GeoLocation.context_json)
         loader(GeoLocation.context_url)
         responses.add(responses.GET, schema_url, status=200, json=GeoLocation.validation_schema[schema_url])

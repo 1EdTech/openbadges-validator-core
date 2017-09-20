@@ -4,7 +4,7 @@ from requests_cache import CachedSession
 import responses
 import unittest
 
-from badgecheck.utils import CachableDocumentLoader
+from openbadges.verifier.utils import CachableDocumentLoader
 
 try:
     from .testfiles.test_components import test_components

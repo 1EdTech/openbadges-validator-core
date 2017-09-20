@@ -2,11 +2,11 @@ import unittest
 
 from pydux import create_store
 
-from badgecheck.reducers import main_reducer
-from badgecheck.actions.tasks import add_task, resolve_task
-from badgecheck.reducers.tasks import _new_state_with_updated_item
-from badgecheck.tasks.utils import abbreviate_value
-from badgecheck.state import INITIAL_STATE, filter_active_tasks
+from openbadges.verifier.reducers import main_reducer
+from openbadges.verifier.actions.tasks import add_task, resolve_task
+from openbadges.verifier.reducers.tasks import _new_state_with_updated_item
+from openbadges.verifier.tasks.utils import abbreviate_value
+from openbadges.verifier.state import INITIAL_STATE, filter_active_tasks
 
 
 class TaskActionTests(unittest.TestCase):
