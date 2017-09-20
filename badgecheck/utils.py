@@ -104,3 +104,12 @@ def make_string_from_bytes(input_value):
     if isinstance(input_value,bytes):
         return input_value.decode()
     return input_value
+
+def make_utf8(input_value):
+    """
+    If input_value is unicode, it is returned as is.
+    If it's str, convert it to Unicode using UTF-8 encoding
+    """
+    if sys.version[:3] < '3':
+        return input_value if isinstance(input_value, unicode) else input_value.decode('utf8')
+    return input_value
