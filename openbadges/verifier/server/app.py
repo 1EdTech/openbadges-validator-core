@@ -28,13 +28,13 @@ def result_get_redirect():
 def results():
     data = request.get_json()
     profile = None
-    if not data and isinstance(request.form['data'], six.string_types) or request.files:
+    if not data and isinstance(request.form.get('data'), six.string_types) or request.files:
         user_input = request.form['data']
         if 'image' in request.files and len(request.files['image'].filename):
             user_input = request.files['image']
 
         try:
-            profile = json.loads(request.form['profile'])
+            profile = json.loads(request.form.get('profile'))
         except (TypeError, ValueError):
             profile = None
     elif data:
