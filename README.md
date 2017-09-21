@@ -6,7 +6,7 @@ Note - Open Badges Validator Core is in *beta* stage. The results provided *cann
 
 Open Badges Validator Core is released by [IMS Global Learning Consortium](https://www.imsglobal.org).
 
-This package builds on Badgecheck, originated by [Concentric Sky](https://concentricsky.com).
+This package builds on Badgecheck, originated by [Concentric Sky](https://concentricsky.com). Other IMS Global members who have contributed to this package include [D2L](https://www.d2l.com/) and [Chalk & Wire](http://www.chalkandwire.com).
 
 ## User documentation
 
