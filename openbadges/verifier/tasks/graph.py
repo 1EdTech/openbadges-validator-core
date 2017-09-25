@@ -5,6 +5,7 @@ import requests
 import requests_cache
 import six
 import sys
+import uuid
 
 from ..actions.graph import add_node, patch_node, patch_node_reference
 from ..actions.input import store_original_resource
@@ -17,8 +18,8 @@ from ..state import get_node_by_id, node_match_exists
 from ..utils import list_of, jsonld_use_cache,make_string_from_bytes, MESSAGE_LEVEL_WARNING
 
 from .task_types import (DETECT_AND_VALIDATE_NODE_CLASS, FETCH_HTTP_NODE, INTAKE_JSON,
-                         JSONLD_COMPACT_DATA, UPGRADE_1_0_NODE, UPGRADE_1_1_NODE, VALIDATE_EXPECTED_NODE_CLASS,
-                         VALIDATE_EXTENSION_NODE, )
+                         JSONLD_COMPACT_DATA, UPGRADE_0_5_NODE, UPGRADE_1_0_NODE, UPGRADE_1_1_NODE,
+                         VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_EXTENSION_NODE)
 from .utils import abbreviate_node_id as abv_node, filter_tasks, is_iri, is_url, task_result, URN_REGEX
 from .validation import OBClasses
 
@@ -100,6 +101,11 @@ def intake_json(state, task_meta, **options):
     elif openbadges_version == '1.0':
         actions.append(add_task(
             UPGRADE_1_0_NODE, node_id=node_id, expected_class=expected_class, data=input_data,
+            source_node_path=task_meta.get('source_node_path')
+        ))
+    elif openbadges_version == '0.5':
+        actions.append(add_task(
+            UPGRADE_0_5_NODE, node_id=node_id, expected_class=expected_class, data=input_data,
             source_node_path=task_meta.get('source_node_path')
         ))
     else:
@@ -223,9 +229,20 @@ def flatten_refetch_embedded_resource(state, task_meta, **options):
                 prop_name, abv_node(node_id=node_id)
             ))
     embedded_node_id = value.get('id')
-    if embedded_node_id is None or \
-            not isinstance(embedded_node_id, six.string_types) or \
-            not is_iri(embedded_node_id):
+
+    if embedded_node_id is None:
+        new_node = value.copy()
+        embedded_node_id = '_:{}'.format(uuid.uuid4())
+        new_node['id'] = embedded_node_id
+        new_node['@context'] = OPENBADGES_CONTEXT_V2_URI
+        actions.append(add_node(embedded_node_id, data=new_node))
+        actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
+        actions.append(report_message(
+            'Node id missing at {}. A blank node ID has been assigned'.format(
+                abv_node(node_path=[node_id, prop_name], length=64)
+            ), message_level=MESSAGE_LEVEL_WARNING)
+        )
+    elif not isinstance(embedded_node_id, six.string_types) or not is_iri(embedded_node_id):
         return task_result(False, "Embedded JSON object at {} has no proper assigned id.".format(
             abv_node(node_path=[node_id, prop_name])))
 
@@ -235,6 +252,8 @@ def flatten_refetch_embedded_resource(state, task_meta, **options):
                     'ID format for {} at {} not in an expected HTTP or URN:UUID scheme'.format(
                         embedded_node_id, abv_node(node_path=[node_id, prop_name])
                     )))
+            new_node = value.copy()
+            new_node['@context'] = OPENBADGES_CONTEXT_V2_URI
             actions.append(add_node(embedded_node_id, data=value))
             actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
 

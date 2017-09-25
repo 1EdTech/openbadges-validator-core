@@ -3,11 +3,13 @@ import os
 import responses
 import unittest
 
+from openbadges.verifier.actions.action_types import SET_OPENBADGES_VERSION
 from openbadges.verifier.actions.tasks import add_task
 from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V1_URI, OPENBADGES_CONTEXT_V2_URI
 from openbadges.verifier.reducers import main_reducer
-from openbadges.verifier.tasks.task_types import INTAKE_JSON, JSONLD_COMPACT_DATA, UPGRADE_1_0_NODE, UPGRADE_1_1_NODE
-from openbadges.verifier.tasks import task_named
+from openbadges.verifier.tasks.task_types import (INTAKE_JSON, JSONLD_COMPACT_DATA, UPGRADE_0_5_NODE,
+                                                  UPGRADE_1_0_NODE, UPGRADE_1_1_NODE)
+from openbadges.verifier.tasks import run_task, task_named
 from openbadges.verifier.state import INITIAL_STATE
 from openbadges.verifier.tasks.validation import OBClasses
 from openbadges.verifier.verifier import generate_report, verification_store
@@ -15,19 +17,20 @@ from openbadges.verifier.verifier import generate_report, verification_store
 from .testfiles.test_components import test_components
 
 
-class TestV1_1Detection(unittest.TestCase):
-    def setUpContextCache(self):
-        v2_data = test_components['openbadges_context']
-        responses.add(
-            responses.GET, OPENBADGES_CONTEXT_V2_URI,
-            body=v2_data, status=200, content_type='application/ld+json'
-        )
-        v1_data = test_components['openbadges_context_v1']
-        responses.add(
-            responses.GET, OPENBADGES_CONTEXT_V1_URI,
-            body=v1_data, status=200, content_type='application/ld+json'
-        )
+def setUpContextCache():
+    v2_data = test_components['openbadges_context']
+    responses.add(
+        responses.GET, OPENBADGES_CONTEXT_V2_URI,
+        body=v2_data, status=200, content_type='application/ld+json'
+    )
+    v1_data = test_components['openbadges_context_v1']
+    responses.add(
+        responses.GET, OPENBADGES_CONTEXT_V1_URI,
+        body=v1_data, status=200, content_type='application/ld+json'
+    )
 
+
+class V1_1DetectionAndUpgradesTests(unittest.TestCase):
     def test_can_detect_v1_based_on_context(self):
         json_data = test_components['1_1_basic_assertion']
         state = INITIAL_STATE
@@ -57,7 +60,7 @@ class TestV1_1Detection(unittest.TestCase):
 
     @responses.activate
     def test_upgrade_1_1_assertion(self):
-        self.setUpContextCache()
+        setUpContextCache()
         json_data = test_components['1_1_basic_assertion']
         state = INITIAL_STATE
         task = add_task(INTAKE_JSON, node_id='https://example.org/beths-robotics-badge.json', data=json_data)
@@ -96,7 +99,7 @@ class TestV1_1Detection(unittest.TestCase):
 
     @responses.activate
     def test_upgrade_1_1_badgeclass(self):
-        self.setUpContextCache()
+        setUpContextCache()
         json_data = test_components['1_1_basic_badgeclass']
         state = INITIAL_STATE
         task = add_task(INTAKE_JSON, node_id='https://example.org/robotics-badge.json', data=json_data)
@@ -119,7 +122,7 @@ class TestV1_1Detection(unittest.TestCase):
         self.assertEqual(len(actions), 1)
 
     def test_upgrade_1_1_issuer(self):
-        self.setUpContextCache()
+        setUpContextCache()
         data = json.loads(test_components['1_1_basic_issuer'])
         data['type'] = 'IssuerOrg'  # Test alias that was accepted in v1.1 context
         json_data = json.dumps(data)
@@ -137,6 +140,8 @@ class TestV1_1Detection(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(state['graph'][0]['type'], OBClasses.Issuer)
 
+
+class V1_0DetectionAndUpgradeTests(unittest.TestCase):
     def test_upgrade_1_0_assertion(self):
         json_data = test_components['1_0_basic_assertion']
         state = INITIAL_STATE
@@ -207,7 +212,7 @@ class TestV1_1Detection(unittest.TestCase):
 
     @responses.activate
     def full_validate_1_0_to_2_0_conversion(self):
-        self.setUpContextCache()
+        setUpContextCache()
         assertion_data = json.loads(test_components['1_0_basic_assertion_with_extra_properties'])
         badgeclass_data = json.loads(test_components['1_0_basic_badgeclass'])
         issuer_data = json.loads(test_components['1_0_basic_issuer'])
@@ -244,3 +249,86 @@ class TestV1_1Detection(unittest.TestCase):
         self.assertEqual(issuer_node['type'], OBClasses.Issuer)
 
         self.assertEqual(report['report']['openBadgesVersion'], '1.0')
+
+
+class V1_0DetectionAndUpgradeTests(unittest.TestCase):
+    def test_can_detect_and_upgrade_v_0_5(self):
+        assertion_data = {
+            "recipient": "sha256$a4a934a0bfc882a34a3e71650e40789453b2db9799a51a2d084a64caadd72397",
+            "salt": "2e2bad0df9e11272ffbcee86e4c7edd4",
+            "issued_on": "2017-01-01",
+            "badge": {
+                "name": "Test Badge for admin@bluemantis.com",
+                "image": "http://example.org/image",
+                "description": "Awarded using the php example codebase",
+                "criteria": "http://example.org/criteria",
+                "issuer": {
+                    "origin": "example.org",
+                    "name": "Test Issuer",
+                    "org": None,
+                    "contact": None
+                }
+            }
+        }
+        state = INITIAL_STATE
+        task = add_task(INTAKE_JSON, data=json.dumps(assertion_data), node_id='http://example.org/assertion')
+
+        result, message, actions = run_task(state, task)
+        self.assertTrue(result)
+        version_action = [a for a in actions if a.get('type') == SET_OPENBADGES_VERSION][0]
+        self.assertEqual(version_action['version'], '0.5')
+        upgrade_action = [a for a in actions if a.get('name') == UPGRADE_0_5_NODE][0]
+
+        result, message, actions = run_task(state, upgrade_action)
+        self.assertTrue(result)
+
+        self.assertEqual(len(actions), 2)
+        self.assertEqual(actions[0]['name'], JSONLD_COMPACT_DATA)
+
+    @responses.activate
+    def full_validate_0_5_to_2_0_conversion(self):
+        setUpContextCache()
+        assertion_url = 'http://example.org/assertion'
+        assertion_data = {
+            "recipient": "sha256$a4a934a0bfc882a34a3e71650e40789453b2db9799a51a2d084a64caadd72397",
+            "salt": "2e2bad0df9e11272ffbcee86e4c7edd4",
+            "issued_on": "2017-01-01",
+            "badge": {
+                "name": "Test Badge for admin@bluemantis.com",
+                "image": "http://example.org/image",
+                "description": "Awarded using the php example codebase",
+                "criteria": "http://example.org/criteria",
+                "issuer": {
+                    "origin": "http://example.org",
+                    "name": "Test Issuer",
+                    "org": None,
+                    "contact": 'test@example.com'
+                }
+            }
+        }
+
+        responses.add(
+            responses.GET, assertion_url,
+            json=assertion_data
+        )
+        png_badge = os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart.png')
+        with open(png_badge, 'rb') as image:
+            responses.add(
+                responses.GET, assertion_data['badge']['image'],
+                body=image.read(), status=200, content_type='image/png'
+            )
+
+        store = verification_store(assertion_url)
+        state = store.get_state()
+        report = generate_report(store)
+
+        self.assertTrue(report['report']['valid'])
+        assertion_node = state['graph'][0]
+        badgeclass_node = state['graph'][2]
+        issuer_node = state['graph'][1]
+
+        self.assertEqual(assertion_node['id'], assertion_url)
+        self.assertEqual(badgeclass_node['@context'], OPENBADGES_CONTEXT_V2_URI)
+        self.assertEqual(issuer_node['type'], OBClasses.Profile)
+
+        self.assertEqual(report['report']['openBadgesVersion'], '0.5')

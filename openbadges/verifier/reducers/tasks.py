@@ -73,6 +73,7 @@ def task_reducer(state=None, action=None):
     elif action.get('type') == REPORT_MESSAGE:
         new_task = {
             'task_id': task_counter,
+            'name': REPORT_MESSAGE,
             'complete': True,
             'success': action.get('success', True),
             'result': action.get('message'),

@@ -27,28 +27,32 @@ def is_null_list(value):
     return isinstance(value, (tuple, list)) and all(val is None for val in value)
 
 
-def abbreviate_value(value):
+def abbreviate_value(value, length=48):
     if isinstance(value, (tuple, list)):
         value = ', '.join([str(val) for val in value])
 
-    if len(str(value)) < 48:
+    if len(str(value)) < length:
         return str(value)
     else:
-        return str(value)[:48] + '...'
+        return str(value)[:length] + '...'
 
 
-def abbreviate_node_id(node_id=None, node_path=None):
+def abbreviate_node_id(node_id=None, node_path=None, length=48):
     if node_id:
         return node_id
-    return abbreviate_value(node_path)
+    return abbreviate_value(node_path, length=length)
 
 
 def is_iri(value):
     return bool(
         is_url(value) or
-        re.match(r'_:b\d+$', value) or
+        re.match(r'^_:', value) or
         re.match(URN_REGEX, value, re.IGNORECASE)
     )
+
+
+def is_blank_node_id(value):
+    return bool(re.match(r'^_:', value))
 
 
 def is_url(value):

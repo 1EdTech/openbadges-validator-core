@@ -1,10 +1,11 @@
 import rfc3986
+import six
 
 from ..actions.tasks import report_message
 from ..actions.validation_report import set_verified_recipient_profile
 from ..exceptions import TaskPrerequisitesError
 from ..state import get_node_by_id, get_node_by_path
-from ..utils import identity_hash, list_of
+from ..utils import identity_hash, list_of, MESSAGE_LEVEL_WARNING
 
 from .utils import abbreviate_value as abv, task_result
 
@@ -29,11 +30,14 @@ def hosted_id_in_verification_scope(state, task_meta, **options):
 
         badgeclass_node = get_node_by_id(state, assertion_node['badge'])
         issuer_node = get_node_by_id(state, badgeclass_node['issuer'])
+        issuer_id = issuer_node.get('id')
     except IndexError:
         raise TaskPrerequisitesError()
 
     try:
-        verification_policy = get_node_by_id(state, issuer_node.get('verification'))
+        verification_policy = issuer_node.get('verification')
+        if verification_policy is None or isinstance(verification_policy, six.string_types):
+            verification_policy = get_node_by_id(state, issuer_node.get('verification'))
     except IndexError:
         verification_policy = _default_verification_policy(issuer_node)
 
@@ -47,9 +51,16 @@ def hosted_id_in_verification_scope(state, task_meta, **options):
 
     allowed_origins = list_of(
         verification_policy.get(
-            'allowedOrigins', _default_allowed_origins_for_issuer_id(issuer_node.get('id')))
+            'allowedOrigins', _default_allowed_origins_for_issuer_id(issuer_id))
     )
-    if allowed_origins and rfc3986.uri_reference(assertion_id).authority not in allowed_origins:
+    if not allowed_origins or not issuer_id.startswith('http'):
+        return task_result(
+            True, "There are no allowed hosted verification URL domains for this issuer's verification policy.",
+            actions=[report_message(
+                'Issuer {} has no HTTP domain to enforce hosted verification policy against.'.format(issuer_id),
+                message_level=MESSAGE_LEVEL_WARNING)]
+        )
+    elif rfc3986.uri_reference(assertion_id).authority not in allowed_origins:
         return task_result(
             False, 'Assertion {} not hosted in allowed origins {}'.format(
                 abv(assertion_id), abv(allowed_origins))
