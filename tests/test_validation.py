@@ -891,7 +891,7 @@ class ClassValidationTaskTests(unittest.TestCase):
                 actions.extend(new_actions)
             self.assertTrue(result)
 
-        self.assertEqual(len(actions), 5)
+        self.assertEqual(len(actions), 6)
         self.assertTrue(CRITERIA_PROPERTY_DEPENDENCIES in [a.get('name') for a in actions])
 
     def test_run_criteria_task_discovery_and_validation_embedded(self):
@@ -919,7 +919,7 @@ class ClassValidationTaskTests(unittest.TestCase):
                 actions.extend(new_actions)
             self.assertTrue(result)
 
-        self.assertEqual(len(actions), 5)
+        self.assertEqual(len(actions), 6)
         self.assertTrue(CRITERIA_PROPERTY_DEPENDENCIES in [a.get('name') for a in actions])
 
     def test_many_criteria_disallowed(self):

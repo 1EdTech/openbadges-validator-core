@@ -1,5 +1,6 @@
 import aniso8601
 from datetime import datetime
+from language_tags import tags as language_tags
 from pyld import jsonld
 from pytz import utc
 import re
@@ -22,7 +23,7 @@ from .task_types import (ASSERTION_TIMESTAMP_CHECKS, ASSERTION_VERIFICATION_CHEC
                          VERIFY_RECIPIENT_IDENTIFIER)
 from .utils import (abbreviate_value as abv,
                     abbreviate_node_id as abv_node,
-                    is_empty_list, is_null_list, is_iri, is_url, task_result,)
+                    is_blank_node_id, is_empty_list, is_null_list, is_iri, is_url, task_result,)
 
 
 class OBClasses(object):
@@ -73,13 +74,17 @@ class ValueTypes(object):
     ID = 'ID'
     IDENTITY_HASH = 'IDENTITY_HASH'
     IRI = 'IRI'
+    LANGUAGE = 'LANGUAGE'
     MARKDOWN_TEXT = 'MARKDOWN_TEXT'
     RDF_TYPE = 'RDF_TYPE'
     TELEPHONE = 'TELEPHONE'
     TEXT = 'TEXT'
     URL = 'URL'
 
-    PRIMITIVES = (BOOLEAN, DATA_URI_OR_URL, DATETIME, ID, IDENTITY_HASH, IRI, MARKDOWN_TEXT, TELEPHONE, TEXT, URL)
+    PRIMITIVES = (
+        BOOLEAN, DATA_URI_OR_URL, DATETIME, ID, IDENTITY_HASH, IRI, LANGUAGE, MARKDOWN_TEXT,
+        TELEPHONE, TEXT, URL
+    )
 
 
 class PrimitiveValueValidator(object):
@@ -99,6 +104,7 @@ class PrimitiveValueValidator(object):
             ValueTypes.EMAIL: self._validate_email,
             ValueTypes.IDENTITY_HASH: self._validate_identity_hash,
             ValueTypes.IRI: self._validate_iri,
+            ValueTypes.LANGUAGE: self._validate_language,
             ValueTypes.COMPACT_IRI: self._validate_compact_iri,
             ValueTypes.MARKDOWN_TEXT: self._validate_markdown_text,
             ValueTypes.RDF_TYPE: self._validate_rdf_type,
@@ -183,6 +189,10 @@ class PrimitiveValueValidator(object):
         :return: bool
         """
         return is_iri(value)
+
+    @staticmethod
+    def _validate_language(value):
+        return isinstance(value, six.string_types) and language_tags.check(value)
 
     @classmethod
     def _validate_markdown_text(cls, value):
@@ -300,6 +310,10 @@ def validate_property(state, task_meta, **options):
                         prop_name, abv(val), abv_node(node_id, node_path))
                     )
                 elif not task_meta.get('allow_data_uri', False) and not PrimitiveValueValidator(ValueTypes.IRI)(val):
+                    actions.append(report_message(
+                        "ID-type property {} had value `{}` where another scheme may have been expected {}.".format(
+                            prop_name, abv(val), abv_node(node_id, node_path)
+                        ), message_level=MESSAGE_LEVEL_WARNING))
                     raise ValidationError(
                         "ID-type property {} had value `{}` not embedded node or in IRI format in {}.".format(
                             prop_name, abv(val), abv_node(node_id, node_path))
@@ -377,7 +391,7 @@ class ClassValidators(OBClasses):
         self.class_name = class_name
 
         if class_name == OBClasses.Assertion:
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True,
                     'many': True, 'must_contain_one': ['Assertion']},
@@ -400,9 +414,9 @@ class ClassValidators(OBClasses):
                     'required': False, 'many': False},
                 {'task_type': FLATTEN_EMBEDDED_RESOURCE, 'prop_name': 'badge', 'node_class': OBClasses.Assertion,
                     'task_key': 'ASN_FLATTEN_BC'}
-            )
+            ]
         elif class_name == OBClasses.BadgeClass:
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True,
                     'many': True, 'must_contain_one': ['BadgeClass']},
@@ -422,19 +436,19 @@ class ClassValidators(OBClasses):
                     'required': True, 'many': False},
                 {'task_type': FLATTEN_EMBEDDED_RESOURCE, 'prop_name': 'issuer', 'node_class': OBClasses.BadgeClass,
                     'task_key': 'BC_FLATTEN_ISS'}
-            )
+            ]
         elif class_name == OBClasses.CryptographicKey:
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False, 'many': True,
                  'default': 'CryptographicKey'},
                 {'prop_name': 'owner', 'prop_type': ValueTypes.IRI, 'required': False, 'fetch': True},
                 {'prop_name': 'publicKeyPem', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'task_type': ASSERTION_VERIFICATION_CHECK, 'triggers_completion': 'SIGNING_KEY_FETCHED'}
-            )
+            ]
         elif class_name == OBClasses.Profile or class_name == OBClasses.Issuer:
             # To start, required values will assume the Profile class is used as BadgeClass.issuer
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True,
                     'many': True, 'must_contain_one': ['Issuer', 'Profile']},
@@ -450,10 +464,10 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
                  'expected_class': OBClasses.VerificationObjectIssuer, 'fetch': False, 'required': False},
                 {'task_type': ISSUER_PROPERTY_DEPENDENCIES, 'messageLevel': MESSAGE_LEVEL_WARNING}
-            )
+            ]
         elif class_name == OBClasses.ExpectedRecipientProfile:
             # For ephemeral profiles representing recipients, there are few required properties.
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False, 'many': True,
                  'must_contain_one': ['Issuer', 'Profile'], 'default': OBClasses.Profile},
@@ -469,9 +483,9 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
                  'expected_class': OBClasses.VerificationObjectIssuer, 'fetch': False, 'required': False},
                 {'task_type': VERIFY_RECIPIENT_IDENTIFIER, 'prerequisites': ASSERTION_VERIFICATION_DEPENDENCIES}
-            )
+            ]
         elif class_name == OBClasses.AlignmentObject:
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
                     'many': True, 'required': False, 'default': OBClasses.AlignmentObject},
                 {'prop_name': 'targetName', 'prop_type': ValueTypes.TEXT, 'required': True},
@@ -479,26 +493,26 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'targetFramework', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'targetCode', 'prop_type': ValueTypes.TEXT, 'required': False},
-            )
+            ]
         elif class_name == OBClasses.Criteria:
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE,
                     'many': True, 'required': False, 'default': OBClasses.Criteria},
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 {'task_type': CRITERIA_PROPERTY_DEPENDENCIES}
-            )
+            ]
         elif class_name == OBClasses.IdentityObject:
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True, 'many': False,
                     'must_contain_one': ['id', 'email', 'url', 'telephone']},
                 {'prop_name': 'identity', 'prop_type': ValueTypes.IDENTITY_HASH, 'required': True},
                 {'prop_name': 'hashed', 'prop_type': ValueTypes.BOOLEAN, 'required': True},
                 {'prop_name': 'salt', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'task_type': IDENTITY_OBJECT_PROPERTY_DEPENDENCIES}
-            )
+            ]
         elif class_name == OBClasses.Evidence:
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'many': True,
                     'required': False, 'default': 'Evidence'},
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
@@ -507,42 +521,46 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'description', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'genre', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'audience', 'prop_type': ValueTypes.TEXT, 'required': False},
-            )
+            ]
         elif class_name == OBClasses.Image:
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'many': True,
                     'required': False, 'default': 'schema:ImageObject'},
                 {'prop_name': 'id', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
                 {'prop_name': 'caption', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'author', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'task_type': IMAGE_VALIDATION, 'prop_name': 'id'}
-            )
+            ]
         elif class_name == OBClasses.VerificationObjectAssertion:
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True, 'many': False,
                     'must_contain_one': ['HostedBadge', 'SignedBadge']},
                 {'prop_name': 'creator', 'prop_type': ValueTypes.ID,
                     'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False,
                     'prerequisites': ASSERTION_VERIFICATION_DEPENDENCIES},
-            )
+            ]
         elif class_name == OBClasses.VerificationObjectIssuer:
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': False, 'many': True,
                     'default': 'VerificationObject'},
                 {'prop_name': 'verificationProperty', 'prop_type': ValueTypes.COMPACT_IRI, 'required': False},
                 {'prop_name': 'startsWith', 'prop_type': ValueTypes.URL, 'required': False},
                 {'prop_name': 'allowedOrigins', 'prop_type': ValueTypes.TEXT, 'required': False,
                  'many': True}
-            )
+            ]
         elif class_name == OBClasses.RevocationList:
-            self.validators = (
+            self.validators = [
                 {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True, 'many': True,
                  'must_contain_one': OBClasses.RevocationList},
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'task_type': VALIDATE_REVOCATIONLIST_ENTRIES}
-            )
+            ]
         else:
             raise NotImplementedError("Chosen OBClass not implemented yet.")
+
+        self.validators += [
+            {'prop_name': '@language', 'prop_type': ValueTypes.LANGUAGE, 'required': False},
+        ]
 
 
 def _get_validation_actions(node_class, node_id=None, node_path=None):

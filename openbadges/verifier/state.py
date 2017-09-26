@@ -1,5 +1,6 @@
 import six
 
+from .actions.action_types import REPORT_MESSAGE
 from .utils import list_of, MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_INFO, MESSAGE_LEVEL_WARNING
 
 INITIAL_STATE = {
@@ -38,7 +39,7 @@ def filter_failed_tasks(state):
 def filter_messages_for_report(state):
     messages = []
     for t in state.get('tasks'):
-        if not t.get('success') or t.get('messageLevel') == MESSAGE_LEVEL_INFO:
+        if t.get('success') is False or t.get('messageLevel') == MESSAGE_LEVEL_INFO or t.get('name') == REPORT_MESSAGE:
             messages.append(t)
     return messages
 
