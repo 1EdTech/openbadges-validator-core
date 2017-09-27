@@ -1,6 +1,7 @@
 import aniso8601
 from datetime import datetime
 from language_tags import tags as language_tags
+import numbers
 from pyld import jsonld
 from pytz import utc
 import re
@@ -79,11 +80,12 @@ class ValueTypes(object):
     RDF_TYPE = 'RDF_TYPE'
     TELEPHONE = 'TELEPHONE'
     TEXT = 'TEXT'
+    TEXT_OR_NUMBER = 'TEXT_OR_NUMBER'
     URL = 'URL'
 
     PRIMITIVES = (
         BOOLEAN, DATA_URI_OR_URL, DATETIME, ID, IDENTITY_HASH, IRI, LANGUAGE, MARKDOWN_TEXT,
-        TELEPHONE, TEXT, URL
+        TELEPHONE, TEXT, TEXT_OR_NUMBER, URL
     )
 
 
@@ -110,6 +112,7 @@ class PrimitiveValueValidator(object):
             ValueTypes.RDF_TYPE: self._validate_rdf_type,
             ValueTypes.TELEPHONE: self._validate_tel,
             ValueTypes.TEXT: self._validate_text,
+            ValueTypes.TEXT_OR_NUMBER: None,
             ValueTypes.URL: self._validate_url
         }
         self.value_type = value_type
@@ -227,6 +230,10 @@ class PrimitiveValueValidator(object):
     def _validate_text(value):
         return isinstance(value, six.string_types)
 
+    @classmethod
+    def _validate_text_or_number(cls, value):
+        return cls._validate_text(value) or isinstance(value, numbers.Number)
+
     @staticmethod
     def _validate_url(value):
         return is_url(value)
@@ -249,6 +256,7 @@ def validate_property(state, task_meta, **options):
     prop_type = task_meta.get('prop_type')
     required = bool(task_meta.get('required'))
     allow_many = task_meta.get('many')
+
     actions = []
 
     try:
@@ -303,7 +311,8 @@ def validate_property(state, task_meta, **options):
                 if isinstance(val, dict):
                     actions.append(
                         add_task(VALIDATE_EXPECTED_NODE_CLASS, node_path=value_to_test_path,
-                                 expected_class=task_meta.get('expected_class')))
+                                 expected_class=task_meta.get('expected_class'),
+                                 full_validate=task_meta.get('full_validate', True)))
                     continue
                 elif task_meta.get('allow_data_uri') and not PrimitiveValueValidator(ValueTypes.DATA_URI_OR_URL)(val):
                     raise ValidationError("ID-type property {} had value `{}` that isn't URI or DATA URI in {}.".format(
@@ -560,7 +569,11 @@ class ClassValidators(OBClasses):
 
         self.validators += [
             {'prop_name': '@language', 'prop_type': ValueTypes.LANGUAGE, 'required': False},
+            {'prop_name': 'version', 'prop_type': ValueTypes.TEXT_OR_NUMBER, 'required': False},
+            {'prop_name': 'related', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
+             'fetch': False, 'allow_data_uri': False, 'expected_class': class_name, 'full_validate': False}
         ]
+
 
 
 def _get_validation_actions(node_class, node_id=None, node_path=None):
@@ -604,6 +617,12 @@ def detect_and_validate_node_class(state, task_meta, **options):
 
     actions = _get_validation_actions(node_class, node_id, node_path)
 
+    # Filter list for related nodes down to props that exist and 'id'
+    if task_meta.get('full_validate', True) is False:
+        actions = [a for a in actions
+                   if a.get('prop_name') == 'id'
+                   or a.get('prop_name') is not None and node.get(a['prop_name']) is not None]
+
     return task_result(
         True, "Declared type on node {} is {}".format(abv_node(node_id, node_path), declared_node_type),
         actions
@@ -616,6 +635,16 @@ def validate_expected_node_class(state, task_meta, **options):
 
     node_class = OBClasses.default_for(task_meta['expected_class'])
     actions = _get_validation_actions(node_class, node_id, node_path)
+
+    # Filter list for related nodes down to props that exist and 'id'
+    if task_meta.get('full_validate', True) is False:
+        if node_id:
+            node = get_node_by_id(state, node_id)
+        else:
+            node = get_node_by_path(state, node_path)
+        actions = [a for a in actions
+                   if a.get('prop_name') == 'id'
+                   or a.get('prop_name') is not None and node.get(a['prop_name']) is not None]
 
     return task_result(
         True, "Queued property validations for class {} instance {}".format(
