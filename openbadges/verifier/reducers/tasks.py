@@ -95,7 +95,9 @@ def task_reducer(state=None, action=None):
 
     elif action.get('type') == DELETE_OUTDATED_NODE_TASKS:
         node_id = action.get('node_id', 'UNKNOWN')
-        return filter(lambda tt: not all([tt.get('node_id') == node_id and tt.get('name') in UPGRADE_TASKS]), state)
+        return list(
+            filter(lambda tt: not all([tt.get('node_id') == node_id and tt.get('name') in UPGRADE_TASKS]), state)
+        )
     return state
 
 
