@@ -9,7 +9,7 @@ import uuid
 
 from ..actions.graph import add_node, patch_node, patch_node_reference
 from ..actions.input import store_original_resource
-from ..actions.tasks import add_task, report_message
+from ..actions.tasks import add_task, delete_outdated_node_tasks, report_message
 from ..actions.validation_report import set_openbadges_version
 from ..exceptions import TaskPrerequisitesError
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
@@ -174,6 +174,7 @@ def jsonld_compact_data(state, task_meta, **options):
                 "Node fetched from source {} declared its id as {}".format(
                     task_meta['node_id'], node_id), MESSAGE_LEVEL_WARNING, success=False
             ),
+            delete_outdated_node_tasks(task_meta['node_id']),
             refetch_action
         ]
         if task_meta.get('source_node_path'):

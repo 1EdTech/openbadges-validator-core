@@ -226,13 +226,13 @@ class ObjectRedirectionTests(unittest.TestCase):
 
         result, message, actions = run_task(state, actions[1])  # JSONLD_COMPACT_DATA
         self.assertTrue(result)
-        self.assertEqual(len(actions), 2)
-        self.assertEqual(actions[1]['name'], FETCH_HTTP_NODE)
-        self.assertEqual(actions[1]['url'], first_url)
+        self.assertEqual(len(actions), 3)
+        self.assertEqual(actions[2]['name'], FETCH_HTTP_NODE)
+        self.assertEqual(actions[2]['url'], first_url)
         self.assertEqual(actions[0]['messageLevel'], MESSAGE_LEVEL_WARNING)
 
         # Pass 2: re-run FETCH_HTTP_NODE
-        result, message, actions = run_task(state, actions[1])
+        result, message, actions = run_task(state, actions[2])
         self.assertTrue(result)
 
         result, message, actions = run_task(state, actions[1])  # INTAKE_JSON
