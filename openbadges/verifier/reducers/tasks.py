@@ -1,5 +1,7 @@
-from ..actions.action_types import ADD_TASK, REPORT_MESSAGE, RESOLVE_TASK, TRIGGER_CONDITION, UPDATE_TASK
-from ..tasks.task_types import FETCH_HTTP_NODE, VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_PROPERTY, VALIDATE_RDF_TYPE_PROPERTY
+from ..actions.action_types import (ADD_TASK, DELETE_OUTDATED_NODE_TASKS, REPORT_MESSAGE, RESOLVE_TASK,
+                                    TRIGGER_CONDITION, UPDATE_TASK)
+from ..tasks.task_types import (FETCH_HTTP_NODE, VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_PROPERTY,
+                                VALIDATE_RDF_TYPE_PROPERTY, UPGRADE_TASKS)
 from ..state import filter_active_tasks, MESSAGE_LEVEL_INFO
 
 
@@ -91,6 +93,9 @@ def task_reducer(state=None, action=None):
         }
         return list(state) + [new_task]
 
+    elif action.get('type') == DELETE_OUTDATED_NODE_TASKS:
+        node_id = action.get('node_id', 'UNKNOWN')
+        return filter(lambda tt: not all([tt.get('node_id') == node_id and tt.get('name') in UPGRADE_TASKS]), state)
     return state
 
 

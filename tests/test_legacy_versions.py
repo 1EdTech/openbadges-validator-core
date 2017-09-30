@@ -12,7 +12,7 @@ from openbadges.verifier.tasks.task_types import (INTAKE_JSON, JSONLD_COMPACT_DA
 from openbadges.verifier.tasks import run_task, task_named
 from openbadges.verifier.state import INITIAL_STATE
 from openbadges.verifier.tasks.validation import OBClasses
-from openbadges.verifier.verifier import generate_report, verification_store
+from openbadges.verifier.verifier import generate_report, verification_store, verify
 
 from .testfiles.test_components import test_components
 
@@ -139,6 +139,27 @@ class V1_1DetectionAndUpgradesTests(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertEqual(state['graph'][0]['type'], OBClasses.Issuer)
+
+    @responses.activate
+    def test_upgrade_1_1_issuer_in_full_verify_with_redirect(self):
+        setUpContextCache()
+        old_url = "http://example.org/oldissuerurl"
+        data = {
+            "@context": "https://w3id.org/openbadges/v1",
+            "type": "Issuer",
+            "id": "http://example.org/realissuerurl",
+            "description": "Example Badge Issuer",
+            "url": "http://example.org",
+            "email": "noreply@example.org",
+            "name": "Test Issuer",
+            "image": "http://example.org/image"
+        }
+
+        responses.add(responses.GET, old_url, json=data)
+        responses.add(responses.GET, data['id'], json=data)
+
+        result = verify(old_url)
+        self.assertTrue(result['report']['valid'])
 
 
 class V1_0DetectionAndUpgradeTests(unittest.TestCase):

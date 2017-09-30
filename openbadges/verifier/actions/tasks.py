@@ -1,7 +1,8 @@
 from ..utils import MESSAGE_LEVEL_INFO, MESSAGE_LEVELS
 
 from .utils import generate_task_key
-from .action_types import ADD_TASK, DELETE_TASK, REPORT_MESSAGE, RESOLVE_TASK, TRIGGER_CONDITION, UPDATE_TASK
+from .action_types import (ADD_TASK, DELETE_OUTDATED_NODE_TASKS, DELETE_TASK, REPORT_MESSAGE, RESOLVE_TASK,
+                           TRIGGER_CONDITION, UPDATE_TASK)
 
 
 def add_task(task_name, **kwargs):
@@ -33,6 +34,13 @@ def trigger_condition(condition_key, result=''):
         'name': condition_key,
         'success': True,
         'result': result
+    }
+
+
+def delete_outdated_node_tasks(node_id):
+    return {
+        'type': DELETE_OUTDATED_NODE_TASKS,
+        'node_id': node_id
     }
 
 
