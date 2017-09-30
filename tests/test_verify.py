@@ -122,6 +122,13 @@ class MessagesTests(unittest.TestCase):
         self.assertEqual(len(result['report']['messages']), 1)
         self.assertEqual(result['report']['messages'][0]['result'], 'TEST MESSAGE')
 
+    def test_valid_when_no_graph(self):
+        state = INITIAL_STATE.copy()
+        store = create_store(main_reducer, state)
+        result = generate_report(store)
+        self.assertFalse(result['report']['valid'])
+
+
 
 class ResultReportTests(unittest.TestCase):
     def test_original_json_option(self):

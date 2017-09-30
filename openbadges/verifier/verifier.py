@@ -150,7 +150,11 @@ def generate_report(store, options=DEFAULT_OPTIONS):
 
     report['errorCount'] = len([m for m in report['messages'] if m['messageLevel'] == MESSAGE_LEVEL_ERROR])
     report['warningCount'] = len([m for m in report['messages'] if m['messageLevel'] == MESSAGE_LEVEL_WARNING])
-    report['valid'] = not bool(report['errorCount'])
+
+    is_valid = True  # Assume to be true at first
+    if bool(report['errorCount']) or len(state.get('graph', [])) == 0:
+        is_valid = False
+    report['valid'] = is_valid
 
     ret = {
         'graph': state['graph'],
