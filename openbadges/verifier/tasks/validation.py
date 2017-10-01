@@ -33,6 +33,8 @@ class OBClasses(object):
     BadgeClass = 'BadgeClass'
     Criteria = 'Criteria'
     CryptographicKey = 'CryptographicKey'
+    Endorsement = 'Endorsement'
+    EndorsementClaim = 'EndorsementClaim'
     Evidence = 'Evidence'
     ExpectedRecipientProfile = 'ExpectedRecipientProfile'
     Extension = 'Extension'
@@ -46,7 +48,7 @@ class OBClasses(object):
     VerificationObjectAssertion = 'VerificationObjectAssertion'
     VerificationObjectIssuer = 'VerificationObjectIssuer'
 
-    ALL_CLASSES = (AlignmentObject, Assertion, BadgeClass, Criteria, CryptographicKey,
+    ALL_CLASSES = (AlignmentObject, Assertion, BadgeClass, Criteria, CryptographicKey, Endorsement, EndorsementClaim,
                    ExpectedRecipientProfile, Extension, Evidence, IdentityObject, Image, Issuer,
                    Profile, RevocationList, VerificationObject, VerificationObjectAssertion,
                    VerificationObjectIssuer)
@@ -564,16 +566,38 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': False},
                 {'task_type': VALIDATE_REVOCATIONLIST_ENTRIES}
             ]
+        elif class_name == OBClasses.Endorsement:
+            self.validators = [
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
+                {'prop_name': 'type', 'prop_type': ValueTypes.RDF_TYPE, 'required': True,
+                 'many': True, 'must_contain_one': [OBClasses.Endorsement]},
+                {'prop_name': 'claim', 'prop_type': ValueTypes.ID, 'required': True, 'allow_remote_url': False,
+                 'fetch': False, 'allow_data_uri': False, 'expected_class': [OBClasses.EndorsementClaim, class_name],
+                 'full_validate': False},
+                {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
+                {'prop_name': 'issuer', 'prop_type': ValueTypes.ID,  # 'prerequisites': ['ENDO_FLATTEN_ISS'],
+                 'expected_class': OBClasses.Profile, 'fetch': True, 'required': True},
+                {'prop_name': 'verification'},
+                # {'task_type': FLATTEN_EMBEDDED_RESOURCE, 'prop_name': 'issuer', 'node_class': OBClasses.BadgeClass,
+                #  'task_key': 'ENDO_FLATTEN_ISS'}
+            ]
+        elif class_name == OBClasses.EndorsementClaim:
+            self.validators = [
+                {'prop_name': 'id', 'prop_type': ValueTypes.IRI, 'required': True},
+                {'prop_name': 'endorsementComment', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False}
+            ]
+            return  # Because this class appears paired with another, no need to repeat the generic props below.
         else:
-            raise NotImplementedError("Chosen OBClass not implemented yet.")
+            raise NotImplementedError("Chosen OBClass {} not implemented yet.".format(class_name))
 
         self.validators += [
             {'prop_name': '@language', 'prop_type': ValueTypes.LANGUAGE, 'required': False},
             {'prop_name': 'version', 'prop_type': ValueTypes.TEXT_OR_NUMBER, 'required': False},
             {'prop_name': 'related', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
-             'fetch': False, 'allow_data_uri': False, 'expected_class': class_name, 'full_validate': False}
+             'fetch': False, 'allow_data_uri': False, 'expected_class': class_name, 'full_validate': False},
+            {'prop_name': 'endorsement', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
+             'fetch': True, 'allow_data_uri': False, 'expected_class': OBClasses.Endorsement}
         ]
-
 
 
 def _get_validation_actions(node_class, node_id=None, node_path=None):
@@ -633,8 +657,10 @@ def validate_expected_node_class(state, task_meta, **options):
     node_id = task_meta.get('node_id')
     node_path = task_meta.get('node_path')
 
-    node_class = OBClasses.default_for(task_meta['expected_class'])
-    actions = _get_validation_actions(node_class, node_id, node_path)
+    node_classes = [OBClasses.default_for(c) for c in list_of(task_meta['expected_class'])]
+    actions = []
+    for node_class in node_classes:
+        actions += _get_validation_actions(node_class, node_id, node_path)
 
     # Filter list for related nodes down to props that exist and 'id'
     if task_meta.get('full_validate', True) is False:
@@ -643,8 +669,11 @@ def validate_expected_node_class(state, task_meta, **options):
         else:
             node = get_node_by_path(state, node_path)
         actions = [a for a in actions
-                   if a.get('prop_name') == 'id'
-                   or a.get('prop_name') is not None and node.get(a['prop_name']) is not None]
+                   if a.get('prop_name', 'UNKNOWN') in ['id', 'endorsementComment']
+                   or a.get('prop_name') is not None and node.get(a['prop_name']) is not None
+                   or a.get('prop_name') is None and a.get('run_non_core') is True]
+
+
 
     return task_result(
         True, "Queued property validations for class {} instance {}".format(
