@@ -3,11 +3,11 @@ from pyld import jsonld
 import re
 
 from ..actions.input import set_input_type, store_input
-from ..actions.tasks import add_task
+from ..actions.tasks import add_task, report_message
 from ..actions.validation_report import set_validation_subject
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..tasks.utils import is_url
-from ..utils import CachableDocumentLoader, jsonld_use_cache,make_string_from_bytes
+from ..utils import CachableDocumentLoader, jsonld_use_cache, make_string_from_bytes, MESSAGE_LEVEL_ERROR
 from ..tasks.task_types import FETCH_HTTP_NODE, PROCESS_JWS_INPUT
 from .utils import task_result
 
@@ -36,6 +36,14 @@ def find_id_in_jsonld(json_string, jsonld_options):
     return node_id
 
 
+def find_1_0_verify_url(json_string):
+    input_data = json.loads(json_string)
+    try:
+        return input_data['verify']['url']
+    except KeyError:
+        return ''
+
+
 """
 Input-processing tasks
 """
@@ -54,11 +62,16 @@ def detect_input_type(state, task_meta=None, **options):
         new_actions.append(set_validation_subject(input_value))
     elif input_is_json(input_value):
         id_url = find_id_in_jsonld(input_value, options.get('jsonld_options', jsonld_use_cache))
+        if not is_url(id_url):
+            id_url = find_1_0_verify_url(input_value)
+
         if is_url(id_url):
             detected_type = 'url'
             new_actions.append(store_input(id_url))
         else:
             detected_type = 'json'
+            new_actions.append(report_message(
+                'Could not find canonical source url from JSON input', message_level=MESSAGE_LEVEL_ERROR))
         new_actions.append(set_input_type(detected_type))
         if detected_type == 'url':
             new_actions.append(add_task(FETCH_HTTP_NODE, url=id_url))
