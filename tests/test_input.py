@@ -8,10 +8,13 @@ import unittest
 import sys
 
 from openbadges.verifier.actions.input import set_input_type, store_input
+from openbadges.verifier.actions.action_types import STORE_INPUT
+from openbadges.verifier.actions.tasks import add_task
+from openbadges.verifier.tasks.task_types import DETECT_INPUT_TYPE
 from openbadges.verifier.reducers import main_reducer
 from openbadges.verifier.state import INITIAL_STATE
 from openbadges.verifier.tasks.input import detect_input_type
-from openbadges.verifier.utils import make_string_from_bytes
+from openbadges.verifier.utils import MESSAGE_LEVEL_ERROR
 
 try:
     from .testfiles.test_components import test_components
@@ -86,9 +89,51 @@ class InputTaskTests(unittest.TestCase):
         success, message, actions = detect_input_type(state)
 
         self.assertTrue(success)
-        self.assertEqual(len(actions), 1)
+        self.assertEqual(len(actions), 2)
         self.assertEqual(actions[0]['type'], 'SET_INPUT_TYPE')
         self.assertEqual(actions[0]['input_type'], 'json')
+
+    def test_input_json_bad_0_5(self):
+        input_data = {
+            "recipient": "sha256$ef1253755797c2a3dfd3ab455a7a2080cb9160f2f1fbbf99c475347af1ecc598",
+            "issued_on": "2012-12-28",
+            "badge": {
+                "name": "Completed Rails for Zombies Redux",
+                "image": "https://d1ffx7ull4987f.cloudfront.net/images/achievements/large_badge/133/completed-rails-for-zombies-redux-0f73c361c3d5070ca2fa7951e65cbf39.png",
+                "description": "Awarded for the completion of Rails for Zombies Redux",
+                "version": "0.5.0",
+                "criteria": "https://www.codeschool.com/users/mrmickca/badges/133",
+                "issuer": {
+                    "origin": "http://www.codeschool.com",
+                    "org": None,
+                    "contact": None,
+                    "name": "Code School"
+                }
+            },
+            "salt": "6abf7e9504d73363bdcf9336056f5235",
+        }
+        input_string = json.dumps(input_data)
+        state = INITIAL_STATE
+        state['input']['value'] = input_string
+        task_meta = add_task(DETECT_INPUT_TYPE)
+        result, message, actions = detect_input_type(state, task_meta)
+        self.assertTrue(result)
+        self.assertEqual(actions[0]['input_type'], 'json')
+        self.assertEqual(actions[1]['messageLevel'], MESSAGE_LEVEL_ERROR)
+
+        # 1.0 style hosted JSON input
+        input_data['verify'] = {"url": "http://example.org/assertion/1", "type": "hosted"}
+        input_data['badge'] = 'http://example.org/badge/1'
+        input_string = json.dumps(input_data)
+        state['input']['value'] = input_string
+
+        result, message, actions = detect_input_type(state, task_meta)
+        self.assertTrue(result)
+        self.assertEqual(actions[0]['type'], STORE_INPUT)
+        self.assertEqual(actions[0]['input'], input_data['verify']['url'])
+        self.assertEqual(actions[1]['input_type'], 'url')
+        self.assertEqual(actions[2]['url'], input_data['verify']['url'])  # FETCH_HTTP_NODE
+        self.assertEqual(actions[3]['node_id'], input_data['verify']['url'])  # SET_VALIDATION_SUBJECT
 
 
 class InputJwsTests(unittest.TestCase):

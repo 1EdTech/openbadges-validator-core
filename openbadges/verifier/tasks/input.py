@@ -36,13 +36,12 @@ def find_id_in_jsonld(json_string, jsonld_options):
     return node_id
 
 
-def find_1_0_verify_url(json_string):
+def find_1_0_verify_url(json_string, options):
     input_data = json.loads(json_string)
     try:
         return input_data['verify']['url']
     except KeyError:
         return ''
-
 
 """
 Input-processing tasks
@@ -61,19 +60,22 @@ def detect_input_type(state, task_meta=None, **options):
         new_actions.append(add_task(FETCH_HTTP_NODE, url=input_value))
         new_actions.append(set_validation_subject(input_value))
     elif input_is_json(input_value):
-        id_url = find_id_in_jsonld(input_value, options.get('jsonld_options', jsonld_use_cache))
-        if not is_url(id_url):
-            id_url = find_1_0_verify_url(input_value)
+        for url_finder in [find_id_in_jsonld, find_1_0_verify_url]:
+            id_url = url_finder(input_value, options.get('jsonld_options', jsonld_use_cache))
+            if is_url(id_url):
+                detected_type = 'url'
+                new_actions.append(store_input(id_url))
+                break
+            else:
+                detected_type = 'json'
 
-        if is_url(id_url):
-            detected_type = 'url'
-            new_actions.append(store_input(id_url))
-        else:
-            detected_type = 'json'
-            new_actions.append(report_message(
-                'Could not find canonical source url from JSON input', message_level=MESSAGE_LEVEL_ERROR))
         new_actions.append(set_input_type(detected_type))
-        if detected_type == 'url':
+        if detected_type == 'json':
+            new_actions.append(report_message(
+                'Could not determine verifiable input from provided JSON. No hosted verification URL found.',
+                message_level=MESSAGE_LEVEL_ERROR
+            ))
+        elif detected_type == 'url':
             new_actions.append(add_task(FETCH_HTTP_NODE, url=id_url))
             new_actions.append(set_validation_subject(id_url))
     elif input_is_jws(input_value):
