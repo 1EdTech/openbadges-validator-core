@@ -65,8 +65,9 @@ def call_task(task_func, task_meta, store, options=DEFAULT_OPTIONS):
         message = "Task could not run due to unmet prerequisites."
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
     except Exception as e:
+        error_message = traceback.format_exception_only(type(e), e)
         logger.error(traceback.format_exc())
-        message = "{} {}".format(e.__class__, e.message)
+        message = "{} {}".format(e.__class__, error_message)
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
     else:
         store.dispatch(resolve_task(task_meta.get('task_id'), success=success, result=message))

@@ -4,12 +4,14 @@ import unittest
 
 from pydux import create_store
 
-from openbadges.verifier import verify
 from openbadges.verifier.actions.input import store_original_resource
-from openbadges.verifier.verifier import generate_report
-from openbadges.verifier.actions.tasks import report_message
+from openbadges.verifier.actions.tasks import add_task, report_message
 from openbadges.verifier.reducers import main_reducer
 from openbadges.verifier.state import INITIAL_STATE
+from openbadges.verifier.tasks import task_named
+from openbadges.verifier.tasks.task_types import VALIDATE_PROPERTY
+from openbadges.verifier.tasks.validation import ValueTypes
+from openbadges.verifier.verifier import call_task, generate_report, verify
 
 from openbadges_bakery import bake
 
@@ -168,3 +170,23 @@ class ResultReportTests(unittest.TestCase):
         self.assertIn('original_json', list(result['input'].keys()))
         self.assertEqual(len(result['input']['original_json']), 3)
         self.assertIn(url, list(result['input']['original_json'].keys()))
+
+
+class ExceptionHandlingTests(unittest.TestCase):
+    def test_can_print_exception(self):
+        state = INITIAL_STATE.copy()
+        # Create a state that will trigger an exception
+        state['graph'] = [AttributeError("Haha this isn't a dict!")]
+        task = add_task(
+            VALIDATE_PROPERTY, node_id='http://example.org/1', prop_name='turnips',
+            prop_type=ValueTypes.TEXT)
+        store = create_store(main_reducer, state)
+        store.dispatch(task)
+
+        call_task(task_named(VALIDATE_PROPERTY), store.get_state()['tasks'][0], store)
+
+        state = store.get_state()
+        self.assertEqual(len(state['tasks']), 1, 'There is one task in state.')
+        task = state['tasks'][0]
+        self.assertFalse(task['success'])
+        self.assertIn('AttributeError:', task['result'], "assert an AttributeError is formatted as the message.")
