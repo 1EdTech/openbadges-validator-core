@@ -129,7 +129,6 @@ class MessagesTests(unittest.TestCase):
         self.assertFalse(result['report']['valid'])
 
 
-
 class ResultReportTests(unittest.TestCase):
     def test_original_json_option(self):
         store = create_store(main_reducer, INITIAL_STATE)

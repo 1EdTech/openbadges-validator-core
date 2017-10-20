@@ -13,7 +13,7 @@ from openbadges.verifier.actions.tasks import add_task
 from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_DICT
 from openbadges.verifier.reducers import main_reducer
 from openbadges.verifier.state import filter_active_tasks, INITIAL_STATE
-from openbadges.verifier.tasks import task_named
+from openbadges.verifier.tasks import task_named, run_task
 from openbadges.verifier.tasks.validation import (_get_validation_actions, assertion_timestamp_checks,
                                          criteria_property_dependencies, detect_and_validate_node_class,
                                          OBClasses, PrimitiveValueValidator, validate_property, ValueTypes,)
@@ -27,10 +27,10 @@ from openbadges.verifier.verifier import call_task, verify
 
 try:
     from .testfiles.test_components import test_components
-    from tests.utils import set_up_context_mock,set_up_image_mock
+    from tests.utils import set_up_context_mock, set_up_image_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
-    from tests.utils import set_up_context_mock,set_up_image_mock
+    from tests.utils import set_up_context_mock, set_up_image_mock
 
 
 class PropertyValidationTests(unittest.TestCase):
@@ -110,6 +110,21 @@ class PropertyValidationTests(unittest.TestCase):
             self.assertTrue(validator(url), "`{}` should pass IRI validation but failed.".format(url))
         for url in bad_iris:
             self.assertFalse(validator(url), "`{}` should fail IRI validation but passed.".format(url))
+
+    def test_url_authority(self):
+        validator = PrimitiveValueValidator(ValueTypes.URL_AUTHORITY)
+        good_values = (
+            'google.com', 'nerds.example.com', '192.168.0.1', '1::6:7:8'
+        )
+        bad_values = (
+            '666', 'http://google.com/', 'https://www.google.com/search?q=murder+she+wrote&oq=murder+she+wrote',
+            'ftp://123.123.123.123', 'bears', 'lots of hungry bears', 'bears.com/thewoods'
+        )
+
+        for value in good_values:
+            self.assertTrue(validator(value), "{} should pass origin validation but failed".format(value))
+        for value in bad_values:
+            self.assertFalse(validator(value), "{} should fail origin validation but passed".format(value))
 
 
 class IriPropertyValidationTests(unittest.TestCase):
@@ -1205,6 +1220,26 @@ class RdfTypeValidationTests(unittest.TestCase):
 
 
 class VerificationObjectValiationTests(unittest.TestCase):
+    def test_bad_allowed_origins(self):
+        issuer = {
+            'id': 'http://example.org/issuer',
+            'verification': {
+                'allowedOrigins': ['example.com']
+            }
+        }
+        state = {'graph':[issuer]}
+        task = add_task(
+            VALIDATE_PROPERTY, node_path=[issuer['id'], 'verification'],
+            prop_name='allowedOrigins', prop_type=ValueTypes.URL_AUTHORITY, many=True
+        )
+
+        result, message, actions = run_task(state, task)
+        self.assertTrue(result)
+        issuer['verification']['allowedOrigins'] = ['http://mary.had/a-little-lamb']
+        result, message, actions = run_task(state, task)
+        self.assertFalse(result)
+
+
     def test_hosted_verification_object_in_assertion(self):
         assertion = {
             'type': 'Assertion',

@@ -26,6 +26,10 @@ from .utils import (abbreviate_value as abv,
                     abbreviate_node_id as abv_node,
                     is_blank_node_id, is_empty_list, is_null_list, is_iri, is_url, task_result,)
 
+from future.standard_library import install_aliases
+install_aliases()
+from urllib.parse import urlparse
+
 
 class OBClasses(object):
     AlignmentObject = 'AlignmentObject'
@@ -84,10 +88,11 @@ class ValueTypes(object):
     TEXT = 'TEXT'
     TEXT_OR_NUMBER = 'TEXT_OR_NUMBER'
     URL = 'URL'
+    URL_AUTHORITY = 'URL_AUTHORITY'
 
     PRIMITIVES = (
         BOOLEAN, DATA_URI_OR_URL, DATETIME, ID, IDENTITY_HASH, IRI, LANGUAGE, MARKDOWN_TEXT,
-        TELEPHONE, TEXT, TEXT_OR_NUMBER, URL
+        TELEPHONE, TEXT, TEXT_OR_NUMBER, URL, URL_AUTHORITY
     )
 
 
@@ -115,7 +120,8 @@ class PrimitiveValueValidator(object):
             ValueTypes.TELEPHONE: self._validate_tel,
             ValueTypes.TEXT: self._validate_text,
             ValueTypes.TEXT_OR_NUMBER: None,
-            ValueTypes.URL: self._validate_url
+            ValueTypes.URL: self._validate_url,
+            ValueTypes.URL_AUTHORITY: self._validate_url_authority
         }
         self.value_type = value_type
         self.is_valid = value_check_functions[value_type]
@@ -239,6 +245,34 @@ class PrimitiveValueValidator(object):
     @staticmethod
     def _validate_url(value):
         return is_url(value)
+
+    @staticmethod
+    def _validate_url_authority(value):
+        if not isinstance(value, six.string_types):
+            return False
+
+        hostname = re.compile(r'(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{0,62}[a-zA-Z0-9]\.)+[a-zA-Z]{2,63}$)')
+        ipv4 = re.compile(
+            r'^((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])$')
+        ipv6 = re.compile(
+            r'^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]'
+            + r'{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}'
+            + r'|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|'
+            + r'[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}'
+            + r'%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|'
+            + r'(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.)'
+            + r'{3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$')
+
+        def is_localhost(val):
+            return val == 'localhost'
+
+        test_value = 'http://{}/test'.format(value)
+        parsed = urlparse(test_value)
+        au = parsed.netloc
+        if not au or not any([hostname.match(au), ipv4.match(au), ipv6.match(au), is_localhost(au)]):
+            return False
+
+        return parsed.scheme == 'http' and au == value and parsed.path == '/test' and not parsed.query
 
 
 def validate_property(state, task_meta, **options):
@@ -556,7 +590,7 @@ class ClassValidators(OBClasses):
                     'default': 'VerificationObject'},
                 {'prop_name': 'verificationProperty', 'prop_type': ValueTypes.COMPACT_IRI, 'required': False},
                 {'prop_name': 'startsWith', 'prop_type': ValueTypes.URL, 'required': False},
-                {'prop_name': 'allowedOrigins', 'prop_type': ValueTypes.TEXT, 'required': False,
+                {'prop_name': 'allowedOrigins', 'prop_type': ValueTypes.URL_AUTHORITY, 'required': False,
                  'many': True}
             ]
         elif class_name == OBClasses.RevocationList:
