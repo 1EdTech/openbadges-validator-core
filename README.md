@@ -2,8 +2,6 @@
 
 Open Badges Validator Core is a python package designed to verify the validity of Open Badges based on a variety of input sources and present a useful interface for accessing their properties and validation information. HTTP, Python and command line APIs are provided.
 
-Note - Open Badges Validator Core is in *beta* stage. The results provided *cannot* be used as a reliable indicator of the validity of an Open Badge, and *cannot* be used as proof to claim implementation conformance.
-
 Open Badges Validator Core is released by [IMS Global Learning Consortium](https://www.imsglobal.org).
 
 This package builds on Badgecheck, originated by [Concentric Sky](https://concentricsky.com). Other IMS Global members who have contributed to this package include [D2L](https://www.d2l.com/) and [Chalk & Wire](http://www.chalkandwire.com).
