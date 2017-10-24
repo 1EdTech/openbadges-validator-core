@@ -56,6 +56,7 @@ class OBClasses(object):
                    ExpectedRecipientProfile, Extension, Evidence, IdentityObject, Image, Issuer,
                    Profile, RevocationList, VerificationObject, VerificationObjectAssertion,
                    VerificationObjectIssuer)
+    PRIMARY_OBJECTS = ([Assertion, BadgeClass, Issuer, Profile, Endorsement])
 
     @classmethod
     def default_for(cls, class_name):
@@ -119,7 +120,7 @@ class PrimitiveValueValidator(object):
             ValueTypes.RDF_TYPE: self._validate_rdf_type,
             ValueTypes.TELEPHONE: self._validate_tel,
             ValueTypes.TEXT: self._validate_text,
-            ValueTypes.TEXT_OR_NUMBER: None,
+            ValueTypes.TEXT_OR_NUMBER: self._validate_text_or_number,
             ValueTypes.URL: self._validate_url,
             ValueTypes.URL_AUTHORITY: self._validate_url_authority
         }
@@ -624,14 +625,15 @@ class ClassValidators(OBClasses):
         else:
             raise NotImplementedError("Chosen OBClass {} not implemented yet.".format(class_name))
 
-        self.validators += [
-            {'prop_name': '@language', 'prop_type': ValueTypes.LANGUAGE, 'required': False},
-            {'prop_name': 'version', 'prop_type': ValueTypes.TEXT_OR_NUMBER, 'required': False},
-            {'prop_name': 'related', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
-             'fetch': False, 'allow_data_uri': False, 'expected_class': class_name, 'full_validate': False},
-            {'prop_name': 'endorsement', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
-             'fetch': True, 'allow_data_uri': False, 'expected_class': OBClasses.Endorsement}
-        ]
+        if class_name in OBClasses.PRIMARY_OBJECTS:
+            self.validators += [
+                {'prop_name': '@language', 'prop_type': ValueTypes.LANGUAGE, 'required': False},
+                {'prop_name': 'version', 'prop_type': ValueTypes.TEXT_OR_NUMBER, 'required': False},
+                {'prop_name': 'related', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
+                 'fetch': False, 'allow_data_uri': False, 'expected_class': class_name, 'full_validate': False},
+                {'prop_name': 'endorsement', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
+                 'fetch': True, 'allow_data_uri': False, 'expected_class': OBClasses.Endorsement}
+            ]
 
 
 def _get_validation_actions(node_class, node_id=None, node_path=None):
