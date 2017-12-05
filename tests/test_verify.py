@@ -16,7 +16,7 @@ from openbadges.verifier.verifier import call_task, generate_report, verify
 from openbadges_bakery import bake
 
 try:
-    from .testfiles.test_components import test_components
+    from tests.testfiles.test_components import test_components
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
 
@@ -90,6 +90,7 @@ class InitializationTests(unittest.TestCase):
 
         with open(png_badge, 'rb') as image:
             baked_image = bake(image, test_components['2_0_basic_assertion'])
+            responses.add(responses.GET, 'https://example.org/baked', body=baked_image.read(), content_type='image/png')
             results = verify(baked_image)
 
         # verify gets the JSON out of the baked image, and then detect_input_type
@@ -99,6 +100,11 @@ class InitializationTests(unittest.TestCase):
         self.assertEqual(results.get('input').get('value'), url)
         self.assertEqual(results.get('input').get('input_type'), 'url')
         self.assertEqual(len(results['report']['messages']), 0, "There should be no failing tasks.")
+
+        # Verify that the same result occurs when passing in the baked image url.
+        another_result = verify('https://example.org/baked')
+        self.assertTrue(another_result['report']['valid'])
+        self.assertEqual(another_result['report']['validationSubject'], results['report']['validationSubject'])
 
     # def debug_live_badge_verification(self):
     #     """

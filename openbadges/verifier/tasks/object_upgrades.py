@@ -47,7 +47,7 @@ def upgrade_1_1_node(state, task_meta, **options):
         dt_validator = PrimitiveValueValidator(ValueTypes.DATETIME)
         issued_on = data.get('issuedOn')
         patch = {}
-        if not dt_validator(issued_on):
+        if not dt_validator(issued_on) and issued_on is not None:
             try:
                 patch['issuedOn'] = _upgrade_datetime(issued_on)
             except TypeError:
