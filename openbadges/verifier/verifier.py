@@ -79,6 +79,10 @@ def call_task(task_func, task_meta, store, options=DEFAULT_OPTIONS):
 
     # Make updates and queue up next tasks.
     for action in actions:
+        if not isinstance(action, dict):
+            raise TypeError("Task {} returned actions of an unreadable type. Task details: {}".format(
+                task_meta.get('name'), json.dumps(task_meta)
+            ))
         store.dispatch(action)
 
 
