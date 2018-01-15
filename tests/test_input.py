@@ -51,7 +51,7 @@ class InputTaskTests(unittest.TestCase):
         state = INITIAL_STATE.copy()
         state['input']['value'] = url
 
-        success, message, actions = detect_input_type(state)
+        success, message, actions = detect_input_type(state, {})
 
         self.assertTrue(success)
         self.assertEqual(len(actions), 3)
@@ -67,7 +67,7 @@ class InputTaskTests(unittest.TestCase):
         state = INITIAL_STATE.copy()
         state['input']['value'] = json_input
 
-        success, message, actions = detect_input_type(state)
+        success, message, actions = detect_input_type(state, {})
 
         self.assertTrue(success)
         self.assertEqual(len(actions), 4)
@@ -90,7 +90,7 @@ class InputTaskTests(unittest.TestCase):
         state = INITIAL_STATE.copy()
         state['input']['value'] = json_input
 
-        success, message, actions = detect_input_type(state)
+        success, message, actions = detect_input_type(state, {})
 
         self.assertTrue(success)
         self.assertEqual(len(actions), 2)
@@ -198,7 +198,7 @@ class InputJwsTests(unittest.TestCase):
         state = INITIAL_STATE.copy()
         state['input']['value'] = self.signed_assertion
 
-        success, message, actions = detect_input_type(state)
+        success, message, actions = detect_input_type(state, {})
 
         self.assertTrue(success)
         self.assertEqual(len(actions), 2)
@@ -257,7 +257,7 @@ class InputImageUrlTests(unittest.TestCase):
         state = {
             'input': {
                 'original_json': {
-                    image_url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAATCAYAAAB/TkaLAAAALWlUWHRvcGVuYmFkZ2VzAAAAAABodHRwOi8vZXhhbXBsZS5vcmcvYXNzZXJ0aW9uLzFq+wCZAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAACtUlEQVQ4y6XRS08TURjG8eec6UxbekmvtFAU0pIajFANxhKNQV2gRF24dOFnUFE3BiMuJUSXLvwCxhhjNCExCiaQECJSqIgXlBgNhd6k9D5tZ+a4kBrAVpH+V5M5b37vyQzBhlivv+mtKCzyILxQpyO6FgdLx9ZWvQ+f2Mozn3qOfSWK1Ojq7sp+mwiYjG3NSVc64if3hxfKM6T8EOw9+SW3HPF4PE5IggBZUcBrBQhWE0rUmDY+frov6m4KClqNCXo1ZL0hSwtFndpsRI4CKl79oGHw3vnf6Mdzp0ZCn5dOeJ1WJNYyMbkk2cvLOIEPKyXJXG/XXxeLzJ9K5/xMVprL55Tjfljb3VbFbITLZrrG9d8ZIgAw2rlf8TY6WOx7WAIgoHLLABqrnMnOIz4qO6xounmXktc+3zMB5AzAZhhwADtMpdWEXN0drkKBzdGcLPVoCGG1gAAg5UVXaTUJScXtpSXGVLVgG1MkBcVYnFKZSCVRlggApVaTEgrIDLQBmhtxKOAICdYiauvNOU4uQVcnLBIAeNTmVTy8hoCQEADXDswVZ4uzIbQUx8HpaUIBoOvDwm7GMKal9DmAlf/RCBC2W4xj1OWY7zx+6ML6u18xgEy3tw/oeX6XKMu9DHBuw4zYLIbRYjK36g4E+ghQBAC6YSPrnJsbCBfFFYHjhgFE/gFGrWbjKzGRSbgDgStlcBNahrvfve+PFsWIhuOHAUSrgDGbxTgiJjOJ1tnZPgIUtjh/xgAy3tFx20GpPcfYaQD2zaDhZXYtm9ozM3NxK1gVXYfphM83aCXEkmfsLAAbgLjVYnhRTIlJz/SbywQQq/y86jFAPe7zDdUTosszdthsMQRKGSnROjXZV+mGFb9phY2Fo8Hg1SVFypv0Wian8snWqclLfwO3HQPU837/LQbw25n/Cf7NEg3as9WWAAAAAElFTkSuQmCC'
+                    image_url: b'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAATCAYAAAB/TkaLAAAALWlUWHRvcGVuYmFkZ2VzAAAAAABodHRwOi8vZXhhbXBsZS5vcmcvYXNzZXJ0aW9uLzFq+wCZAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAACtUlEQVQ4y6XRS08TURjG8eec6UxbekmvtFAU0pIajFANxhKNQV2gRF24dOFnUFE3BiMuJUSXLvwCxhhjNCExCiaQECJSqIgXlBgNhd6k9D5tZ+a4kBrAVpH+V5M5b37vyQzBhlivv+mtKCzyILxQpyO6FgdLx9ZWvQ+f2Mozn3qOfSWK1Ojq7sp+mwiYjG3NSVc64if3hxfKM6T8EOw9+SW3HPF4PE5IggBZUcBrBQhWE0rUmDY+frov6m4KClqNCXo1ZL0hSwtFndpsRI4CKl79oGHw3vnf6Mdzp0ZCn5dOeJ1WJNYyMbkk2cvLOIEPKyXJXG/XXxeLzJ9K5/xMVprL55Tjfljb3VbFbITLZrrG9d8ZIgAw2rlf8TY6WOx7WAIgoHLLABqrnMnOIz4qO6xounmXktc+3zMB5AzAZhhwADtMpdWEXN0drkKBzdGcLPVoCGG1gAAg5UVXaTUJScXtpSXGVLVgG1MkBcVYnFKZSCVRlggApVaTEgrIDLQBmhtxKOAICdYiauvNOU4uQVcnLBIAeNTmVTy8hoCQEADXDswVZ4uzIbQUx8HpaUIBoOvDwm7GMKal9DmAlf/RCBC2W4xj1OWY7zx+6ML6u18xgEy3tw/oeX6XKMu9DHBuw4zYLIbRYjK36g4E+ghQBAC6YSPrnJsbCBfFFYHjhgFE/gFGrWbjKzGRSbgDgStlcBNahrvfve+PFsWIhuOHAUSrgDGbxTgiJjOJ1tnZPgIUtjh/xgAy3tFx20GpPcfYaQD2zaDhZXYtm9ozM3NxK1gVXYfphM83aCXEkmfsLAAbgLjVYnhRTIlJz/SbywQQq/y86jFAPe7zDdUTosszdthsMQRKGSnROjXZV+mGFb9phY2Fo8Hg1SVFypv0Wian8snWqclLfwO3HQPU837/LQbw25n/Cf7NEg3as9WWAAAAAElFTkSuQmCC'
                 }
             }
         }

@@ -43,7 +43,7 @@ def fetch_http_node(state, task_meta, **options):
     except ValueError:
         content_type = result.headers.get('Content-Type', 'UNKNOWN')
         if content_type in ['image/png', 'image/svg+xml']:
-            b64content = 'data:{};base64,{}'.format(content_type, base64.b64encode(result.content))
+            b64content = b''.join([b'data:', content_type.encode(), b';base64,', base64.b64encode(result.content)])
             actions = [store_original_resource(node_id=url, data=b64content)]
             if task_meta.get('is_potential_baked_input', False):
                 actions += [add_task(PROCESS_BAKED_RESOURCE, node_id=url)]

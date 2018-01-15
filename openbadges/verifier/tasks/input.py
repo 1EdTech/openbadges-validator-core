@@ -50,7 +50,7 @@ def find_1_0_verify_url(json_string, options):
 """
 Input-processing tasks
 """
-def detect_input_type(state, task_meta=None, **options):
+def detect_input_type(state, task_meta, **options):
     """
     Detects what data format user has provided and saves to the store.
     """
@@ -104,7 +104,8 @@ def process_baked_resource(state, task_meta, **options):
     except KeyError:
         raise TaskPrerequisitesError()
     try:
-        match = re.search(r'^data:(image\/png|image\/svg\+xml);base64,(.+)$', resource_b64)
+        search_string = resource_b64.decode('utf-8')
+        match = re.search(r'^data:(image\/png|image\/svg\+xml);base64,(.+)$', search_string)
         content_type = match.group(1)
         suffix = '.png' if content_type == 'image/png' else '.svg'
         b64_data = match.group(2)
