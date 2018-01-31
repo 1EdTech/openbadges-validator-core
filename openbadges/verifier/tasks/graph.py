@@ -202,7 +202,7 @@ def jsonld_compact_data(state, task_meta, **options):
             add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=node_id,
                      expected_class=expected_class)
         )
-    else:
+    elif task_meta.get('detectAndValidateClass', True):
         actions.append(add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=node_id))
 
     return task_result(

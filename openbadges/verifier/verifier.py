@@ -12,7 +12,7 @@ from .reducers import main_reducer
 from .state import (filter_active_tasks, filter_messages_for_report, format_message,
                     INITIAL_STATE, MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING,)
 from . import tasks
-from .tasks.task_types import JSONLD_COMPACT_DATA
+from .tasks.task_types import JSONLD_COMPACT_DATA, INTAKE_JSON
 from .tasks.validation import OBClasses
 from .utils import list_of, CachableDocumentLoader, jsonld_use_cache
 
@@ -180,3 +180,43 @@ def verify(badge_input, recipient_profile=None, **options):
     selected_options = _get_options(options)
     store = verification_store(badge_input, recipient_profile, options=selected_options)
     return generate_report(store, options=selected_options)
+
+
+def extension_validation_store(extension_input, store=None, options=DEFAULT_OPTIONS):
+    if store is None:
+        store = create_store(main_reducer, INITIAL_STATE)
+
+    if not isinstance(extension_input, dict):
+        raise ValueError
+
+    store.dispatch(store_input(extension_input.copy()))
+
+    extension_input['@context'] = extension_input.get('@context', OPENBADGES_CONTEXT_V2_URI)
+    extension_input['id'] = extension_input.get('id', '_:extension_validation_input')
+    compact_task = add_task(JSONLD_COMPACT_DATA, detectAndValidateClass=False, data=json.dumps(extension_input))
+    store.dispatch(compact_task)
+
+    tasks_remaining = True
+    while tasks_remaining:
+        active_tasks = filter_active_tasks(store.get_state())
+        if len(active_tasks) < 1:
+            tasks_remaining = False
+            break
+        task_meta = active_tasks[0]
+        task_func = tasks.task_named(task_meta['name'])
+        call_task(task_func, task_meta, store, options)
+
+    return store
+
+
+def validate_extensions(extension_input, **options):
+    """
+    Validate Open Badges Extensions
+
+    :param extension_input: object with openbadges extension properites
+    :param options: dict of options. See DEFAULT_OPTIONS for values
+    :return: dict
+    """
+    selected_options = _get_options(options)
+    store = extension_validation_store(extension_input, options=selected_options)
+    return generate_report(store, selected_options)
