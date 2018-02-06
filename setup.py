@@ -9,7 +9,7 @@ try:
     pypandoc.convert_file('README.md', 'rst', outputfile='README.rst')
     with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
         README = readme.read()
-except (ImportError, RuntimeError):
+except (ImportError, RuntimeError, OSError):
     README = short_description
 
 # import VERSION
