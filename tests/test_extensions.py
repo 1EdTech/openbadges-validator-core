@@ -17,6 +17,7 @@ from openbadges.verifier.tasks import task_named
 from openbadges.verifier.tasks.task_types import (INTAKE_JSON, JSONLD_COMPACT_DATA, VALIDATE_EXTENSION_NODE,
                                          VALIDATE_EXTENSION_SINGLE)
 from openbadges.verifier.utils import jsonld_no_cache, CachableDocumentLoader
+from openbadges.verifier.verifier import extension_validation_store, generate_report
 
 from tests.utils import set_up_context_mock
 
@@ -308,13 +309,10 @@ class UnknownExtensionsTests(unittest.TestCase):
 
 class DynamicExtensionValidationTests(unittest.TestCase):
     """
-    Extension validation involves establishin
+    Extension validation involves establishing mocks for the context & schema resources
     """
-    @responses.activate
-    def test_queue_validation_on_unknown_extension(self):
-        set_up_context_mock()
-
-        extension_schema = {
+    def set_up_test_extension(self):
+        self.extension_schema = {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "1.1 Open Badge Example Extension for testing: Unknown Extension",
             "description": "An extension that allows you to add a single string unknownProperty to an extension object for unknown reasons.",
@@ -326,8 +324,8 @@ class DynamicExtensionValidationTests(unittest.TestCase):
             },
             "required": ["unknownProperty"]
         }
-        extension_schema_url = 'http://example.org/unkownSchema'
-        extension_context = {
+        self.extension_schema_url = 'http://example.org/unkownSchema'
+        self.extension_context = {
             '@context': {
                 "obi": "https://w3id.org/openbadges#",
                 "extensions": "https://w3id.org/openbadges/extensions#",
@@ -336,31 +334,37 @@ class DynamicExtensionValidationTests(unittest.TestCase):
             "obi:validation": [
                 {
                     "obi:validatesType": "extensions:UnknownExtension",
-                    "obi:validationSchema": extension_schema_url
+                    "obi:validationSchema": self.extension_schema_url
                 }
             ]
         }
-        extension_context_url = 'http://example.org/unknownExtensionContext'
+        self.extension_context_url = 'http://example.org/unknownExtensionContext'
+
+        responses.add(
+            responses.GET, self.extension_context_url,
+            json=self.extension_context
+        )
+        responses.add(
+            responses.GET, self.extension_schema_url,
+            json=self.extension_schema
+        )
+
+    @responses.activate
+    def test_queue_validation_on_unknown_extension(self):
+        set_up_context_mock()
+        self.set_up_test_extension()
 
         first_node_json = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
             'id': 'http://example.org/assertion',
             'extensions:exampleExtension': {
-                '@context': extension_context_url,
+                '@context': self.extension_context_url,
                 'type': ['Extension', 'extensions:UnknownExtension'],
                 'unknownProperty': 'I\'m a property, short and sweet'
             },
             'evidence': 'http://example.org/evidence'
         }
 
-        responses.add(
-            responses.GET, extension_context_url,
-            json=extension_context
-        )
-        responses.add(
-            responses.GET, extension_schema_url,
-            json=extension_schema
-        )
         state = INITIAL_STATE
 
         task_meta = add_task(
@@ -381,3 +385,37 @@ class DynamicExtensionValidationTests(unittest.TestCase):
         result, message, actions = validate_extension_node(state, validation_action)
 
         self.assertTrue(result)
+
+    @responses.activate
+    def validate_basic_standalone_extensio_node(self):
+        set_up_context_mock()
+        self.set_up_test_extension()
+
+        extension_data = {
+            '@context': self.extension_context_url,
+            '@type': ['Extension', 'extensions:UnknownExtension'],
+            'unknownProperty': 'I\'m a property, short and sweet'
+        }
+
+        store = extension_validation_store(extension_data)
+        report = generate_report(store)
+
+        self.assertTrue(report['report']['valid'])
+
+        extension_data['unknownProperty'] = 42  # provokes extension schema error: should be a string.
+
+        store = extension_validation_store(extension_data)
+        report = generate_report(store)
+
+        self.assertFalse(report['report']['valid'])
+
+        del extension_data['@type']
+        extension_data['unknownProperty'] = "Ok, valid string again"
+
+        store = extension_validation_store(extension_data)
+        report = generate_report(store)
+
+        self.assertFalse(
+            report['report']['valid'],
+            "Should report an error if there weren't any discoverable extension types to test."
+        )

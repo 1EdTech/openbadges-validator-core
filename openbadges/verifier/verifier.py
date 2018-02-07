@@ -4,7 +4,7 @@ from pydux import create_store
 import traceback
 
 from .actions.input import set_input_type, store_input
-from .actions.tasks import add_task, resolve_task, trigger_condition
+from .actions.tasks import add_task, report_message, resolve_task, trigger_condition
 from .exceptions import SkipTask, TaskPrerequisitesError
 from .logger import logger
 from .openbadges_context import OPENBADGES_CONTEXT_V2_URI
@@ -12,7 +12,7 @@ from .reducers import main_reducer
 from .state import (filter_active_tasks, filter_messages_for_report, format_message,
                     INITIAL_STATE, MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING,)
 from . import tasks
-from .tasks.task_types import JSONLD_COMPACT_DATA, INTAKE_JSON
+from .tasks.task_types import INTAKE_JSON, JSONLD_COMPACT_DATA, VALIDATE_EXTENSION_NODE
 from .tasks.validation import OBClasses
 from .utils import list_of, CachableDocumentLoader, jsonld_use_cache
 
@@ -205,6 +205,16 @@ def extension_validation_store(extension_input, store=None, options=DEFAULT_OPTI
         task_meta = active_tasks[0]
         task_func = tasks.task_named(task_meta['name'])
         call_task(task_func, task_meta, store, options)
+
+
+    all_tasks = store.get_state()['tasks']
+    try:
+        first_extension_node_validation_task = [t for t in all_tasks if t['name'] == VALIDATE_EXTENSION_NODE][0]
+    except IndexError:
+        store.dispatch(report_message(
+            "No extensions were found to test. Check for proper use of context and type to declare an extension.",
+            message_level=MESSAGE_LEVEL_ERROR, success=False
+        ))
 
     return store
 

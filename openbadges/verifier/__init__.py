@@ -1,2 +1,1 @@
-from .verifier import verify
-from .verifier import validate_extensions
+from .verifier import validate_extensions, verify
