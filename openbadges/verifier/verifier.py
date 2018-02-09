@@ -4,7 +4,7 @@ from pydux import create_store
 import traceback
 
 from .actions.input import set_input_type, store_input
-from .actions.tasks import add_task, resolve_task, trigger_condition
+from .actions.tasks import add_task, report_message, resolve_task, trigger_condition
 from .exceptions import SkipTask, TaskPrerequisitesError
 from .logger import logger
 from .openbadges_context import OPENBADGES_CONTEXT_V2_URI
@@ -12,7 +12,7 @@ from .reducers import main_reducer
 from .state import (filter_active_tasks, filter_messages_for_report, format_message,
                     INITIAL_STATE, MESSAGE_LEVEL_ERROR, MESSAGE_LEVEL_WARNING,)
 from . import tasks
-from .tasks.task_types import JSONLD_COMPACT_DATA
+from .tasks.task_types import INTAKE_JSON, JSONLD_COMPACT_DATA, VALIDATE_EXTENSION_NODE
 from .tasks.validation import OBClasses
 from .utils import list_of, CachableDocumentLoader, jsonld_use_cache
 
@@ -65,8 +65,9 @@ def call_task(task_func, task_meta, store, options=DEFAULT_OPTIONS):
         message = "Task could not run due to unmet prerequisites."
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
     except Exception as e:
+        error_message = traceback.format_exception_only(type(e), e)
         logger.error(traceback.format_exc())
-        message = "{} {}".format(e.__class__, e.message)
+        message = "{} {}".format(e.__class__, error_message)
         store.dispatch(resolve_task(task_meta.get('task_id'), success=False, result=message))
     else:
         store.dispatch(resolve_task(task_meta.get('task_id'), success=success, result=message))
@@ -78,6 +79,10 @@ def call_task(task_func, task_meta, store, options=DEFAULT_OPTIONS):
 
     # Make updates and queue up next tasks.
     for action in actions:
+        if not isinstance(action, dict):
+            raise TypeError("Task {} returned actions of an unreadable type. Task details: {}".format(
+                task_meta.get('name'), json.dumps(task_meta)
+            ))
         store.dispatch(action)
 
 
@@ -175,3 +180,53 @@ def verify(badge_input, recipient_profile=None, **options):
     selected_options = _get_options(options)
     store = verification_store(badge_input, recipient_profile, options=selected_options)
     return generate_report(store, options=selected_options)
+
+
+def extension_validation_store(extension_input, store=None, options=DEFAULT_OPTIONS):
+    if store is None:
+        store = create_store(main_reducer, INITIAL_STATE)
+
+    if not isinstance(extension_input, dict):
+        raise ValueError
+
+    store.dispatch(store_input(extension_input.copy()))
+
+    extension_input['@context'] = extension_input.get('@context', OPENBADGES_CONTEXT_V2_URI)
+    extension_input['id'] = extension_input.get('id', '_:extension_validation_input')
+    compact_task = add_task(JSONLD_COMPACT_DATA, detectAndValidateClass=False, data=json.dumps(extension_input))
+    store.dispatch(compact_task)
+
+    tasks_remaining = True
+    while tasks_remaining:
+        active_tasks = filter_active_tasks(store.get_state())
+        if len(active_tasks) < 1:
+            tasks_remaining = False
+            break
+        task_meta = active_tasks[0]
+        task_func = tasks.task_named(task_meta['name'])
+        call_task(task_func, task_meta, store, options)
+
+
+    all_tasks = store.get_state()['tasks']
+    try:
+        first_extension_node_validation_task = [t for t in all_tasks if t['name'] == VALIDATE_EXTENSION_NODE][0]
+    except IndexError:
+        store.dispatch(report_message(
+            "No extensions were found to test. Check for proper use of context and type to declare an extension.",
+            message_level=MESSAGE_LEVEL_ERROR, success=False
+        ))
+
+    return store
+
+
+def validate_extensions(extension_input, **options):
+    """
+    Validate Open Badges Extensions
+
+    :param extension_input: object with openbadges extension properites
+    :param options: dict of options. See DEFAULT_OPTIONS for values
+    :return: dict
+    """
+    selected_options = _get_options(options)
+    store = extension_validation_store(extension_input, options=selected_options)
+    return generate_report(store, selected_options)

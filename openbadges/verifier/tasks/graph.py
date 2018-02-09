@@ -1,3 +1,4 @@
+import base64
 import json
 from pyld import jsonld
 import re
@@ -17,8 +18,8 @@ from ..reducers.graph import get_next_blank_node_id
 from ..state import get_node_by_id, node_match_exists
 from ..utils import list_of, jsonld_use_cache,make_string_from_bytes, MESSAGE_LEVEL_WARNING
 
-from .task_types import (DETECT_AND_VALIDATE_NODE_CLASS, FETCH_HTTP_NODE, INTAKE_JSON,
-                         JSONLD_COMPACT_DATA, UPGRADE_0_5_NODE, UPGRADE_1_0_NODE, UPGRADE_1_1_NODE,
+from .task_types import (DETECT_AND_VALIDATE_NODE_CLASS, FETCH_HTTP_NODE, INTAKE_JSON, JSONLD_COMPACT_DATA,
+                         PROCESS_BAKED_RESOURCE, UPGRADE_0_5_NODE, UPGRADE_1_0_NODE, UPGRADE_1_1_NODE,
                          VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_EXTENSION_NODE)
 from .utils import abbreviate_node_id as abv_node, filter_tasks, is_iri, is_url, task_result, URN_REGEX
 from .validation import OBClasses
@@ -40,11 +41,18 @@ def fetch_http_node(state, task_meta, **options):
     try:
         json.loads(result.text)
     except ValueError:
-        if result.headers.get('Content-Type', 'UNKNOWN') in ['image/png', 'image/svg+xml']:
+        content_type = result.headers.get('Content-Type', 'UNKNOWN')
+        if content_type in ['image/png', 'image/svg+xml']:
+            b64content = b''.join([b'data:', content_type.encode(), b';base64,', base64.b64encode(result.content)])
+            actions = [store_original_resource(node_id=url, data=b64content)]
+            if task_meta.get('is_potential_baked_input', False):
+                actions += [add_task(PROCESS_BAKED_RESOURCE, node_id=url)]
             return task_result(
-                True, 'Successfully fetched image from {}'.format(url),
-                store_original_resource(node_id=url, data=result.content))
-        return task_result(success=False, message="Response could not be interpreted from url {}".format(url))
+                True, 'Successfully fetched image from {}'.format(url), actions)
+        return task_result(
+            success=False,
+            message="Unknown Content-Type (Not image/png or image/svg+xml). Response could not be interpreted from url {}".format(url)
+        )
 
     actions = [
         store_original_resource(node_id=url, data=result.text),
@@ -194,7 +202,7 @@ def jsonld_compact_data(state, task_meta, **options):
             add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=node_id,
                      expected_class=expected_class)
         )
-    else:
+    elif task_meta.get('detectAndValidateClass', True):
         actions.append(add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=node_id))
 
     return task_result(

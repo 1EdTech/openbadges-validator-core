@@ -1,4 +1,6 @@
 include LICENSE
 include README.rst
+include openbadges/verifier/server/static/*.css
+include openbadges/verifier/server/templates/*.html
 recursive-include docs *
 recursive-include tests *

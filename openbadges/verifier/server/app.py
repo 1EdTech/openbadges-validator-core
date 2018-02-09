@@ -16,7 +16,8 @@ def request_wants_json():
 
 @app.route("/")
 def home():
-    return render_template('index.html')
+    provided_url = request.args.get('url', "")
+    return render_template('index.html', url=provided_url)
 
 
 @app.route("/results", methods=['GET'])

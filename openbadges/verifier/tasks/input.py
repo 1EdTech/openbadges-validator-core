@@ -1,15 +1,19 @@
+import base64
 import json
+from openbadges_bakery import unbake
 from pyld import jsonld
 import re
+from tempfile import NamedTemporaryFile
 
 from ..actions.input import set_input_type, store_input
-from ..actions.tasks import add_task
+from ..actions.tasks import add_task, report_message
 from ..actions.validation_report import set_validation_subject
+from ..exceptions import TaskPrerequisitesError
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..tasks.utils import is_url
-from ..utils import CachableDocumentLoader, jsonld_use_cache,make_string_from_bytes
-from ..tasks.task_types import FETCH_HTTP_NODE, PROCESS_JWS_INPUT
-from .utils import task_result
+from ..utils import jsonld_use_cache, make_string_from_bytes, MESSAGE_LEVEL_ERROR
+from ..tasks.task_types import DETECT_INPUT_TYPE, FETCH_HTTP_NODE, PROCESS_JWS_INPUT
+from .utils import abbreviate_value as abv, task_result
 
 
 """
@@ -36,10 +40,17 @@ def find_id_in_jsonld(json_string, jsonld_options):
     return node_id
 
 
+def find_1_0_verify_url(json_string, options):
+    input_data = json.loads(json_string)
+    try:
+        return input_data['verify']['url']
+    except KeyError:
+        return ''
+
 """
 Input-processing tasks
 """
-def detect_input_type(state, task_meta=None, **options):
+def detect_input_type(state, task_meta, **options):
     """
     Detects what data format user has provided and saves to the store.
     """
@@ -50,18 +61,28 @@ def detect_input_type(state, task_meta=None, **options):
     if is_url(input_value):
         detected_type = 'url'
         new_actions.append(set_input_type(detected_type))
-        new_actions.append(add_task(FETCH_HTTP_NODE, url=input_value))
+        new_actions.append(add_task(
+            FETCH_HTTP_NODE, url=input_value, is_potential_baked_input=task_meta.get('is_potential_baked_input', True)
+        ))
         new_actions.append(set_validation_subject(input_value))
     elif input_is_json(input_value):
-        id_url = find_id_in_jsonld(input_value, options.get('jsonld_options', jsonld_use_cache))
-        if is_url(id_url):
-            detected_type = 'url'
-            new_actions.append(store_input(id_url))
-        else:
-            detected_type = 'json'
+        for url_finder in [find_id_in_jsonld, find_1_0_verify_url]:
+            id_url = url_finder(input_value, options.get('jsonld_options', jsonld_use_cache))
+            if is_url(id_url):
+                detected_type = 'url'
+                new_actions.append(store_input(id_url))
+                break
+            else:
+                detected_type = 'json'
+
         new_actions.append(set_input_type(detected_type))
-        if detected_type == 'url':
-            new_actions.append(add_task(FETCH_HTTP_NODE, url=id_url))
+        if detected_type == 'json':
+            new_actions.append(report_message(
+                'Could not determine verifiable input from provided JSON. No hosted verification URL found.',
+                message_level=MESSAGE_LEVEL_ERROR
+            ))
+        elif detected_type == 'url':
+            new_actions.append(add_task(FETCH_HTTP_NODE, url=id_url, is_potential_baked_input=False))
             new_actions.append(set_validation_subject(id_url))
     elif input_is_jws(input_value):
         detected_type = 'jws'
@@ -74,3 +95,37 @@ def detect_input_type(state, task_meta=None, **options):
         message="Input of type {} detected.".format(detected_type),
         actions=new_actions
     )
+
+
+def process_baked_resource(state, task_meta, **options):
+    try:
+        node_id = task_meta['node_id']
+        resource_b64 = state['input']['original_json'][node_id]
+    except KeyError:
+        raise TaskPrerequisitesError()
+    try:
+        search_string = resource_b64.decode('utf-8')
+        match = re.search(r'^data:(image\/png|image\/svg\+xml);base64,(.+)$', search_string)
+        content_type = match.group(1)
+        suffix = '.png' if content_type == 'image/png' else '.svg'
+        b64_data = match.group(2)
+    except (AttributeError, IndexError):
+        return task_result(False, "Cannot determine image type or content from dataURI {}".format(abv(resource_b64)))
+
+    baked_file = NamedTemporaryFile(suffix=suffix)
+    baked_file.write(base64.b64decode(b64_data))
+    baked_file.seek(0)
+
+    assertion_data = unbake(baked_file)
+
+    if assertion_data:
+        actions = [
+            store_input(assertion_data),
+            add_task(DETECT_INPUT_TYPE, is_potential_baked_input=False)
+        ]
+        return task_result(True, "Retrieved baked data from image resource {}".format(abv(node_id)), actions)
+    else:
+        return task_result(
+            False, "Resource {} was an image of known type but no baked Open Badges data was available".format(
+                abv(node_id)
+            ))
