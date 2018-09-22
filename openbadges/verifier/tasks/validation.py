@@ -632,7 +632,7 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'related', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
                  'fetch': False, 'allow_data_uri': False, 'expected_class': class_name, 'full_validate': False},
                 {'prop_name': 'endorsement', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
-                 'fetch': True, 'allow_data_uri': False, 'expected_class': OBClasses.Endorsement}
+                 'fetch': True, 'allow_data_uri': False, 'expected_class': OBClasses.Endorsement, 'many': True}
             ]
 
 

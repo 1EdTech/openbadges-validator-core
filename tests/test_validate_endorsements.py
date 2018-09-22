@@ -36,6 +36,17 @@ class EndorsementTests(unittest.TestCase):
             'image': 'http://example.com/badgeimage',
             'criteria': 'http://example.com/badgecriteria'
         }
+        self.badgeclass_with_endorsement_array = {
+            '@context': OPENBADGES_CONTEXT_V2_URI,
+            'id': 'http://example.com/badgeclass',
+            'type': 'BadgeClass',
+            'issuer': 'http://example.com/issuer',
+            'endorsement': ['http://example.org/endorsement','http://example.org/endorsement'],
+            'name': 'Best Badge',
+            'description': 'An achievement that is good.',
+            'image': 'http://example.com/badgeimage',
+            'criteria': 'http://example.com/badgecriteria'
+        }
         self.issuer = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
             'id': 'http://example.com/issuer',
@@ -72,7 +83,7 @@ class EndorsementTests(unittest.TestCase):
         set_up_context_mock()
         self.set_up_resources()
 
-        for resource in [self.assertion, self.badgeclass, self.issuer, self.endorsement, self.endorsement_issuer]:
+        for resource in [self.assertion, self.badgeclass, self.badgeclass_with_endorsement_array, self.issuer, self.endorsement, self.endorsement_issuer]:
             responses.add(responses.GET, resource['id'], json=resource)
         set_up_image_mock(self.badgeclass['image'])
 
