@@ -55,14 +55,28 @@ def is_blank_node_id(value):
     return bool(re.match(r'^_:', value))
 
 
+def is_data_uri(value):
+    data_uri_regex = r'(?P<scheme>^data):(?P<mimetypes>[^,]{0,}?)?(?P<encoding>base64)?,(?P<data>.*$)'
+    ret = False
+    try:
+        if ((value and isinstance(value, six.string_types))
+                and rfc3986.is_valid_uri(value, require_scheme=True)
+                and re.match(data_uri_regex, value, re.IGNORECASE)
+                and re.match(data_uri_regex, value, re.IGNORECASE).group('scheme').lower() == 'data'):
+            ret = True
+    except ValueError:
+        pass
+    return ret
+
+
 def is_url(value):
     ret = False
     try:
         if ((value and isinstance(value, six.string_types))
-            and rfc3986.is_valid_uri(value, require_scheme=True)
-            and rfc3986.uri_reference(value).scheme.lower() in ['http', 'https']):
+                and rfc3986.is_valid_uri(value, require_scheme=True)
+                and rfc3986.uri_reference(value).scheme.lower() in ['http', 'https']):
             ret = True
-    except ValueError as e:
+    except ValueError:
         pass
     return ret
 
