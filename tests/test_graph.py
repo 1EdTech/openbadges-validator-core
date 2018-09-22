@@ -286,3 +286,47 @@ class ObjectRedirectionTests(unittest.TestCase):
         self.assertEqual(len(results['graph']), 3)
         assertion_node = [n for n in results['graph'] if n['id'] == assertion_data['id']][0]
         self.assertEqual(assertion_node['badge'], 'https://example.org/robotics-badge.json')
+
+    @responses.activate
+    def test_verify_redirected_validation_subject(self):
+        url = 'https://example.org/beths-robotics-badge.json'
+        assertion_data = json.loads(test_components['2_0_basic_assertion'])
+        alt_assertion_url = 'http://example.org/altbadgeurl'
+        assertion_data['id'] = alt_assertion_url
+        responses.add(
+            responses.GET, url, json=assertion_data, status=200,
+            content_type='application/ld+json'
+        )
+        responses.add(
+            responses.GET, alt_assertion_url,
+            json=assertion_data, status=200,
+            content_type='application/ld+json'
+        )
+        set_up_image_mock('https://example.org/beths-robot-badge.png')
+        responses.add(
+            responses.GET, 'https://w3id.org/openbadges/v2',
+            body=test_components['openbadges_context'], status=200,
+            content_type='application/ld+json'
+        )
+        responses.add(
+            responses.GET, 'https://example.org/robotics-badge.json',
+            body=test_components['2_0_basic_badgeclass'], status=200,
+            content_type='application/ld+json'
+        )
+        set_up_image_mock(u'https://example.org/robotics-badge.png')
+        responses.add(
+            responses.GET, 'https://example.org/organization.json',
+            body=test_components['2_0_basic_issuer'], status=200,
+            content_type='application/ld+json'
+        )
+
+        results = verify(url)
+
+        self.assertEqual(len(results['report']['messages']), 1,
+                         "There should be a warning about the redirection.")
+        self.assertIn('Node fetched from source', results['report']['messages'][0]['result'],
+                      "Message should be the one about the graph ID change.")
+        self.assertEqual(len(results['graph']), 3)
+        assertion_node = [n for n in results['graph'] if n['id'] == assertion_data['id']][0]
+        self.assertEqual(assertion_node['badge'], 'https://example.org/robotics-badge.json')
+        self.assertEqual(results['report']['validationSubject'], alt_assertion_url)

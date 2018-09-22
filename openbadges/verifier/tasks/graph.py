@@ -10,6 +10,7 @@ import uuid
 
 from ..actions.graph import add_node, patch_node, patch_node_reference
 from ..actions.input import store_original_resource
+from ..actions.validation_report import set_validation_subject
 from ..actions.tasks import add_task, delete_outdated_node_tasks, report_message
 from ..actions.validation_report import set_openbadges_version
 from ..exceptions import TaskPrerequisitesError
@@ -187,6 +188,9 @@ def jsonld_compact_data(state, task_meta, **options):
         ]
         if task_meta.get('source_node_path'):
             actions.append(patch_node_reference(task_meta['source_node_path'], node_id))
+        if state.get('report', {}).get('validationSubject') == task_meta['node_id']:
+            actions.append(set_validation_subject(result['id']))
+
         return task_result(
             True,
             "Successfully compacted node {} from source {} and found ID mismatch".format(node_id, task_meta['node_id']),
