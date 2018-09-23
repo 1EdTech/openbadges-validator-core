@@ -60,6 +60,7 @@ setup(
         'pydux==0.2.2',
         'PyLD==0.7.1',
         'python-jose==3.0.1',
+        'python-mimeparse==1.6.0',
         'pytz==2017.2',
         'requests >= 2.13',
         'requests_cache==0.4.13',

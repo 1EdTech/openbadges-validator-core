@@ -43,6 +43,24 @@ class HttpFetchingTests(unittest.TestCase):
         self.assertEqual(actions[0]['type'], STORE_ORIGINAL_RESOURCE)
         self.assertEqual(actions[1]['name'], INTAKE_JSON)
 
+    @responses.activate
+    def test_svg_fetch_with_complex_mimetype(self):
+        url = 'http://example.com/circle'
+        svg_circle = u'<svg height="100" width="100"><circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" ' \
+                      u'fill="red" /></svg>'
+        responses.add(
+            responses.GET, url,
+            body=svg_circle,
+            status=200, content_type='image/svg+xml; charset=utf-8'
+        )
+        task = add_task(FETCH_HTTP_NODE, url=url)
+
+        success, message, actions = fetch_http_node({}, task)
+
+        self.assertTrue(success)
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(actions[0]['type'], STORE_ORIGINAL_RESOURCE)
+
 
 class NodeStorageTests(unittest.TestCase):
     def test_single_node_store(self):
