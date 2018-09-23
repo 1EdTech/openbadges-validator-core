@@ -1,7 +1,7 @@
 from base64 import b64encode
 from Crypto.PublicKey import RSA
+from jose import jws
 import json
-import jws
 import responses
 import unittest
 import sys
@@ -20,20 +20,21 @@ from openbadges.verifier.utils import make_string_from_bytes
 
 try:
     from .testfiles.test_components import test_components
-    from tests.utils import set_up_context_mock,set_up_image_mock
+    from tests.utils import set_up_context_mock, set_up_image_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
-    from .testutils import set_up_context_mock
+    from .utils import set_up_context_mock, set_up_image_mock
 
 
 class JwsVerificationTests(unittest.TestCase):
     def setUp(self):
-        self.private_key = RSA.generate(2048)
+        self.key = RSA.generate(2048)
+        self.public_key_pem = self.key.publickey().export_key()
         self.signing_key_doc = {
             'id': 'http://example.org/key1',
             'type': 'CryptographicKey',
             'owner': 'http://example.org/issuer',
-            'publicKeyPem': self.private_key.publickey().exportKey('PEM')
+            'publicKeyPem': self.public_key_pem
         }
         self.issuer_data = {
             'id': 'http://example.org/issuer',
@@ -53,21 +54,13 @@ class JwsVerificationTests(unittest.TestCase):
             'verification': '_:b0',
             'badge': '_:b1'
         }
+        self.assertion = {
+            'id': 'urn:uuid:bf8d3c3d-fe60-487c-87a3-06440d0d0163',
+            'verification': self.verification_object,
+            'badge': self.badgeclass
+        }
 
-        header = {'alg': 'RS256'}
-        payload = self.assertion_data
-        signature = jws.sign(header, payload, self.private_key)
-
-        encoded_separator = '.'
-        if sys.version[:3] < '3':
-            encoded_header = b64encode(json.dumps(header))
-            encoded_payload = b64encode(json.dumps(payload))
-        else:
-            encoded_separator = '.'.encode()
-            encoded_header = b64encode(json.dumps(header).encode())
-            encoded_payload = b64encode(json.dumps(payload).encode())
-
-        self.signed_assertion = encoded_separator.join((encoded_header, encoded_payload, signature))
+        self.signature = jws.sign(self.assertion, self.key, algorithm='RS256')
 
         self.state = {
             'graph': [self.signing_key_doc, self.issuer_data, self.badgeclass,
@@ -75,7 +68,7 @@ class JwsVerificationTests(unittest.TestCase):
         }
 
     def test_can_process_jws_input(self):
-        task_meta = add_task(PROCESS_JWS_INPUT, data=self.signed_assertion)
+        task_meta = add_task(PROCESS_JWS_INPUT, data=self.signature)
         state = {}
 
         success, message, actions = process_jws_input(state, task_meta)
@@ -83,34 +76,27 @@ class JwsVerificationTests(unittest.TestCase):
         self.assertEqual(len(actions), 3)
 
     def test_can_verify_jws(self):
-        task_meta = add_task(VERIFY_JWS, data=self.signed_assertion,
+        task_meta = add_task(VERIFY_JWS, data=self.signature,
                              node_id=self.assertion_data['id'])
 
         success, message, actions = verify_jws_signature(self.state, task_meta)
-        print("TEST CAN VERIFY JWS : success:")
-        print(success)
-        print("TEST CAN VERIFY JWS : message:")
-        print(message)
-        print("TEST CAN VERIFY JWS : actions:")
-        print(actions)
         self.assertTrue(success)
         self.assertEqual(len(actions), 2)
 
         # Construct an invalid signature by adding to payload after signing, one theoretical attack.
-        header = {'alg': 'RS256'}
-        signature = jws.sign(header, self.assertion_data, self.private_key)
+        signed = jws.sign(self.assertion, self.key, algorithm='RS256')
         self.assertion_data['evidence'] = 'http://hahafakeinserteddata.com'
 
         encoded_separator = '.'
         if sys.version[:3] < '3':
-            encoded_header = b64encode(json.dumps(header))
+            original_header, original_payload, original_signature = self.signature.split(encoded_separator)
             encoded_payload = b64encode(json.dumps(self.assertion_data))
         else:
             encoded_separator = '.'.encode()
-            encoded_header = b64encode(json.dumps(header).encode())
+            original_header, original_payload, original_signature = self.signature.encode().split(encoded_separator)
             encoded_payload = b64encode(json.dumps(self.assertion_data).encode())
 
-        self.signed_assertion = encoded_separator.join((encoded_header, encoded_payload, signature))
+        self.signed_assertion = encoded_separator.join((original_header, encoded_payload, original_signature))
 
         task_meta = add_task(VERIFY_JWS, data=self.signed_assertion,
                              node_id=self.assertion_data['id'])
@@ -204,45 +190,24 @@ class JwsFullVerifyTests(unittest.TestCase):
         input_issuer = json.loads(test_components['2_0_basic_issuer'])
         input_issuer['publicKey'] = input_assertion['verification']['creator']
 
-        private_key = RSA.generate(2048)
+        key = RSA.generate(2048)
+        public_key_pem = key.publickey().export_key()
 
         cryptographic_key_doc = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
             'id': input_assertion['verification']['creator'],
             'type': 'CryptographicKey',
             'owner': input_issuer['id'],
-            'publicKeyPem': private_key.publickey().exportKey('PEM').decode()
+            'publicKeyPem': public_key_pem.decode()
         }
 
         set_up_context_mock()
-        for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc]:
+        for doc in [input_badgeclass, input_issuer, cryptographic_key_doc]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 
-        header = json.dumps({'alg': 'RS256'})
-        payload = json.dumps(input_assertion)
-
-
-
-        encoded_separator = '.'
-        if not sys.version[:3] < '3':
-            encoded_separator = '.'.encode()
-            encoded_header = b64encode(header.encode())
-            encoded_payload = b64encode(payload.encode())
-        else:
-            encoded_header = b64encode(header)
-            encoded_payload = b64encode(payload)
-
-        signature = encoded_separator.join([
-            encoded_header,
-            encoded_payload,
-            jws.sign(header,payload,private_key, is_json=True)
-        ])
-
+        signature = jws.sign(input_assertion, key, algorithm='RS256')
 
         response = verify(signature, use_cache=False)
-
-        print("TEST CAN FULLY VERIFY JWS SIGNED ASSERTION : response:")
-        print(response['report'])
 
         self.assertTrue(response['report']['valid'])
 
@@ -264,38 +229,24 @@ class JwsFullVerifyTests(unittest.TestCase):
         input_issuer['revocationList'] = revocation_list['id']
         input_issuer['publicKey'] = input_assertion['verification']['creator']
 
-        private_key = RSA.generate(2048)
-        print("PKEY")
-        print(private_key.publickey().exportKey('PEM').decode())
+        key = RSA.generate(2048)
+        public_key_pem = key.publickey().export_key()
+
         cryptographic_key_doc = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
             'id': input_assertion['verification']['creator'],
             'type': 'CryptographicKey',
             'owner': input_issuer['id'],
-            'publicKeyPem': private_key.publickey().exportKey('PEM').decode()
+            'publicKeyPem': public_key_pem.decode()
         }
 
         set_up_context_mock()
         for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc, revocation_list]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 
-        header = json.dumps({'alg': 'RS256'})
-        payload = json.dumps(input_assertion)
-
-        encoded_separator = '.'
-        if not sys.version[:3] < '3':
-            encoded_separator = '.'.encode()
-            encoded_header = b64encode(header.encode())
-            encoded_payload = b64encode(payload.encode())
-        else:
-            encoded_header = b64encode(header)
-            encoded_payload = b64encode(payload)
-
-        signature = encoded_separator.join([
-            encoded_header,
-            encoded_payload,
-            jws.sign(header, payload, private_key, is_json=True)
-        ])
+        header = {'alg': 'RS256'}
+        payload = json.dumps(input_assertion).encode()
+        signature = jws.sign(input_assertion, key, algorithm='RS256')
 
         response = verify(signature, use_cache=False)
 
@@ -322,37 +273,22 @@ class JwsFullVerifyTests(unittest.TestCase):
         input_issuer['revocationList'] = revocation_list['id']
         input_issuer['publicKey'] = input_assertion['verification']['creator']
 
-        private_key = RSA.generate(2048)
+        key = RSA.generate(2048)
+        public_key_pem = key.publickey().export_key()
+
         cryptographic_key_doc = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
             'id': input_assertion['verification']['creator'],
             'type': 'CryptographicKey',
             'owner': input_issuer['id'],
-            'publicKeyPem': make_string_from_bytes(private_key.publickey().exportKey('PEM'))
+            'publicKeyPem': public_key_pem.decode()
         }
 
         set_up_context_mock()
         for doc in [input_assertion, input_badgeclass, input_issuer, cryptographic_key_doc, revocation_list]:
             responses.add(responses.GET, doc['id'], json=doc, status=200)
 
-        header = json.dumps({'alg': 'RS256'})
-        payload = json.dumps(input_assertion)
-
-        encoded_separator = '.'
-        if not sys.version[:3] < '3':
-            encoded_separator = '.'.encode()
-            encoded_header = b64encode(header.encode())
-            encoded_payload = b64encode(payload.encode())
-        else:
-            encoded_header = b64encode(header)
-            encoded_payload = b64encode(payload)
-
-        signature = encoded_separator.join([
-            encoded_header,
-            encoded_payload,
-            jws.sign(header, payload, private_key, is_json=True)
-        ])
-
+        signature = jws.sign(input_assertion, key, algorithm='RS256')
 
         response = verify(signature, use_cache=False)
         self.assertFalse(response['report']['valid'])

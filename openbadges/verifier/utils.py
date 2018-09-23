@@ -101,6 +101,6 @@ def identity_hash(identfier, salt='', alg='sha256'):
 
 
 def make_string_from_bytes(input_value):
-    if isinstance(input_value,bytes):
+    if isinstance(input_value, bytes):
         return input_value.decode()
     return input_value
