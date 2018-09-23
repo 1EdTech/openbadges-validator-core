@@ -122,6 +122,36 @@ class V1_1DetectionAndUpgradesTests(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(len(actions), 1)
 
+    @responses.activate
+    def test_upgrade_1_1_badgeclass_with_multiple_alignments(self):
+        setUpContextCache()
+        data = json.loads(test_components['1_1_basic_badgeclass'])
+        data['alignment'] = [
+            {
+                'name': 'Target 1 Name',
+                'description': 'Target 1 Description',
+                'url': 'http://example.org/target-1'
+            },
+            {
+                'name': 'Target 2 Name',
+                'url': 'http://example.org/target-2'
+            }
+        ]
+        state = INITIAL_STATE
+        task = add_task(INTAKE_JSON, node_id='https://example.org/robotics-badge.json', data=json.dumps(data))
+
+        result, message, actions = task_named(INTAKE_JSON)(state, task)
+        for action in actions:
+            state = main_reducer(state, action)
+        for task in state.get('tasks'):
+            result, message, actions = task_named(task['name'])(state, task)
+            for action in actions:
+                state = main_reducer(state, action)
+
+        # Test alignment object upgrades
+        self.assertEqual(len(state['graph'][0]['alignment']), 2)
+        self.assertEqual(state['graph'][0]['alignment'][0]['targetUrl'], data['alignment'][0]['url'])
+
     def test_upgrade_1_1_issuer(self):
         setUpContextCache()
         data = json.loads(test_components['1_1_basic_issuer'])
