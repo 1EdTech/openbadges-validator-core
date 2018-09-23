@@ -282,6 +282,60 @@ class ComplexExtensionNodeValdiationTests(unittest.TestCase):
         result, message, actions = task_named(VALIDATE_EXTENSION_NODE)(state, validate_task)
         self.assertTrue(result, "Validation task is successful.")
 
+    @responses.activate
+    def test_extension_discovered_jsonld_compact_with_validates_type_variation(self):
+        """
+        Ensure an extension node is properly discovered and that the task runs without error.
+        """
+        node = {
+            '@context': OPENBADGES_CONTEXT_V2_URI,
+            'id': 'http://example.com/1',
+            'type': 'Assertion',
+            'schema:location': {
+                '@context': GeoLocation.context_url,
+                'type': ['Extension', 'extensions:GeoCoordinates'],
+                'description': 'That place in the woods where we built the fort',
+                'schema:geo': {
+                    'schema:latitude': 44.580900,
+                    'schema:longitude': -123.301815
+                }
+            }
+        }
+        state = INITIAL_STATE
+
+        set_up_context_mock()
+        geo_context = GeoLocation.context_json
+        geo_context["obi:validation"][0]['obi:validatesType'] = 'https://w3id.org/openbadges/extensions#GeoCoordinates'
+
+        responses.add(
+            responses.GET,
+            GeoLocation.context_url,
+            body=json.dumps(geo_context),
+            status=200,
+            content_type='application/ld+json')
+
+        schema_url = 'https://w3id.org/openbadges/extensions/geoCoordinatesExtension/schema.json'
+        responses.add(
+            responses.GET, schema_url,
+            body=json.dumps(GeoLocation.validation_schema[schema_url]),
+            status=200,
+            content_type='application/ld+json')
+
+        compact_task = add_task(
+            JSONLD_COMPACT_DATA, data=json.dumps(node), jsonld_options=jsonld_no_cache,
+            context_urls=[GeoLocation.context_url]
+        )
+        result, message, actions = task_named(JSONLD_COMPACT_DATA)(state, compact_task)
+        self.assertTrue(result, "JSON-LD Compact is successful.")
+        self.assertIn(VALIDATE_EXTENSION_NODE, [i.get('name') for i in actions], "Validation task queued.")
+        state = main_reducer(state, actions[0])  # ADD_NODE
+
+        validate_task = [i for i in actions if i.get('name') == VALIDATE_EXTENSION_NODE][0]
+        self.assertIsNotNone(validate_task['node_json'])
+
+        result, message, actions = task_named(VALIDATE_EXTENSION_NODE)(state, validate_task)
+        self.assertTrue(result, "Validation task is successful.")
+
 
 class UnknownExtensionsTests(unittest.TestCase):
     """

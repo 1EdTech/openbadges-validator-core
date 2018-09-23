@@ -1,6 +1,9 @@
+from pyld import jsonld
 import re
 import rfc3986
 import six
+
+from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 
 URN_REGEX = r'^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
 
@@ -88,3 +91,13 @@ def filter_tasks(state, **kwargs):
         return all([val.get(kwarg) == kwargs[kwarg] for kwarg in list(kwargs.keys())])
 
     return list(filter(_matches, tasks))
+
+
+def is_ld_term_in_list(term, search_list, context=OPENBADGES_CONTEXT_V2_URI, options=None):
+    construct = {
+        '@context': context,
+        '_:term': {'@type': term},
+        '_:list': {'@type': search_list}
+    }
+    result = jsonld.expand(construct, options)
+    return result[0]['_:term'][0]['@type'][0] in result[0]['_:list'][0]['@type']
