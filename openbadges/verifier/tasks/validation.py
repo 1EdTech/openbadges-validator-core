@@ -606,7 +606,8 @@ class ClassValidators(OBClasses):
                 {'prop_name': '@language', 'prop_type': ValueTypes.LANGUAGE, 'required': False},
                 {'prop_name': 'version', 'prop_type': ValueTypes.TEXT_OR_NUMBER, 'required': False},
                 {'prop_name': 'related', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
-                 'fetch': False, 'allow_data_uri': False, 'expected_class': class_name, 'full_validate': False},
+                 'fetch': False, 'allow_data_uri': False, 'expected_class': class_name, 'full_validate': False,
+                 'many': True},
                 {'prop_name': 'endorsement', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
                  'fetch': True, 'allow_data_uri': False, 'expected_class': OBClasses.Endorsement, 'many': True}
             ]

@@ -113,7 +113,7 @@ class InitializationTests(unittest.TestCase):
     #     even when uncommented.
     #     """
     #     results = verify(
-    #         'REPLACE WITH URL, UNCOMMENT, AND RUN')
+    #         u'REPLACE WITH URL, UNCOMMENT, AND RUN')
     #
     #     self.assertTrue(results['report']['valid'])
 
