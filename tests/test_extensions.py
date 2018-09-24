@@ -16,6 +16,7 @@ from openbadges.verifier.tasks.graph import _get_extension_actions
 from openbadges.verifier.tasks import task_named
 from openbadges.verifier.tasks.task_types import (INTAKE_JSON, JSONLD_COMPACT_DATA, VALIDATE_EXTENSION_NODE,
                                          VALIDATE_EXTENSION_SINGLE)
+from openbadges.verifier.tasks.utils import combine_contexts
 from openbadges.verifier.utils import jsonld_no_cache, CachableDocumentLoader
 from openbadges.verifier.verifier import extension_validation_store, generate_report
 
@@ -336,6 +337,60 @@ class ComplexExtensionNodeValdiationTests(unittest.TestCase):
         result, message, actions = task_named(VALIDATE_EXTENSION_NODE)(state, validate_task)
         self.assertTrue(result, "Validation task is successful.")
 
+    @responses.activate
+    def test_extension_discovered_jsonld_compact_with_context_variation(self):
+        """
+        Ensure an extension node is properly discovered and that the task runs without error.
+        """
+        node = {
+            '@context': OPENBADGES_CONTEXT_V2_URI,
+            'id': 'http://example.com/1',
+            'type': 'Assertion',
+            'schema:location': {
+                '@context': GeoLocation.context_url,
+                'type': ['Extension', 'extensions:GeoCoordinates'],
+                'description': 'That place in the woods where we built the fort',
+                'schema:geo': {
+                    'schema:latitude': 44.580900,
+                    'schema:longitude': -123.301815
+                }
+            }
+        }
+        state = INITIAL_STATE
+
+        set_up_context_mock()
+        geo_context = GeoLocation.context_json
+        geo_context['@context'] = [OPENBADGES_CONTEXT_V2_URI, geo_context['@context'].copy()]
+
+        responses.add(
+            responses.GET,
+            GeoLocation.context_url,
+            body=json.dumps(geo_context),
+            status=200,
+            content_type='application/ld+json')
+
+        schema_url = 'https://w3id.org/openbadges/extensions/geoCoordinatesExtension/schema.json'
+        responses.add(
+            responses.GET, schema_url,
+            body=json.dumps(GeoLocation.validation_schema[schema_url]),
+            status=200,
+            content_type='application/ld+json')
+
+        compact_task = add_task(
+            JSONLD_COMPACT_DATA, data=json.dumps(node), jsonld_options=jsonld_no_cache,
+            context_urls=[GeoLocation.context_url]
+        )
+        result, message, actions = task_named(JSONLD_COMPACT_DATA)(state, compact_task)
+        self.assertTrue(result, "JSON-LD Compact is successful.")
+        self.assertIn(VALIDATE_EXTENSION_NODE, [i.get('name') for i in actions], "Validation task queued.")
+        state = main_reducer(state, actions[0])  # ADD_NODE
+
+        validate_task = [i for i in actions if i.get('name') == VALIDATE_EXTENSION_NODE][0]
+        self.assertIsNotNone(validate_task['node_json'])
+
+        result, message, actions = task_named(VALIDATE_EXTENSION_NODE)(state, validate_task)
+        self.assertTrue(result, "Validation task is successful.")
+
 
 class UnknownExtensionsTests(unittest.TestCase):
     """
@@ -441,7 +496,7 @@ class DynamicExtensionValidationTests(unittest.TestCase):
         self.assertTrue(result)
 
     @responses.activate
-    def validate_basic_standalone_extensio_node(self):
+    def validate_basic_standalone_extension_node(self):
         set_up_context_mock()
         self.set_up_test_extension()
 
@@ -473,3 +528,17 @@ class DynamicExtensionValidationTests(unittest.TestCase):
             report['report']['valid'],
             "Should report an error if there weren't any discoverable extension types to test."
         )
+
+
+class ExtensionContextCombinations(unittest.TestCase):
+    def test_combine_contexts(self):
+        str1, str2 = '_:str1', '_:str2'
+        dict1, dict2 = {'dict1': 'http://dict1.com'}, {'dict2': 'http://dict2.com'}
+        dict3 = {'@context': [str2, dict1]}
+        list1, list2 = ['_:list1', '_:list1b'], ['_:list2']
+
+        self.assertEqual(combine_contexts(str1, str2),          [str1, str2])
+        self.assertEqual(combine_contexts(str1, dict1),         [str1, dict1])
+        self.assertEqual(combine_contexts(list1, list2),        list1 + list2)
+        self.assertEqual(combine_contexts(list1, dict1, str1),  list1 + [dict1, str1])
+        self.assertEqual(combine_contexts(list1, dict3, list2), list1 + [str2, dict1] + list2)

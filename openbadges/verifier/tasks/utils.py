@@ -101,3 +101,21 @@ def is_ld_term_in_list(term, search_list, context=OPENBADGES_CONTEXT_V2_URI, opt
     }
     result = jsonld.expand(construct, options)
     return result[0]['_:term'][0]['@type'][0] in result[0]['_:list'][0]['@type']
+
+
+def combine_contexts(*args):
+    if not len(args):
+        return []
+
+    context = args[0]
+    if context is None:
+        return [] + combine_contexts(*args[1:])
+    elif isinstance(context, dict):
+        try:
+            return combine_contexts(context['@context']) + combine_contexts(*args[1:])
+        except KeyError:
+            return [context] + combine_contexts(*args[1:])
+    elif isinstance(context, six.string_types):
+        return [context] + combine_contexts(*args[1:])
+    elif isinstance(context, (list, tuple)):
+        return context + combine_contexts(*args[1:])

@@ -8,10 +8,10 @@ from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..state import get_node_by_id, get_node_by_path
 from ..utils import jsonld_use_cache, list_of
 
-from .task_types import VALIDATE_EXTENSION_NODE, VALIDATE_EXTENSION_SINGLE
+from .task_types import VALIDATE_EXTENSION_SINGLE
 from .utils import (abbreviate_value as abv,
                     abbreviate_node_id as abv_node,
-                    is_iri, is_ld_term_in_list, filter_tasks, task_result,)
+                    combine_contexts, is_ld_term_in_list, task_result,)
 
 
 def validate_single_extension(state, task_meta, **options):
@@ -43,7 +43,7 @@ def validate_single_extension(state, task_meta, **options):
 
     node_data['@context'] = OPENBADGES_CONTEXT_V2_URI
     compact_data = jsonld.compact(
-        node_data, {'@context': [OPENBADGES_CONTEXT_V2_URI, context]},
+        node_data, {'@context': combine_contexts(OPENBADGES_CONTEXT_V2_URI, context)},
         options=options.get('jsonld_options', jsonld_use_cache))
 
     try:
