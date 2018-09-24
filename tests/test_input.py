@@ -1,7 +1,7 @@
 from base64 import b64encode
 from Crypto.PublicKey import RSA
 import json
-import jws
+from jose import jws
 import os
 from pydux import create_store
 import responses
@@ -147,7 +147,7 @@ class InputJwsTests(unittest.TestCase):
             'id': 'http://example.org/key1',
             'type': 'CryptographicKey',
             'owner': 'http://example.org/issuer',
-            'publicKeyPem': self.private_key.publickey().exportKey('PEM')
+            'publicKeyPem': self.private_key.publickey().exportKey()
         }
         self.issuer_data = {
             'id': 'http://example.org/issuer',
@@ -168,20 +168,7 @@ class InputJwsTests(unittest.TestCase):
             'badge': '_:b1'
         }
 
-        header = {'alg': 'RS256'}
-        payload = self.assertion_data
-        signature = jws.sign(header, payload, self.private_key)
-
-        encoded_separator = '.'
-        if sys.version[:3] < '3':
-            encoded_header = b64encode(json.dumps(header))
-            encoded_payload = b64encode(json.dumps(payload))
-        else:
-            encoded_separator = '.'.encode()
-            encoded_header = b64encode(json.dumps(header).encode())
-            encoded_payload = b64encode(json.dumps(payload).encode())
-
-        self.signed_assertion = encoded_separator.join((encoded_header, encoded_payload, signature))
+        self.signed_assertion = jws.sign(self.assertion_data, self.private_key, algorithm='RS256')
 
         self.state = {
             'graph': [self.signing_key_doc, self.issuer_data, self.badgeclass,

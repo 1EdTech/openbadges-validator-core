@@ -55,11 +55,11 @@ class CachableDocumentLoader(object):
                 doc['from_cache'] = response.from_cache
                 self.session.remove_expired_responses()
 
-           # Save URL for Potential Extension contexts.
+            # Save URL for Potential Extension contexts.
             try:
                 data = json.loads(response.text)
                 context = data['@context']
-                if isinstance(context, dict):  # TODO Improve test to cover arrays that contain dicts.
+                if any([isinstance(el, dict) for el in list_of(context)]):
                     self.contexts.update([url])
             except Exception:
                 pass
@@ -101,6 +101,6 @@ def identity_hash(identfier, salt='', alg='sha256'):
 
 
 def make_string_from_bytes(input_value):
-    if isinstance(input_value,bytes):
+    if isinstance(input_value, bytes):
         return input_value.decode()
     return input_value

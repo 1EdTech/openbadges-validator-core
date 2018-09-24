@@ -4,13 +4,14 @@ from pyld import jsonld
 
 from ..actions.tasks import add_task
 from ..exceptions import TaskPrerequisitesError
-from ..extensions import ALL_KNOWN_EXTENSIONS
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..state import get_node_by_id, get_node_by_path
 from ..utils import jsonld_use_cache, list_of
 
-from .task_types import VALIDATE_EXTENSION_NODE, VALIDATE_EXTENSION_SINGLE
-from .utils import abbreviate_value as abv, abbreviate_node_id as abv_node, is_iri, filter_tasks, task_result
+from .task_types import VALIDATE_EXTENSION_SINGLE
+from .utils import (abbreviate_value as abv,
+                    abbreviate_node_id as abv_node,
+                    combine_contexts, is_ld_term_in_list, task_result,)
 
 
 def validate_single_extension(state, task_meta, **options):
@@ -42,7 +43,7 @@ def validate_single_extension(state, task_meta, **options):
 
     node_data['@context'] = OPENBADGES_CONTEXT_V2_URI
     compact_data = jsonld.compact(
-        node_data, {'@context': [OPENBADGES_CONTEXT_V2_URI, context]},
+        node_data, {'@context': combine_contexts(OPENBADGES_CONTEXT_V2_URI, context)},
         options=options.get('jsonld_options', jsonld_use_cache))
 
     try:
@@ -97,7 +98,9 @@ def validate_extension_node(state, task_meta, **options):
 
         validation = list_of(context_compact.get('validation'))
         for val_entry in validation:
-            if val_entry.get('validatesType') in node_types:
+            if is_ld_term_in_list(
+                    val_entry.get('validatesType'), node_types,
+                    options=options.get('jsonld_options', jsonld_use_cache)):
                 try:
                     schema_url = val_entry['validationSchema']
                     schema_json = loader.session.get(

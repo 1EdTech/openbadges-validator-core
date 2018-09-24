@@ -46,4 +46,40 @@ class RelatedObjectTests(unittest.TestCase):
             r, _, __ = run_task(state, a)
             self.assertTrue(r, "Related node property validation is successful.")
 
+    def test_validate_multiple_related_languages(self):
+        assertion = {
+            'type': 'Assertion',
+            'id': 'http://example.com/assertion',
+            'verification': {
+                'type': 'HostedBadge'
+            },
+            'badge': 'http://example.com/badgeclass'
+        }
+        badgeclass = {
+            'id': 'http://example.com/badgeclass',
+            'type': 'BadgeClass',
+            '@language': 'es',
+            'issuer': 'http://example.com/issuer',
+            'related': [{
+                'id': 'http://example.com/other_badgeclass',
+                '@language': 'en-US'
+            },
+            {
+                'id': 'http://example.com/another_badgeclass',
+                '@language': 'fi'
+            }],
+            'name': 'Insignia Pronto'
+        }
+        state = {'graph': [assertion, badgeclass]}
+        task_meta = add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=badgeclass['id'])
+        result, message, actions = run_task(state, task_meta)
+        self.assertTrue(result)
 
+        language_task = [t for t in actions if t.get('prop_name') == '@language'][0]
+        r, _, __ = run_task(state, language_task)
+        self.assertTrue(r, "The BadgeClass's language property is valid.")
+
+        related_task = [t for t in actions if t.get('prop_name') == 'related'][0]
+        result, message, actions = run_task(state, related_task)
+        self.assertTrue(result, "The related property is valid and queues up task discovery for embedded node")
+        self.assertEqual(len(actions), 2, "It has now discovered two nodes to test.")

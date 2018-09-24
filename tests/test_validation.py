@@ -114,11 +114,12 @@ class PropertyValidationTests(unittest.TestCase):
     def test_url_authority(self):
         validator = PrimitiveValueValidator(ValueTypes.URL_AUTHORITY)
         good_values = (
-            'google.com', 'nerds.example.com', '192.168.0.1', '1::6:7:8'
+            'google.com', 'nerds.example.com'
         )
         bad_values = (
             '666', 'http://google.com/', 'https://www.google.com/search?q=murder+she+wrote&oq=murder+she+wrote',
-            'ftp://123.123.123.123', 'bears', 'lots of hungry bears', 'bears.com/thewoods'
+            'ftp://123.123.123.123', 'bears', 'lots of hungry bears', 'bears.com/thewoods',
+            '192.168.0.1', '1::6:7:8'
         )
 
         for value in good_values:

@@ -1,5 +1,6 @@
 import base64
 import json
+import mimeparse
 from pyld import jsonld
 import re
 import requests
@@ -10,6 +11,7 @@ import uuid
 
 from ..actions.graph import add_node, patch_node, patch_node_reference
 from ..actions.input import store_original_resource
+from ..actions.validation_report import set_validation_subject
 from ..actions.tasks import add_task, delete_outdated_node_tasks, report_message
 from ..actions.validation_report import set_openbadges_version
 from ..exceptions import TaskPrerequisitesError
@@ -42,17 +44,25 @@ def fetch_http_node(state, task_meta, **options):
         json.loads(result.text)
     except ValueError:
         content_type = result.headers.get('Content-Type', 'UNKNOWN')
-        if content_type in ['image/png', 'image/svg+xml']:
-            b64content = b''.join([b'data:', content_type.encode(), b';base64,', base64.b64encode(result.content)])
-            actions = [store_original_resource(node_id=url, data=b64content)]
-            if task_meta.get('is_potential_baked_input', False):
-                actions += [add_task(PROCESS_BAKED_RESOURCE, node_id=url)]
+
+        if mimeparse.quality(content_type, 'image/svg+xml') > 0.9:
+            parsed_type = 'image/svg+xml'
+        elif mimeparse.quality(content_type, 'image/png') > 0.9:
+            parsed_type = 'image/png'
+        else:
             return task_result(
-                True, 'Successfully fetched image from {}'.format(url), actions)
+                success=False,
+                message="Unknown Content-Type (Not image/png or image/svg+xml). Response could not be interpreted from url {}".format(
+                    url)
+            )
+
+        b64content = b''.join([b'data:', parsed_type.encode(), b';base64,', base64.b64encode(result.content)])
+        actions = [store_original_resource(node_id=url, data=b64content)]
+        if task_meta.get('is_potential_baked_input', False):
+            actions += [add_task(PROCESS_BAKED_RESOURCE, node_id=url)]
+
         return task_result(
-            success=False,
-            message="Unknown Content-Type (Not image/png or image/svg+xml). Response could not be interpreted from url {}".format(url)
-        )
+            True, 'Successfully fetched image from {}'.format(url), actions)
 
     actions = [
         store_original_resource(node_id=url, data=result.text),
@@ -187,6 +197,9 @@ def jsonld_compact_data(state, task_meta, **options):
         ]
         if task_meta.get('source_node_path'):
             actions.append(patch_node_reference(task_meta['source_node_path'], node_id))
+        if state.get('report', {}).get('validationSubject') == task_meta['node_id']:
+            actions.append(set_validation_subject(result['id']))
+
         return task_result(
             True,
             "Successfully compacted node {} from source {} and found ID mismatch".format(node_id, task_meta['node_id']),

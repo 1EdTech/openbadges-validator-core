@@ -24,7 +24,7 @@ def input_is_json(user_input):
     try:
         value = json.loads(make_string_from_bytes(user_input))
         return True
-    except ValueError:
+    except (ValueError, TypeError):
         return False
 
 

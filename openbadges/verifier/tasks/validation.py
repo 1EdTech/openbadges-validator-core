@@ -5,7 +5,6 @@ import numbers
 from pyld import jsonld
 from pytz import utc
 import re
-import rfc3986
 import six
 
 from ..actions.graph import patch_node
@@ -24,7 +23,7 @@ from .task_types import (ASSERTION_TIMESTAMP_CHECKS, ASSERTION_VERIFICATION_CHEC
                          VERIFY_RECIPIENT_IDENTIFIER)
 from .utils import (abbreviate_value as abv,
                     abbreviate_node_id as abv_node,
-                    is_blank_node_id, is_empty_list, is_null_list, is_iri, is_url, task_result,)
+                    is_blank_node_id, is_data_uri, is_empty_list, is_null_list, is_iri, is_url, task_result,)
 
 from future.standard_library import install_aliases
 install_aliases()
@@ -149,17 +148,7 @@ class PrimitiveValueValidator(object):
 
     @staticmethod
     def _validate_data_uri(value):
-        data_uri_regex=r'(?P<scheme>^data):(?P<mimetypes>[^,]{0,}?)?(?P<encoding>base64)?,(?P<data>.*$)'
-        ret = False
-        try:
-            if ((value and isinstance(value, six.string_types))
-                and rfc3986.is_valid_uri(value, require_scheme=True)
-                and re.match(data_uri_regex, value, re.IGNORECASE)
-                and re.match(data_uri_regex, value, re.IGNORECASE).group('scheme').lower() == 'data'):
-                ret = True
-        except ValueError as e:
-            pass
-        return ret
+        return is_data_uri(value)
 
     @classmethod
     def _validate_data_uri_or_url(cls, value):
@@ -253,24 +242,11 @@ class PrimitiveValueValidator(object):
             return False
 
         hostname = re.compile(r'(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{0,62}[a-zA-Z0-9]\.)+[a-zA-Z]{2,63}$)')
-        ipv4 = re.compile(
-            r'^((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])$')
-        ipv6 = re.compile(
-            r'^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]'
-            + r'{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}'
-            + r'|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|'
-            + r'[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}'
-            + r'%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|'
-            + r'(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.)'
-            + r'{3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$')
-
-        def is_localhost(val):
-            return val == 'localhost'
 
         test_value = 'http://{}/test'.format(value)
         parsed = urlparse(test_value)
         au = parsed.netloc
-        if not au or not any([hostname.match(au), ipv4.match(au), ipv6.match(au), is_localhost(au)]):
+        if not au or not hostname.match(au):
             return False
 
         return parsed.scheme == 'http' and au == value and parsed.path == '/test' and not parsed.query
@@ -450,14 +426,14 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'issuedOn', 'prop_type': ValueTypes.DATETIME, 'required': True},
                 {'prop_name': 'expires', 'prop_type': ValueTypes.DATETIME, 'required': False},
                 {'prop_name': 'image', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
-                 'expected_class': OBClasses.Image, 'fetch': False, 'allow_data_uri': True},
+                 'expected_class': OBClasses.Image, 'fetch': False, 'allow_data_uri': False},
                 {'prop_name': 'narrative', 'prop_type': ValueTypes.MARKDOWN_TEXT, 'required': False},
                 {'prop_name': 'evidence', 'prop_type': ValueTypes.ID, 'allow_remote_url': True,
                     'expected_class': OBClasses.Evidence, 'many': True, 'fetch': False, 'required': False},
                 {'task_type': ASSERTION_VERIFICATION_DEPENDENCIES, 'prerequisites': ISSUER_PROPERTY_DEPENDENCIES},
                 {'task_type': ASSERTION_TIMESTAMP_CHECKS},
                 {'task_type': IMAGE_VALIDATION, 'prop_name': 'image', 'node_class': OBClasses.Assertion,
-                    'required': False, 'many': False},
+                    'required': False, 'many': False, 'allow_data_uri': False},
                 {'task_type': FLATTEN_EMBEDDED_RESOURCE, 'prop_name': 'badge', 'node_class': OBClasses.Assertion,
                     'task_key': 'ASN_FLATTEN_BC'}
             ]
@@ -479,7 +455,7 @@ class ClassValidators(OBClasses):
                     'expected_class': OBClasses.AlignmentObject, 'many': True, 'fetch': False, 'required': False},
                 {'prop_name': 'tags', 'prop_type': ValueTypes.TEXT, 'many': True, 'required': False},
                 {'task_type': IMAGE_VALIDATION, 'prop_name': 'image', 'node_class': OBClasses.BadgeClass,
-                    'required': True, 'many': False},
+                    'required': True, 'many': False, 'allow_data_uri': True},
                 {'task_type': FLATTEN_EMBEDDED_RESOURCE, 'prop_name': 'issuer', 'node_class': OBClasses.BadgeClass,
                     'task_key': 'BC_FLATTEN_ISS'}
             ]
@@ -575,7 +551,7 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'id', 'prop_type': ValueTypes.DATA_URI_OR_URL, 'required': True},
                 {'prop_name': 'caption', 'prop_type': ValueTypes.TEXT, 'required': False},
                 {'prop_name': 'author', 'prop_type': ValueTypes.IRI, 'required': False},
-                {'task_type': IMAGE_VALIDATION, 'prop_name': 'id'}
+                {'task_type': IMAGE_VALIDATION, 'prop_name': 'id', 'allow_data_uri': True}
             ]
         elif class_name == OBClasses.VerificationObjectAssertion:
             self.validators = [
@@ -630,9 +606,10 @@ class ClassValidators(OBClasses):
                 {'prop_name': '@language', 'prop_type': ValueTypes.LANGUAGE, 'required': False},
                 {'prop_name': 'version', 'prop_type': ValueTypes.TEXT_OR_NUMBER, 'required': False},
                 {'prop_name': 'related', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
-                 'fetch': False, 'allow_data_uri': False, 'expected_class': class_name, 'full_validate': False},
+                 'fetch': False, 'allow_data_uri': False, 'expected_class': class_name, 'full_validate': False,
+                 'many': True},
                 {'prop_name': 'endorsement', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
-                 'fetch': True, 'allow_data_uri': False, 'expected_class': OBClasses.Endorsement}
+                 'fetch': True, 'allow_data_uri': False, 'expected_class': OBClasses.Endorsement, 'many': True}
             ]
 
 

@@ -36,6 +36,17 @@ class EndorsementTests(unittest.TestCase):
             'image': 'http://example.com/badgeimage',
             'criteria': 'http://example.com/badgecriteria'
         }
+        self.badgeclass_with_endorsement_array = {
+            '@context': OPENBADGES_CONTEXT_V2_URI,
+            'id': 'http://example.com/badgeclass',
+            'type': 'BadgeClass',
+            'issuer': 'http://example.com/issuer',
+            'endorsement': ['http://example.org/endorsement', 'http://example.org/endorsement2'],
+            'name': 'Best Badge',
+            'description': 'An achievement that is good.',
+            'image': 'http://example.com/badgeimage',
+            'criteria': 'http://example.com/badgecriteria'
+        }
         self.issuer = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
             'id': 'http://example.com/issuer',
@@ -58,6 +69,8 @@ class EndorsementTests(unittest.TestCase):
                 'type': "HostedBadge"
             }
         }
+        self.endorsement2 = self.endorsement.copy()
+        self.endorsement2['id'] = 'http://example.org/endorsement2'
         self.endorsement_issuer = {
             '@context': OPENBADGES_CONTEXT_V2_URI,
             'id': 'http://example.org/issuer',
@@ -79,6 +92,19 @@ class EndorsementTests(unittest.TestCase):
         results = verify(self.assertion['id'])
         self.assertTrue(results['report']['valid'])
         self.assertEqual(len(results['graph']), 5, "The graph now contains all five resources.")
+
+    @responses.activate
+    def test_validate_linked_endorsement_array(self):
+        set_up_context_mock()
+        self.set_up_resources()
+
+        for resource in [self.assertion, self.badgeclass_with_endorsement_array, self.issuer, self.endorsement, self.endorsement2, self.endorsement_issuer]:
+            responses.add(responses.GET, resource['id'], json=resource)
+        set_up_image_mock(self.badgeclass['image'])
+
+        results = verify(self.assertion['id'])
+        self.assertTrue(results['report']['valid'])
+        self.assertEqual(len(results['graph']), 6, "The graph now contains all six resources including both endorsements.")
 
     @responses.activate
     def test_validate_endorsement_as_input(self):

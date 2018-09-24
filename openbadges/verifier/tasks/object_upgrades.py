@@ -10,6 +10,7 @@ from ..exceptions import TaskPrerequisitesError
 from ..openbadges_context import OPENBADGES_CONTEXT_V1_URI
 from ..state import get_node_by_id
 from ..tasks.task_types import JSONLD_COMPACT_DATA, UPGRADE_1_1_NODE
+from ..utils import list_of
 
 from .utils import task_result, abbreviate_node_id as abv_node
 from .validation import OBClasses, ValueTypes, PrimitiveValueValidator
@@ -65,14 +66,17 @@ def upgrade_1_1_node(state, task_meta, **options):
     elif expected_class == OBClasses.BadgeClass or data.get('criteria') is not None:
         # Do badgeclass upgrades
         if data.get('alignment'):
-            alignment_fixed = False
-            alignment_node = data['alignment'].copy()
-            for term, new_term in [('url', 'targetUrl'), ('name', 'targetName'), ('description', 'targetDescription')]:
-                if alignment_node.get(term) and not alignment_node.get(new_term):
-                    alignment_fixed = True
-                    alignment_node[new_term] = alignment_node.pop(term)
+            a_patch = []
+            for a_item in list_of(data['alignment']):
+                alignment_fixed = False
+                alignment_node = a_item.copy()
+                for term, new_term in [('url', 'targetUrl'), ('name', 'targetName'), ('description', 'targetDescription')]:
+                    if alignment_node.get(term) and not alignment_node.get(new_term):
+                        alignment_fixed = True
+                        alignment_node[new_term] = alignment_node.pop(term)
+                a_patch.append(alignment_node)
             if alignment_fixed:
-                patch = {'alignment': alignment_node}
+                patch = {'alignment': a_patch}
                 actions.append(patch_node(node_id, patch))
     if actions:
         return task_result(True, "Node {} upgraded from v1.1 to 2.0".format(node_id), actions)

@@ -113,9 +113,9 @@ class InitializationTests(unittest.TestCase):
     #     even when uncommented.
     #     """
     #     results = verify(
-    #         'http://NOTAVALIDURL.COM')
+    #         u'REPLACE WITH URL, UNCOMMENT, AND RUN')
     #
-    #     self.assertTrue(results['valid'])
+    #     self.assertTrue(results['report']['valid'])
 
 
 class MessagesTests(unittest.TestCase):
