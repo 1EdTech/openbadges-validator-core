@@ -167,7 +167,7 @@ def upgrade_0_5_node(state, task_meta, **options):
 
     if data.get('id') is None and node_id is None:
         return task_result(False, "Could not determine 'id' for data")
-    elif data.get('id') is None and  node_id is not None:
+    elif data.get('id') is None and node_id is not None:
         data['id'] = node_id
 
     if data.get('issued_on') is not None and data.get('issuedOn') is None:
@@ -200,7 +200,7 @@ def upgrade_0_5_node(state, task_meta, **options):
                     pass
 
         if issuer.get('name') and issuer.get('org'):
-            issuer['name'] = '{}: {}'.format(issuer['name'], issuer.pop('org'))
+            issuer['name'] = u'{}: {}'.format(issuer['name'], issuer.pop('org'))
 
         data['badge']['issuer'] = issuer
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 import os
 import responses
@@ -329,7 +330,7 @@ class V1_0DetectionAndUpgradeTests(unittest.TestCase):
                 "criteria": "http://example.org/criteria",
                 "issuer": {
                     "origin": "example.org",
-                    "name": "Test Issuer",
+                    "name": u"Test Issuer™",
                     "org": None,
                     "contact": None
                 }
