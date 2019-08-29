@@ -112,7 +112,7 @@ def verify_recipient_against_trusted_profile(state, task_meta, **options):
     if identity_node['hashed']:
         salt = identity_node.get('salt', '')
         for possible_id in p:
-            if _matches_hash(possible_id, a, salt):
+            if _matches_hash(possible_id, a.lower(), salt):
                 confirmed_id = possible_id
                 break
         else:

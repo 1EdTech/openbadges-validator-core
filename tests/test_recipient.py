@@ -102,6 +102,29 @@ class RecipientProfileVerificationTests(unittest.TestCase):
         self.assertTrue(result)
         self.assertIn('nobody@example.org', message)
 
+    def test_profile_with_salted_hashed_email_uppercase_hash(self):
+        # Some implementations used an uppercase output of the sha256 hashing algorithm, which is equivalent.
+        recipient_profile = {'id': '_:b0', 'email': 'nobody@example.org'}
+        assertion = {
+            'id': 'http://example.org',
+            'type': 'Assertion',
+            'recipient': '_:b1'
+        }
+        identity_object = {
+            'id': '_:b1',
+            'type': 'email',
+            'hashed': True,
+            'salt': 'Maldon',
+            'identity': 'sha256$' + hashlib.sha256(recipient_profile['email'].encode('utf8') + 'Maldon'.encode('utf8')).hexdigest().upper()
+        }
+
+        state = {'graph': [recipient_profile, assertion, identity_object]}
+        task_meta = add_task(VERIFY_RECIPIENT_IDENTIFIER, node_id='_:b0')
+
+        result, message, actions = verify_recipient_against_trusted_profile(state, task_meta)
+        self.assertTrue(result)
+        self.assertIn('nobody@example.org', message)
+
     def test_unknown_identity_type(self):
         recipient_profile = {'id': '_:b0', 'schema:duns': '999999999'}
         assertion = {
