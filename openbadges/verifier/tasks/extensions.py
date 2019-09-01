@@ -101,7 +101,7 @@ def validate_extension_node(state, task_meta, **options):
                 try:
                     schema_url = val_entry['validationSchema']
                     schema_json = loader.session.get(
-                        schema_url, headers={'Accept': 'application/ld+json, application/json'}).json()
+                        schema_url, headers={'User-Agent': 'Open Badges Validator Core', 'Accept': 'application/ld+json, application/json'}).json()
                 except TypeError:
                     return task_result(False, 'Could not load JSON-schema from URL {}'.format(abv(schema_url)))
 
