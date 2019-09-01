@@ -58,7 +58,7 @@ def validate_image(state, task_meta, **options):
         else:
             try:
                 result = session.get(
-                    url, headers={'Accept': 'application/ld+json, application/json, image/png, image/svg+xml'}
+                    url, headers={'User-Agent': 'Open Badges Validator Core', 'Accept': 'application/ld+json, application/json, image/png, image/svg+xml'}
                 )
                 content_type = result.headers['content-type']
                 encoded_body = base64.b64encode(result.content)
