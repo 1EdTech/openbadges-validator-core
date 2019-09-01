@@ -47,7 +47,7 @@ class CachableDocumentLoader(object):
                     code='loading document failed')
 
             response = self.session.get(
-                url, headers={'Accept': 'application/ld+json, application/json'})
+                url, headers={'User-Agent': 'Open Badges Validator Core', 'Accept': 'application/ld+json, application/json'})
 
             doc = {'contextUrl': None, 'documentUrl': url, 'document': response.text}
 
