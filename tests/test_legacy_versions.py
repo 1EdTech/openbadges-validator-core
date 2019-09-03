@@ -320,6 +320,7 @@ class V1_0DetectionAndUpgradesTests(unittest.TestCase):
 class V1_0DetectionAndUpgradeTests(unittest.TestCase):
     def setUp(self):
         self.assertion_data = {
+            "uid": u"abc123™",
             "recipient": "sha256$a4a934a0bfc882a34a3e71650e40789453b2db9799a51a2d084a64caadd72397",
             "salt": "2e2bad0df9e11272ffbcee86e4c7edd4",
             "issued_on": "2017-01-01",
@@ -371,6 +372,7 @@ class V1_0DetectionAndUpgradeTests(unittest.TestCase):
         setUpContextCache()
         assertion_url = 'http://example.org/assertion'
         assertion_data = {
+            "uid": u"abc123™",
             "recipient": "sha256$a4a934a0bfc882a34a3e71650e40789453b2db9799a51a2d084a64caadd72397",
             "salt": "2e2bad0df9e11272ffbcee86e4c7edd4",
             "issued_on": "2017-01-01",
@@ -381,7 +383,7 @@ class V1_0DetectionAndUpgradeTests(unittest.TestCase):
                 "criteria": "http://example.org/criteria",
                 "issuer": {
                     "origin": "http://example.org",
-                    "name": "Test Issuer",
+                    "name": u"Test Issuer™",
                     "org": None,
                     "contact": 'test@example.com'
                 }

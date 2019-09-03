@@ -103,7 +103,7 @@ def upgrade_1_0_node(state, task_meta, **options):
             if verification_type == 'hosted':
                 node_id = data['verify'].get('url')
             elif verification_type == 'signed' and data.get('uid') is not None:
-                node_id = 'uid:{}'.format(data['uid'])
+                node_id = u'uid:{}'.format(data['uid'])
 
         if node_id:
             data['id'] = node_id
