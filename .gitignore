@@ -7,3 +7,4 @@ build/
 .tox/
 .cache/
 README.rst
+.vscode/launch.json
