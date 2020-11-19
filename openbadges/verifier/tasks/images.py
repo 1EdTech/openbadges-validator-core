@@ -73,11 +73,12 @@ def validate_image(state, task_meta, **options):
                 result = session.get(
                     url, headers={'Accept': 'application/ld+json, application/json, image/png, image/svg+xml'}
                 )
+                result.raise_for_status()
                 content_type = result.headers['content-type']
                 encoded_body = base64.b64encode(result.content)
                 data_uri = "data:{};base64,{}".format(content_type, encoded_body)
 
-            except (requests.ConnectionError, KeyError):
+            except (requests.ConnectionError, requests.HTTPError, KeyError):
                 return task_result(False, "Could not fetch image at {}".format(url))
             else:
                 actions.append(store_original_resource(url, data_uri))
