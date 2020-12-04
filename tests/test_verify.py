@@ -88,10 +88,12 @@ class InitializationTests(unittest.TestCase):
             content_type='application/ld+json'
         )
 
+        options = {'max_validation_depth': 3}
+
         with open(png_badge, 'rb') as image:
             baked_image = bake(image, test_components['2_0_basic_assertion'])
             responses.add(responses.GET, 'https://example.org/baked', body=baked_image.read(), content_type='image/png')
-            results = verify(baked_image)
+            results = verify(baked_image, None, **options)
 
         # verify gets the JSON out of the baked image, and then detect_input_type
         # will reach out to the assertion URL to fetch the canonical assertion (thus,

@@ -757,18 +757,19 @@ class IDPropertyValidationTests(unittest.TestCase):
             ]
         }
         state = {'graph': [first_node]}
+        options = {'max_validation_depth': 3}
         required = True
 
         task = add_task(
             VALIDATE_PROPERTY, node_id=first_node['id'], node_class=OBClasses.BadgeClass,
             prop_name='alignment', prop_type=ValueTypes.ID, required=required, many=True, fetch=False,
-            expected_class=OBClasses.AlignmentObject, allow_remote_url=False
+            expected_class=OBClasses.AlignmentObject, allow_remote_url=False, depth=0
         )
         result, message, actions = validate_property(state, task)
         self.assertTrue(result, "Task the queues up individual class validators is successful")
         self.assertEqual(len(actions), 1)
 
-        result, message, actions = task_named(actions[0]['name'])(state, actions[0])
+        result, message, actions = task_named(actions[0]['name'])(state, actions[0], **options)
         self.assertTrue(result)
         for a in actions:
             self.assertEqual(a['node_path'], [first_node['id'], 'alignment', 0])
@@ -803,6 +804,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             }
         }
         state = {'graph': [first_node]}
+        options = {'max_validation_depth': 3}
 
         task = add_task(
             VALIDATE_PROPERTY,
@@ -810,7 +812,8 @@ class ClassValidationTaskTests(unittest.TestCase):
             prop_name="recipient",
             required=True,
             prop_type=ValueTypes.ID,
-            expected_class=OBClasses.IdentityObject
+            expected_class=OBClasses.IdentityObject,
+            depth=0
         )
 
         def run(cur_state, cur_task, expected_result, msg=''):
@@ -820,7 +823,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             self.assertEqual(actions[0]['expected_class'], OBClasses.IdentityObject)
 
             cur_task = actions[0]
-            result, message, actions = task_named(cur_task['name'])(cur_state, cur_task)
+            result, message, actions = task_named(cur_task['name'])(cur_state, cur_task, **options)
             self.assertTrue(result, "IdentityObject validation task discovery should succeed.")
 
             for cur_task in [a for a in actions if a.get('type') == ADD_TASK]:
@@ -889,20 +892,22 @@ class ClassValidationTaskTests(unittest.TestCase):
                 {'id': 'http://example.com/b', 'name': 'Another property outside of Criteria class scope'},
             ]
         }
+        options = {'max_validation_depth': 3}
         actions = [add_task(
             VALIDATE_PROPERTY,
             node_id=badgeclass_node['id'],
             prop_name="criteria",
             required=False,
             prop_type=ValueTypes.ID,
-            expected_class=OBClasses.Criteria
+            expected_class=OBClasses.Criteria,
+            depth=0
         )]
         badgeclass_node['criteria'] = 'http://example.com/a'
 
         for task in actions:
             if not task.get('type') == 'ADD_TASK':
                 continue
-            result, message, new_actions = task_named(task['name'])(state, task)
+            result, message, new_actions = task_named(task['name'])(state, task, **options)
             if new_actions:
                 actions.extend(new_actions)
             self.assertTrue(result)
@@ -914,13 +919,15 @@ class ClassValidationTaskTests(unittest.TestCase):
         state = {
             'graph': [badgeclass_node]
         }
+        options = {'max_validation_depth': 3}
         actions = [add_task(
             VALIDATE_PROPERTY,
             node_id=badgeclass_node['id'],
             prop_name="criteria",
             required=False,
             prop_type=ValueTypes.ID,
-            expected_class=OBClasses.Criteria
+            expected_class=OBClasses.Criteria,
+            depth=0
         )]
         badgeclass_node['criteria'] = {
             'narrative': 'Do the important things.'
@@ -929,7 +936,7 @@ class ClassValidationTaskTests(unittest.TestCase):
         for task in actions:
             if not task.get('type') == 'ADD_TASK':
                 continue
-            result, message, new_actions = task_named(task['name'])(state, task)
+            result, message, new_actions = task_named(task['name'])(state, task, **options)
             if new_actions:
                 actions.extend(new_actions)
             self.assertTrue(result)
@@ -939,6 +946,7 @@ class ClassValidationTaskTests(unittest.TestCase):
     def test_many_criteria_disallowed(self):
         badgeclass_node = {'id': 'http://example.com/badgeclass', 'type': 'BadgeClass'}
         state = {'graph': [badgeclass_node]}
+        options = {'max_validation_depth': 3}
         actions = [add_task(
             VALIDATE_PROPERTY,
             node_id=badgeclass_node['id'],
@@ -950,7 +958,7 @@ class ClassValidationTaskTests(unittest.TestCase):
         badgeclass_node['criteria'] = ['http://example.com/a', 'http://example.com/b']
 
         task = actions[0]
-        result, message, new_actions = task_named(task['name'])(state, task)
+        result, message, new_actions = task_named(task['name'])(state, task, **options)
         self.assertFalse(result, "Validation should reject multiple criteria entries")
         self.assertTrue('has more than the single allowed value' in message)
 
@@ -985,16 +993,17 @@ class ClassValidationTaskTests(unittest.TestCase):
         ]}
 
     def _run(self, task_meta, expected_result, msg='', test_task='UNKNOWN'):
+        options = {'max_validation_depth': 3}
         result, message, actions = validate_property(self.state, task_meta)
         self.assertTrue(result, "Property validation task should succeed.")
         self.assertEqual(len(actions), 1)
 
         task_meta = actions[0]
-        result, message, actions = task_named(task_meta['name'])(self.state, task_meta)
+        result, message, actions = task_named(task_meta['name'])(self.state, task_meta, **options)
         self.assertTrue(result, "Class validation task discovery should succeed.")
 
         for task_meta in [a for a in actions if a.get('type') == ADD_TASK]:
-            val_result, val_message, val_actions = task_named(task_meta['name'])(self.state, task_meta)
+            val_result, val_message, val_actions = task_named(task_meta['name'])(self.state, task_meta, **options)
             if not task_meta['name'] == test_task:
                 self.assertTrue(val_result, "Test {} should pass".format(task_meta['name']))
             elif task_meta['name'] == test_task:
@@ -1013,7 +1022,8 @@ class ClassValidationTaskTests(unittest.TestCase):
             prop_name="evidence",
             required=False,
             prop_type=ValueTypes.ID,
-            expected_class=OBClasses.Evidence
+            expected_class=OBClasses.Evidence,
+            depth=0
         )
 
         self._run(task, True, 'Single embedded complete evidence node passes')
@@ -1073,7 +1083,8 @@ class ClassValidationTaskTests(unittest.TestCase):
             prop_name="alignment",
             required=False,
             prop_type=ValueTypes.ID,
-            expected_class=OBClasses.AlignmentObject
+            expected_class=OBClasses.AlignmentObject,
+            depth=0
         )
 
         self._run(task, True, 'Single embedded complete alignment node passes', test_task=None)
@@ -1095,7 +1106,7 @@ class ClassValidationTaskTests(unittest.TestCase):
         second_node = {'id': '_:b0', 'narrative': 'Do the important learning.'}
         state = {'graph': [first_node, second_node]}
 
-        actions = _get_validation_actions(OBClasses.BadgeClass, first_node['id'])
+        actions = _get_validation_actions(OBClasses.BadgeClass, 0, first_node['id'])
         results = []
         for action in actions:
             if action['type'] == 'ADD_TASK':
@@ -1393,15 +1404,16 @@ class IssuerClassValidationTests(unittest.TestCase):
         }
 
         state = {'graph': [issuer]}
+        options = {'max_validation_depth': 3}
 
         task_meta = add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=issuer['id'],
-                             expected_class=issuer['type'])
+                             expected_class=issuer['type'], depth=0)
 
-        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        result, message, actions = task_named(task_meta['name'])(state, task_meta, **options)
         self.assertTrue(result)
 
-        task_meta = add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=issuer['id'])
-        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        task_meta = add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=issuer['id'], depth=0)
+        result, message, actions = task_named(task_meta['name'])(state, task_meta, **options)
         self.assertTrue(result)
 
     def test_issuer_warn_on_non_https_id(self):
@@ -1412,10 +1424,11 @@ class IssuerClassValidationTests(unittest.TestCase):
             'url': 'http://example.com'
         }
         state = {'graph': [issuer]}
+        options = {'max_validation_depth': 3}
         task_meta = add_task(ISSUER_PROPERTY_DEPENDENCIES, node_id=issuer['id'],
                              messageLevel=MESSAGE_LEVEL_WARNING)
 
-        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        result, message, actions = task_named(task_meta['name'])(state, task_meta, **options)
         self.assertFalse(result)
         self.assertIn('HTTP', message)
 

@@ -7,6 +7,7 @@ from openbadges.verifier.tasks import run_task
 from openbadges.verifier.tasks.task_types import VALIDATE_EXPECTED_NODE_CLASS
 from openbadges.verifier.tasks.validation import OBClasses
 from openbadges import verify
+from openbadges.verifier.tasks import task_named
 
 
 from .utils import set_up_context_mock, set_up_image_mock
@@ -122,17 +123,20 @@ class EndorsementTests(unittest.TestCase):
     def test_claim_property_validation(self):
         self.set_up_resources()
 
+        options = {'max_validation_depth': 3}
+
         state = {'graph': [self.endorsement]}
         task_meta = add_task(
             VALIDATE_EXPECTED_NODE_CLASS, node_id=self.endorsement['id'], prop_name='claim',
-            expected_class=OBClasses.Endorsement
+            expected_class=OBClasses.Endorsement,
+            depth=0
         )
 
-        result, message, actions = run_task(state, task_meta)
+        result, message, actions = task_named(VALIDATE_EXPECTED_NODE_CLASS)(state, task_meta, **options)
         self.assertTrue(result)
         claim_action = [a for a in actions if a.get('prop_name') == 'claim'][0]
 
-        result, message, actions = run_task(state, claim_action)
+        result, message, actions = task_named(VALIDATE_EXPECTED_NODE_CLASS)(state, claim_action, **options)
         self.assertTrue(result)
         self.assertEqual(len(actions), 1)
 

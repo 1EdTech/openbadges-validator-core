@@ -223,7 +223,7 @@ class InputImageUrlTests(unittest.TestCase):
 
         responses.add(responses.GET, image_url, body=baked_file.read(), status=200, content_type='image/png')
 
-        task = add_task(FETCH_HTTP_NODE, url=image_url, is_potential_baked_input=True)
+        task = add_task(FETCH_HTTP_NODE, url=image_url, is_potential_baked_input=True, depth=0)
         result, message, actions = run_task({}, task)
 
         self.assertTrue(result)
@@ -233,7 +233,7 @@ class InputImageUrlTests(unittest.TestCase):
         self.assertEqual(store_resource_action.get('node_id'), image_url)
         self.assertEqual(process_baked_input_action.get('node_id'), image_url)
 
-        task = add_task(FETCH_HTTP_NODE, url=image_url, is_potential_baked_input=False)
+        task = add_task(FETCH_HTTP_NODE, url=image_url, is_potential_baked_input=False, depth=0)
         result, message, actions = run_task({}, task)
         self.assertTrue(result)
 
@@ -248,7 +248,7 @@ class InputImageUrlTests(unittest.TestCase):
                 }
             }
         }
-        task_meta = add_task(PROCESS_BAKED_RESOURCE, node_id=image_url)
+        task_meta = add_task(PROCESS_BAKED_RESOURCE, node_id=image_url, depth=0)
         result, message, actions = process_baked_resource(state, task_meta)
         self.assertTrue(result)
         self.assertEqual(len(actions), 2)

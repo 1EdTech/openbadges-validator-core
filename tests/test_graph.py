@@ -34,7 +34,7 @@ class HttpFetchingTests(unittest.TestCase):
             body=test_components['2_0_basic_assertion'],
             status=200, content_type='application/ld+json'
         )
-        task = add_task(FETCH_HTTP_NODE, url=url)
+        task = add_task(FETCH_HTTP_NODE, url=url, depth=0)
 
         success, message, actions = fetch_http_node({}, task)
 
@@ -53,7 +53,7 @@ class HttpFetchingTests(unittest.TestCase):
             body=svg_circle,
             status=200, content_type='image/svg+xml; charset=utf-8'
         )
-        task = add_task(FETCH_HTTP_NODE, url=url)
+        task = add_task(FETCH_HTTP_NODE, url=url, depth=0)
 
         success, message, actions = fetch_http_node({}, task)
 
@@ -229,7 +229,7 @@ class ObjectRedirectionTests(unittest.TestCase):
         responses.add(responses.GET, first_url, json=node_data)
         responses.add(responses.GET, second_url, json=node_data)
 
-        task = add_task(FETCH_HTTP_NODE, url=second_url)
+        task = add_task(FETCH_HTTP_NODE, url=second_url, depth=0)
         state = {'graph': []}
 
         result, message, actions = run_task(state, task)
