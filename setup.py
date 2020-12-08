@@ -52,7 +52,7 @@ setup(
     install_requires=[
         'aniso8601>=1.2.0',
         'Click == 6.7',
-        'future==0.16.0',
+        'future>=0.16.0',
         'jsonschema==2.6.0',
         'language-tags==0.4.3',
         'openbadges-bakery>=1.1.0',
@@ -63,7 +63,7 @@ setup(
         'python-mimeparse==1.6.0',
         'pytz==2017.2',
         'requests >= 2.13',
-        'requests_cache==0.4.13',
+        'requests_cache>=0.4.13',
         'rfc3986==0.4.1',
         'validators==0.11.2',
     ],
