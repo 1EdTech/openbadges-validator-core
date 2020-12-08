@@ -4,7 +4,7 @@ import unittest
 from openbadges.verifier.actions.tasks import add_task
 from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from openbadges.verifier.tasks import run_task
-from openbadges.verifier.tasks.task_types import VALIDATE_EXPECTED_NODE_CLASS
+from openbadges.verifier.tasks.task_types import VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_PROPERTY
 from openbadges.verifier.tasks.validation import OBClasses
 from openbadges import verify
 from openbadges.verifier.tasks import task_named
@@ -136,10 +136,10 @@ class EndorsementTests(unittest.TestCase):
         self.assertTrue(result)
         claim_action = [a for a in actions if a.get('prop_name') == 'claim'][0]
 
-        result, message, actions = task_named(VALIDATE_EXPECTED_NODE_CLASS)(state, claim_action, **options)
+        result, message, actions = task_named(claim_action['name'])(state, claim_action, **options)
         self.assertTrue(result)
         self.assertEqual(len(actions), 1)
 
-        result, message, actions = run_task(state, actions[0])
+        result, message, actions = task_named(actions[0]['name'])(state, actions[0], **options)
         self.assertTrue(result)
         self.assertEqual(len(actions), 3)

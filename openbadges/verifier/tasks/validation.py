@@ -651,7 +651,6 @@ def detect_and_validate_node_class(state, task_meta, **options):
     node_path = task_meta.get('node_path')
     depth = task_meta.get('depth')
     max_depth = options.get('max_validation_depth')
-    actions = []
 
     if depth <= max_depth:
         if node_id:
@@ -667,7 +666,7 @@ def detect_and_validate_node_class(state, task_meta, **options):
                 node_class = OBClasses.default_for(ob_class)
                 break
 
-        actions += _get_validation_actions(node_class, depth, node_id, node_path)
+        actions = _get_validation_actions(node_class, depth, node_id, node_path)
 
         # Filter list for related nodes down to props that exist and 'id'
         if task_meta.get('full_validate', True) is False:
@@ -681,7 +680,7 @@ def detect_and_validate_node_class(state, task_meta, **options):
         )
     else:
         return task_result(
-            True, "Reached max validation depth", actions
+            True, "Reached max validation depth", []
         )
 
 
