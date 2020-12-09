@@ -252,7 +252,7 @@ def flatten_refetch_embedded_resource(state, task_meta, **options):
     actions = []
     value = node.get(prop_name)
     if value is None:
-        return task_result(True, "Expected property {} was missing in node {}".format(node_id))
+        return task_result(True, "Expected property {} was missing in node {}".format(prop_name, node_id))
 
     if isinstance(value, six.string_types):
         return task_result(
