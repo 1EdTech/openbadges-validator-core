@@ -628,7 +628,6 @@ class ClassValidators(OBClasses):
 def _get_validation_actions(node_class, depth, node_id=None, node_path=None):
     validators = ClassValidators(node_class).validators
     actions = []
-    print(f'{" ":<{depth * 4}}{node_class}')
     for validator in validators:
         if validator.get('prop_type') == ValueTypes.RDF_TYPE:
             action = add_task(VALIDATE_RDF_TYPE_PROPERTY, **validator)

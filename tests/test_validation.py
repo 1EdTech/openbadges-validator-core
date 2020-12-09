@@ -10,7 +10,7 @@ import unittest
 from openbadges.verifier.actions.action_types import ADD_TASK, PATCH_NODE
 from openbadges.verifier.actions.graph import add_node, patch_node
 from openbadges.verifier.actions.tasks import add_task
-from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_DICT
+from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_DICT, OPENBADGES_CONTEXT_V2_URI
 from openbadges.verifier.reducers import main_reducer
 from openbadges.verifier.state import filter_active_tasks, INITIAL_STATE
 from openbadges.verifier.tasks import task_named, run_task
@@ -1436,3 +1436,110 @@ class IssuerClassValidationTests(unittest.TestCase):
         task_meta['node_id'] = issuer['id']
         result, message, actions = task_named(task_meta['name'])(state, task_meta)
         self.assertTrue(result)
+
+class ValidationDepthTests(unittest.TestCase):
+    assertion = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'type': 'Assertion',
+        'id': 'http://example.com/assertion',
+        'badge': 'http://example.com/badgeclass',
+        'recipient': {
+            'id': '_:b0',
+            'identity': 'two@example.com',
+            'type': 'email',
+            'hashed': False
+        },
+        "verification": {
+            "type": "HostedBadge"
+        },
+        'issuedOn': (datetime.now(utc) - timedelta(hours=1)).isoformat()
+    }
+    badgeclass = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example.com/badgeclass',
+        'type': 'BadgeClass',
+        'name': 'Example Badge',
+        'description': 'An example',
+        'criteria': 'http://example.com/criteria',
+        'issuer': 'http://example.com/issuer',
+        'image': 'http://example.com/image1',
+    }
+    endorsement = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example2.com/endorsement',
+        'type': 'Endorsement',
+        'claim': {
+            'id': 'http://example.com/issuer',
+            'endorsementComment': 'Pretty good issuer'
+        },
+        'issuedOn': '2017-10-01T00:00Z',
+        'issuer': 'http://example2.com/issuer',
+        'verification': {
+            'type': "hosted"
+        }
+    }
+    issuer = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example.com/issuer',
+        'type': 'Issuer',
+        'name': 'Example Issuer',
+        'email': 'me@example.com',
+        'url': 'http://example.com',
+        'endorsement': endorsement['id']
+    }
+    endorsement_issuer_endorsement = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example3.com/endorsement',
+        'type': 'Endorsement',
+        'claim': {
+            'id': 'http://example2.com/issuer',
+            'endorsementComment': 'Pretty good endorsement issuer'
+        },
+        'issuedOn': '2017-10-01T00:00Z',
+        'issuer': 'http://example3.com/issuer',
+        'verification': {
+            'type': "hosted"
+        }
+    }
+    endorsement_issuer = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example2.com/issuer',
+        'type': 'Issuer',
+        'name': 'Example Issuer 2',
+        'email': 'me@example2.com',
+        'url': 'http://example2.com',
+        'endorsement': endorsement_issuer_endorsement['id']
+    }
+    endorsement_issuer_endorsement_issuer = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example3.com/issuer',
+        'type': 'Issuer',
+        'name': 'Example Issuer 3',
+        'email': 'me@example3.com',
+        'url': 'http://example3.com'
+    }
+
+    @responses.activate
+    def test_validation_depth(self):
+        set_up_context_mock()
+
+        for resource in [self.assertion, self.badgeclass, self.issuer, self.endorsement, self.endorsement_issuer]:
+            responses.add(responses.GET, resource['id'], json=resource)
+        set_up_image_mock(self.badgeclass['image'])
+
+        results = verify(self.assertion['id'])
+        self.assertTrue(results['report']['valid'])
+        self.assertEqual(5, len(results['graph']), "The graph does not contain endorsement of issuer of endorsement.")
+
+    @responses.activate
+    def test_validation_depth_5(self):
+        options = {'max_validation_depth': 5}
+        set_up_context_mock()
+
+        for resource in [self.assertion, self.badgeclass, self.issuer, self.endorsement, self.endorsement_issuer, self.endorsement_issuer_endorsement, self.endorsement_issuer_endorsement_issuer]:
+            responses.add(responses.GET, resource['id'], json=resource)
+        set_up_image_mock(self.badgeclass['image'])
+
+        results = verify(self.assertion['id'], **options)
+        self.assertTrue(results['report']['valid'])
+        self.assertEqual(7, len(results['graph']), "The graph now contains all objects.")

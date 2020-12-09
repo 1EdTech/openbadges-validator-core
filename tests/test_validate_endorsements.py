@@ -3,8 +3,7 @@ import unittest
 
 from openbadges.verifier.actions.tasks import add_task
 from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_URI
-from openbadges.verifier.tasks import run_task
-from openbadges.verifier.tasks.task_types import VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_PROPERTY
+from openbadges.verifier.tasks.task_types import VALIDATE_EXPECTED_NODE_CLASS
 from openbadges.verifier.tasks.validation import OBClasses
 from openbadges import verify
 from openbadges.verifier.tasks import task_named
