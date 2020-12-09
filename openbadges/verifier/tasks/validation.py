@@ -618,7 +618,10 @@ class ClassValidators(OBClasses):
                  'fetch': False, 'allow_data_uri': False, 'expected_class': class_name, 'full_validate': False,
                  'many': True},
                 {'prop_name': 'endorsement', 'prop_type': ValueTypes.ID, 'required': False, 'allow_remote_url': True,
-                 'fetch': True, 'allow_data_uri': False, 'expected_class': OBClasses.Endorsement, 'many': True}
+                 'fetch': True, 'allow_data_uri': False, 'expected_class': OBClasses.Endorsement, 'many': True,
+                 'prerequisites': ['PRI_FLATTEN_ENDRS']},
+                {'task_type': FLATTEN_EMBEDDED_RESOURCE, 'prop_name': 'endorsement', 'node_class': OBClasses.Endorsement,
+                 'task_key': 'PRI_FLATTEN_ENDRS'}
             ]
 
 

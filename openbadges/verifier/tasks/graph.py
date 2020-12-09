@@ -254,51 +254,56 @@ def flatten_refetch_embedded_resource(state, task_meta, **options):
     if value is None:
         return task_result(True, "Expected property {} was missing in node {}".format(prop_name, node_id))
 
-    if isinstance(value, six.string_types):
+    if isinstance(value, six.string_types) or (isinstance(value, list) and all(isinstance(s, six.string_types) for s in value)):
         return task_result(
             True, "Property {} referenced from {} is not embedded in need of flattening".format(
                 prop_name, abv_node(node_id=node_id)
             ))
 
     if not isinstance(value, dict):
-        return task_result(
-            False, "Property {} referenced from {} is not a JSON object or string as expected".format(
-                prop_name, abv_node(node_id=node_id)
-            ))
-    embedded_node_id = value.get('id')
+        if not isinstance(value, list):
+            return task_result(
+                False, "Property {} referenced from {} is not a JSON object, JSON object list, or string as expected".format(
+                    prop_name, abv_node(node_id=node_id)
+                ))
+    else:
+        value = [value]
 
-    if embedded_node_id is None:
-        new_node = value.copy()
-        embedded_node_id = '_:{}'.format(uuid.uuid4())
-        new_node['id'] = embedded_node_id
-        new_node['@context'] = OPENBADGES_CONTEXT_V2_URI
-        actions.append(add_node(embedded_node_id, data=new_node))
-        actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
-        actions.append(report_message(
-            'Node id missing at {}. A blank node ID has been assigned'.format(
-                abv_node(node_path=[node_id, prop_name], length=64)
-            ), message_level=MESSAGE_LEVEL_WARNING)
-        )
-    elif not isinstance(embedded_node_id, six.string_types) or not is_iri(embedded_node_id):
-        return task_result(False, "Embedded JSON object at {} has no proper assigned id.".format(
-            abv_node(node_path=[node_id, prop_name])))
+    for node in value:
+        embedded_node_id = node.get('id')
 
-    elif node_class == OBClasses.Assertion and not is_url(embedded_node_id):
+        if embedded_node_id is None:
+            new_node = node.copy()
+            embedded_node_id = '_:{}'.format(uuid.uuid4())
+            new_node['id'] = embedded_node_id
+            new_node['@context'] = OPENBADGES_CONTEXT_V2_URI
+            actions.append(add_node(embedded_node_id, data=new_node))
+            actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
+            actions.append(report_message(
+                'Node id missing at {}. A blank node ID has been assigned'.format(
+                    abv_node(node_path=[node_id, prop_name], length=64)
+                ), message_level=MESSAGE_LEVEL_WARNING)
+            )
+        elif not isinstance(embedded_node_id, six.string_types) or not is_iri(embedded_node_id):
+            return task_result(False, "Embedded JSON object at {} has no proper assigned id.".format(
+                abv_node(node_path=[node_id, prop_name])))
+
+        elif node_class == OBClasses.Assertion and not is_url(embedded_node_id):
             if not re.match(URN_REGEX, embedded_node_id, re.IGNORECASE):
                 actions.append(report_message(
                     'ID format for {} at {} not in an expected HTTP or URN:UUID scheme'.format(
                         embedded_node_id, abv_node(node_path=[node_id, prop_name])
                     )))
-            new_node = value.copy()
+            new_node = node.copy()
             new_node['@context'] = OPENBADGES_CONTEXT_V2_URI
-            actions.append(add_node(embedded_node_id, data=value))
+            actions.append(add_node(embedded_node_id, data=node))
             actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
 
-    else:
-        actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
-        if not node_match_exists(state, embedded_node_id) and not filter_tasks(
+        else:
+            actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
+            if not node_match_exists(state, embedded_node_id) and not filter_tasks(
                 state, node_id=embedded_node_id, task_type=FETCH_HTTP_NODE):
-            # fetch
-            actions.append(add_task(FETCH_HTTP_NODE, url=embedded_node_id, depth=depth))
+                # fetch
+                actions.append(add_task(FETCH_HTTP_NODE, url=embedded_node_id, depth=depth))
 
     return task_result(True, "Embedded {} node in {} queued for storage and/or refetching as needed", actions)

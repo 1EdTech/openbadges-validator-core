@@ -31,7 +31,20 @@ class EndorsementTests(unittest.TestCase):
             'id': 'http://example.com/badgeclass',
             'type': 'BadgeClass',
             'issuer': 'http://example.com/issuer',
-            'endorsement': ['http://example.org/endorsement'],
+            'endorsement': {
+                '@context': OPENBADGES_CONTEXT_V2_URI,
+                'id': 'http://example.org/endorsement',
+                'type': 'Endorsement',
+                'claim': {
+                    'id': 'http://example.com/badgeclass',
+                    'endorsementComment': 'Pretty good'
+                },
+                'issuedOn': '2017-10-01T00:00Z',
+                'issuer': 'http://example.org/issuer',
+                'verification': {
+                    'type': "HostedBadge"
+                }
+            },
             'name': 'Best Badge',
             'description': 'An achievement that is good.',
             'image': 'http://example.com/badgeimage',
