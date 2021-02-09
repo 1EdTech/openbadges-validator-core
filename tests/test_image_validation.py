@@ -19,7 +19,8 @@ class ImageValidationTests(unittest.TestCase):
         session = CachedSession(backend='memory', expire_after=100000)
         loader = CachableDocumentLoader(use_cache=True, session=session)
         options = {
-            'jsonld_options': {'documentLoader': loader}
+            'jsonld_options': {'documentLoader': loader},
+            'max_validation_depth': 3
         }
         image_url = 'http://example.org/awesomebadge.png'
         badgeclass = {
@@ -35,7 +36,7 @@ class ImageValidationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
         task_meta = add_task(
-            VALIDATE_EXPECTED_NODE_CLASS, node_id=badgeclass['id'], expected_class=OBClasses.BadgeClass)
+            VALIDATE_EXPECTED_NODE_CLASS, node_id=badgeclass['id'], expected_class=OBClasses.BadgeClass, depth=0)
 
         result, message, actions = task_named(VALIDATE_EXPECTED_NODE_CLASS)(state, task_meta, **options)
         self.assertTrue(result)
@@ -88,7 +89,8 @@ class ImageValidationTests(unittest.TestCase):
         session = CachedSession(backend='memory', expire_after=100000)
         loader = CachableDocumentLoader(use_cache=True, session=session)
         options = {
-            'jsonld_options': {'documentLoader': loader}
+            'jsonld_options': {'documentLoader': loader},
+            'max_validation_depth': 3
         }
         badgeclass = {
             'id': 'http://example.org/badgeclass',
@@ -98,7 +100,7 @@ class ImageValidationTests(unittest.TestCase):
         state = {'graph': [badgeclass]}
 
         task_meta = add_task(
-            VALIDATE_EXPECTED_NODE_CLASS, node_id=badgeclass['id'], expected_class=OBClasses.BadgeClass)
+            VALIDATE_EXPECTED_NODE_CLASS, node_id=badgeclass['id'], expected_class=OBClasses.BadgeClass, depth=0)
 
         result, message, actions = task_named(VALIDATE_EXPECTED_NODE_CLASS)(state, task_meta, **options)
         self.assertTrue(result)
@@ -144,7 +146,8 @@ class ImageValidationTests(unittest.TestCase):
         session = CachedSession(backend='memory', expire_after=100000)
         loader = CachableDocumentLoader(use_cache=True, session=session)
         options = {
-            'jsonld_options': {'documentLoader': loader}
+            'jsonld_options': {'documentLoader': loader},
+            'max_validation_depth': 3
         }
         assertion = {
             'id': 'http://example.org/assertion',
@@ -153,7 +156,7 @@ class ImageValidationTests(unittest.TestCase):
         state = {'graph': [assertion]}
 
         task_meta = add_task(
-            VALIDATE_EXPECTED_NODE_CLASS, node_id=assertion['id'], expected_class=OBClasses.Assertion)
+            VALIDATE_EXPECTED_NODE_CLASS, node_id=assertion['id'], expected_class=OBClasses.Assertion, depth=0)
 
         result, message, actions = task_named(VALIDATE_EXPECTED_NODE_CLASS)(state, task_meta, **options)
         self.assertTrue(result)

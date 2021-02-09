@@ -29,6 +29,7 @@ from .validation import OBClasses
 
 def fetch_http_node(state, task_meta, **options):
     url = task_meta['url']
+    depth = task_meta['depth']
 
     if options.get('cache_backend'):
         session = requests_cache.CachedSession(
@@ -60,16 +61,21 @@ def fetch_http_node(state, task_meta, **options):
         b64content = b''.join([b'data:', parsed_type.encode(), b';base64,', base64.b64encode(result.content)])
         actions = [store_original_resource(node_id=url, data=b64content)]
         if task_meta.get('is_potential_baked_input', False):
-            actions += [add_task(PROCESS_BAKED_RESOURCE, node_id=url)]
+            actions += [add_task(PROCESS_BAKED_RESOURCE, node_id=url, depth=depth)]
 
         return task_result(
             True, 'Successfully fetched image from {}'.format(url), actions)
 
     actions = [
         store_original_resource(node_id=url, data=response_text_with_proper_encoding),
-        add_task(INTAKE_JSON, data=response_text_with_proper_encoding, node_id=url,
+        add_task(INTAKE_JSON,
+                 data=response_text_with_proper_encoding,
+                 node_id=url,
                  expected_class=task_meta.get('expected_class'),
-                 source_node_path=task_meta.get('source_node_path'))]
+                 source_node_path=task_meta.get('source_node_path'),
+                 depth=depth
+                 )
+    ]
     return task_result(message="Successfully fetched JSON data from {}".format(url), actions=actions)
 
 
@@ -92,6 +98,7 @@ def intake_json(state, task_meta, **options):
     input_data = task_meta['data']
     node_id = task_meta.get('node_id')
     expected_class = task_meta.get('expected_class')
+    depth = task_meta.get('depth')
     openbadges_version = None
     actions = []
 
@@ -105,8 +112,13 @@ def intake_json(state, task_meta, **options):
 
     if openbadges_version in ['1.1', '2.0']:
         compact_action = add_task(
-            JSONLD_COMPACT_DATA, node_id=node_id, openbadges_version=openbadges_version,
-            expected_class=expected_class, data=input_data, source_node_path=task_meta.get('source_node_path')
+            JSONLD_COMPACT_DATA,
+            node_id=node_id,
+            openbadges_version=openbadges_version,
+            expected_class=expected_class,
+            data=input_data,
+            source_node_path=task_meta.get('source_node_path'),
+            depth=depth
         )
         actions.append(compact_action)
 
@@ -170,6 +182,7 @@ def jsonld_compact_data(state, task_meta, **options):
             data = data.decode()
         input_data = json.loads(data)
         expected_class = task_meta.get('expected_class')
+        depth = task_meta.get('depth')
     except TypeError:
         return task_result(False, "Could not load data")
 
@@ -185,7 +198,7 @@ def jsonld_compact_data(state, task_meta, **options):
 
     # Handle mismatch between URL node source and declared ID.
     if result.get('id') and task_meta.get('node_id') and result['id'] != task_meta['node_id']:
-        refetch_action = add_task(FETCH_HTTP_NODE, url=result['id'])
+        refetch_action = add_task(FETCH_HTTP_NODE, url=result['id'], depth=depth)
         if expected_class:
             refetch_action['expected_class'] = expected_class
         actions = [
@@ -214,10 +227,10 @@ def jsonld_compact_data(state, task_meta, **options):
     if expected_class:
         actions.append(
             add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=node_id,
-                     expected_class=expected_class)
+                     expected_class=expected_class, depth=depth)
         )
     elif task_meta.get('detectAndValidateClass', True):
-        actions.append(add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=node_id))
+        actions.append(add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=node_id, depth=depth))
 
     return task_result(
         True,
@@ -232,59 +245,65 @@ def flatten_refetch_embedded_resource(state, task_meta, **options):
         node = get_node_by_id(state, node_id)
         prop_name = task_meta['prop_name']
         node_class = task_meta['node_class']
+        depth = task_meta['depth']
     except (IndexError, KeyError):
         raise TaskPrerequisitesError()
 
     actions = []
     value = node.get(prop_name)
     if value is None:
-        return task_result(True, "Expected property {} was missing in node {}".format(node_id))
+        return task_result(True, "Expected property {} was missing in node {}".format(prop_name, node_id))
 
-    if isinstance(value, six.string_types):
+    if isinstance(value, six.string_types) or (isinstance(value, list) and all(isinstance(s, six.string_types) for s in value)):
         return task_result(
             True, "Property {} referenced from {} is not embedded in need of flattening".format(
                 prop_name, abv_node(node_id=node_id)
             ))
 
     if not isinstance(value, dict):
-        return task_result(
-            False, "Property {} referenced from {} is not a JSON object or string as expected".format(
-                prop_name, abv_node(node_id=node_id)
-            ))
-    embedded_node_id = value.get('id')
+        if not isinstance(value, list):
+            return task_result(
+                False, "Property {} referenced from {} is not a JSON object, JSON object list, or string as expected".format(
+                    prop_name, abv_node(node_id=node_id)
+                ))
+    else:
+        value = [value]
 
-    if embedded_node_id is None:
-        new_node = value.copy()
-        embedded_node_id = '_:{}'.format(uuid.uuid4())
-        new_node['id'] = embedded_node_id
-        new_node['@context'] = OPENBADGES_CONTEXT_V2_URI
-        actions.append(add_node(embedded_node_id, data=new_node))
-        actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
-        actions.append(report_message(
-            'Node id missing at {}. A blank node ID has been assigned'.format(
-                abv_node(node_path=[node_id, prop_name], length=64)
-            ), message_level=MESSAGE_LEVEL_WARNING)
-        )
-    elif not isinstance(embedded_node_id, six.string_types) or not is_iri(embedded_node_id):
-        return task_result(False, "Embedded JSON object at {} has no proper assigned id.".format(
-            abv_node(node_path=[node_id, prop_name])))
+    for node in value:
+        embedded_node_id = node.get('id')
 
-    elif node_class == OBClasses.Assertion and not is_url(embedded_node_id):
+        if embedded_node_id is None:
+            new_node = node.copy()
+            embedded_node_id = '_:{}'.format(uuid.uuid4())
+            new_node['id'] = embedded_node_id
+            new_node['@context'] = OPENBADGES_CONTEXT_V2_URI
+            actions.append(add_node(embedded_node_id, data=new_node))
+            actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
+            actions.append(report_message(
+                'Node id missing at {}. A blank node ID has been assigned'.format(
+                    abv_node(node_path=[node_id, prop_name], length=64)
+                ), message_level=MESSAGE_LEVEL_WARNING)
+            )
+        elif not isinstance(embedded_node_id, six.string_types) or not is_iri(embedded_node_id):
+            return task_result(False, "Embedded JSON object at {} has no proper assigned id.".format(
+                abv_node(node_path=[node_id, prop_name])))
+
+        elif node_class == OBClasses.Assertion and not is_url(embedded_node_id):
             if not re.match(URN_REGEX, embedded_node_id, re.IGNORECASE):
                 actions.append(report_message(
                     'ID format for {} at {} not in an expected HTTP or URN:UUID scheme'.format(
                         embedded_node_id, abv_node(node_path=[node_id, prop_name])
                     )))
-            new_node = value.copy()
+            new_node = node.copy()
             new_node['@context'] = OPENBADGES_CONTEXT_V2_URI
-            actions.append(add_node(embedded_node_id, data=value))
+            actions.append(add_node(embedded_node_id, data=node))
             actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
 
-    else:
-        actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
-        if not node_match_exists(state, embedded_node_id) and not filter_tasks(
+        else:
+            actions.append(patch_node(node_id, {prop_name: embedded_node_id}))
+            if not node_match_exists(state, embedded_node_id) and not filter_tasks(
                 state, node_id=embedded_node_id, task_type=FETCH_HTTP_NODE):
-            # fetch
-            actions.append(add_task(FETCH_HTTP_NODE, url=embedded_node_id))
+                # fetch
+                actions.append(add_task(FETCH_HTTP_NODE, url=embedded_node_id, depth=depth))
 
     return task_result(True, "Embedded {} node in {} queued for storage and/or refetching as needed", actions)
