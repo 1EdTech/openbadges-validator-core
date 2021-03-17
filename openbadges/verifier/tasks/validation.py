@@ -689,7 +689,7 @@ def detect_and_validate_node_class(state, task_meta, **options):
 def validate_expected_node_class(state, task_meta, **options):
     node_id = task_meta.get('node_id')
     node_path = task_meta.get('node_path')
-    depth = task_meta.get('depth')
+    depth = int(task_meta.get('depth') or 0)
     max_depth = options.get('max_validation_depth')
     actions = []
 
