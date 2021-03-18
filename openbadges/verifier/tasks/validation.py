@@ -99,9 +99,9 @@ class ValueTypes(object):
 
 class PrimitiveValueValidator(object):
     """
-    A callable validator for primitive Open Badges value types. 
-    
-    Example usage: 
+    A callable validator for primitive Open Badges value types.
+
+    Example usage:
     PrimitiveValueValidator(ValueTypes.TEXT)("test value")
     > True
     """
@@ -187,7 +187,7 @@ class PrimitiveValueValidator(object):
         """
         Checks if a string matches an acceptable IRI format and scheme. For now, only accepts a few schemes,
         'http', 'https', blank node identifiers, and 'urn:uuid'
-        :param value: six.string_types 
+        :param value: six.string_types
         :return: bool
         """
         return is_iri(value)
@@ -689,7 +689,12 @@ def detect_and_validate_node_class(state, task_meta, **options):
 def validate_expected_node_class(state, task_meta, **options):
     node_id = task_meta.get('node_id')
     node_path = task_meta.get('node_path')
-    depth = int(task_meta.get('depth') or 0)
+
+    try:
+        depth = int(task_meta.get('depth', 0))
+    except (TypeError, ValueError):
+        depth = 0
+
     max_depth = options.get('max_validation_depth')
     actions = []
 
