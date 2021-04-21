@@ -81,6 +81,84 @@ class ImageValidationTests(unittest.TestCase):
         new_state = input_reducer({}, next_task)
         self.assertTrue(new_state['original_json'][image_url].startswith('data:'), "Data is stored in the expected spot.")
 
+
+    @responses.activate
+    def test_badgeclass_with_unsupported_image_formats(self):
+        session = CachedSession(backend='memory', expire_after=100000)
+        loader = CachableDocumentLoader(use_cache=True, session=session)
+        options = {
+            'jsonld_options': {'documentLoader': loader},
+            'max_validation_depth': 3
+        }
+        image_url = 'http://example.org/awesomebadge.png'
+        badgeclass = {
+            'id': 'http://example.org/badgeclass',
+            'name': 'Awesome badge',
+            'image': image_url
+        }
+        state = {'graph': [badgeclass]}
+
+        with open(os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart_jpeg.jpg'), 'rb') as f:
+            responses.add(responses.GET, badgeclass['image'], body=f.read(), content_type='image/png')
+        response = session.get(badgeclass['image'])
+        self.assertEqual(response.status_code, 200)
+
+        task_meta = add_task(
+            VALIDATE_EXPECTED_NODE_CLASS, node_id=badgeclass['id'], expected_class=OBClasses.BadgeClass, depth=0)
+
+        result, message, actions = task_named(VALIDATE_EXPECTED_NODE_CLASS)(state, task_meta, **options)
+        self.assertTrue(result)
+
+        image_task = [a for a in actions if a.get('prop_name') == 'image'][0]
+        class_image_validation_task = [a for a in actions if a.get('name') == IMAGE_VALIDATION][0]
+        result, message, actions = task_named(image_task['name'])(state, image_task, **options)
+        self.assertTrue(result)
+        self.assertEqual(len(actions), 0)
+
+        result, message, actions = task_named(class_image_validation_task['name'])(
+            state, class_image_validation_task, **options)
+        self.assertFalse(result)
+        self.assertEqual(len(actions), 0)
+
+        # Case 2: Embedded image document
+        badgeclass['image'] = {
+            'id': 'http://example.org/awesomebadge.png',
+            'author': 'http://someoneelse.org/1',
+            'caption': 'A hexagon with attitude'
+        }
+
+        # Validate BadgeClass, queuing the image node validation task
+        result, message, actions = task_named(image_task['name'])(state, image_task, **options)
+        self.assertTrue(result)
+        self.assertEqual(len(actions), 1, "Image node validation task queued")
+
+        # Run image node task discovery
+        next_task = actions[0]
+        result, message, actions = task_named(next_task['name'])(state, next_task, **options)
+        self.assertTrue(result)
+
+        # Run validation task for the Image node
+        next_task = [a for a in actions if a.get('name') == IMAGE_VALIDATION][0]
+        result, message, actions = task_named(next_task['name'])(state, next_task, **options)
+        self.assertFalse(result)
+        self.assertEqual(len(actions), 0)
+
+
+    def test_validate_image_mime_type(self):
+        from openbadges.verifier.tasks.images import validate_image_mime_type
+        heart_png = os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart.png')
+        heart_jpeg = os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart_jpeg.jpg')
+
+        # supported image type
+        with open(heart_png, 'rb') as f:
+            validate_image_mime_type(f.read())
+
+        # unsupported image type
+        with open(heart_jpeg, 'rb') as f:
+            self.assertRaises(ValueError, validate_image_mime_type, f.read())
+
+
+
     def test_base64_data_uri_in_badgeclass(self):
         data_uri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mOUMyqsBwACeQFChxl' \
                    'ltgAAAABJRU5ErkJggg=='

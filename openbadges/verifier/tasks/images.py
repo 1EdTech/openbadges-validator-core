@@ -1,4 +1,5 @@
 import base64
+import puremagic
 import re
 import requests
 import requests_cache
@@ -13,6 +14,9 @@ from .task_types import IMAGE_VALIDATION
 from .utils import (task_result, abbreviate_value,
                     abbreviate_node_id as abv_node,
                     is_data_uri)
+
+SVG_MIME_TYPE = 'image/svg+xml'
+PNG_MIME_TYPE = 'image/png'
 
 def validate_image(state, task_meta, **options):
     try:
@@ -74,13 +78,49 @@ def validate_image(state, task_meta, **options):
                     url, headers={'Accept': 'application/ld+json, application/json, image/png, image/svg+xml'}
                 )
                 result.raise_for_status()
+                validate_image_mime_type(result.content)
                 content_type = result.headers['content-type']
                 encoded_body = base64.b64encode(result.content)
                 data_uri = "data:{};base64,{}".format(content_type, encoded_body)
 
-            except (requests.ConnectionError, requests.HTTPError, KeyError):
+            except (requests.ConnectionError,
+                    requests.HTTPError,
+                    puremagic.PureError,
+                    KeyError):
                 return task_result(False, "Could not fetch image at {}".format(url))
+            except ValueError as e:
+                return task_result(False, "The Image at {} is of an unsupported type: {}".format(url, e))
             else:
                 actions.append(store_original_resource(url, data_uri))
 
     return task_result(True, "Validated image for node {}".format(abv_node(node_id, node_path)), actions)
+
+
+def validate_image_mime_type(content):
+    allowed_mime_types = [SVG_MIME_TYPE, PNG_MIME_TYPE]
+    magic_strings = puremagic.magic_string(content)
+    if magic_strings:
+        derived_mime_type = None
+        derived_ext = None
+
+        for magic_string in magic_strings:
+            if getattr(magic_string, 'mime_type', None) in allowed_mime_types:
+                derived_mime_type = getattr(magic_string, 'mime_type', None)
+                derived_ext = getattr(magic_string, 'extension', None)
+                break
+
+        if not derived_mime_type and re.search(b'<svg', content[:1024]) and content.strip()[-6:] == b'</svg>':
+            derived_mime_type = SVG_MIME_TYPE
+            derived_ext = '.svg'
+
+        if derived_mime_type not in allowed_mime_types:
+            magic_string_info = max(magic_strings, key=lambda ms: ms.confidence and ms.extension and ms.mime_type)
+            raise ValueError("{} {}".format(
+                getattr(magic_string_info, 'mime_type', 'Unknown'),
+                getattr(magic_string_info, 'extension', 'Unknown')
+            ))
+
+        if not derived_ext or not derived_mime_type:
+            raise ValueError("Unknown file extension.")
+    else:
+        raise ValueError("Unable to determine file type.")
