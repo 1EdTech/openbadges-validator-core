@@ -68,7 +68,7 @@ setup(
         'validators==0.11.2',
     ],
     extras_require={
-        'server':  ["Flask==0.12.1", 'gunicorn==19.7.1'],
+        'server':  ["Flask==1.0", 'gunicorn==19.7.1'],
     },
     entry_points="""
         [console_scripts]
