@@ -144,18 +144,18 @@ class ImageValidationTests(unittest.TestCase):
         self.assertEqual(len(actions), 0)
 
 
-    def test_validate_image_mime_type(self):
-        from openbadges.verifier.tasks.images import validate_image_mime_type
+    def test_validate_image_mime_type_for_node_class(self):
+        from openbadges.verifier.tasks.images import validate_image_mime_type_for_node_class
         heart_png = os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart.png')
         heart_jpeg = os.path.join(os.path.dirname(__file__), 'testfiles', 'public_domain_heart_jpeg.jpg')
 
         # supported image type
         with open(heart_png, 'rb') as f:
-            validate_image_mime_type(f.read())
+            validate_image_mime_type_for_node_class(f.read(), OBClasses.BadgeClass)
 
         # unsupported image type
         with open(heart_jpeg, 'rb') as f:
-            self.assertRaises(ValueError, validate_image_mime_type, f.read())
+            self.assertRaises(ValueError, validate_image_mime_type_for_node_class, f.read(), OBClasses.BadgeClass)
 
 
 
