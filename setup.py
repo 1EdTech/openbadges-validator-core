@@ -56,6 +56,7 @@ setup(
         'jsonschema==2.6.0',
         'language-tags==0.4.3',
         'openbadges-bakery>=1.1.0',
+        'puremagic==1.6',
         'pycryptodome==3.6.6',
         'pydux==0.2.2',
         'PyLD==0.7.1',
