@@ -23,7 +23,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 
 setup(
-    name='openbadges',
+    name='badgecheck',
     version=".".join(map(str, VERSION)),
     packages=find_packages(exclude=['tests', 'tests.*']),
     include_package_data=True,
@@ -40,10 +40,9 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Education',
         'Topic :: Utilities',
@@ -55,7 +54,7 @@ setup(
         'future>=0.16.0',
         'jsonschema==2.6.0',
         'language-tags==0.4.3',
-        'openbadges-bakery>=1.1.0',
+        'openbadges-bakery>=2.0.0',
         'puremagic==1.6',
         'pycryptodome==3.6.6',
         'pydux==0.2.2',
