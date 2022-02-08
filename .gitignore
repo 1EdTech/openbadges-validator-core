@@ -8,3 +8,4 @@ build/
 .cache/
 README.rst
 .vscode/launch.json
+*.iml

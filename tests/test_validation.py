@@ -26,11 +26,11 @@ from openbadges.verifier.utils import MESSAGE_LEVEL_WARNING
 from openbadges.verifier.verifier import call_task, verify
 
 try:
-    from .testfiles.test_components import test_components
+    from tests.testfiles.test_components import test_components
     from tests.utils import set_up_context_mock, set_up_image_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
-    from tests.utils import set_up_context_mock, set_up_image_mock
+    from .utils import set_up_context_mock, set_up_image_mock
 
 
 class PropertyValidationTests(unittest.TestCase):

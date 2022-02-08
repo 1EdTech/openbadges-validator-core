@@ -13,6 +13,7 @@ from ..actions.graph import add_node, patch_node, patch_node_reference
 from ..actions.input import store_original_resource
 from ..actions.validation_report import set_validation_subject
 from ..actions.tasks import add_task, delete_outdated_node_tasks, report_message
+from ..actions.utils import generate_task_signature
 from ..actions.validation_report import set_openbadges_version
 from ..exceptions import TaskPrerequisitesError
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
@@ -21,7 +22,7 @@ from ..state import get_node_by_id, node_match_exists
 from ..utils import list_of, jsonld_use_cache,make_string_from_bytes, MESSAGE_LEVEL_WARNING
 
 from .task_types import (DETECT_AND_VALIDATE_NODE_CLASS, FETCH_HTTP_NODE, INTAKE_JSON, JSONLD_COMPACT_DATA,
-                         PROCESS_BAKED_RESOURCE, UPGRADE_0_5_NODE, UPGRADE_1_0_NODE, UPGRADE_1_1_NODE,
+                         PROCESS_410_GONE, PROCESS_BAKED_RESOURCE, UPGRADE_0_5_NODE, UPGRADE_1_0_NODE, UPGRADE_1_1_NODE,
                          VALIDATE_EXPECTED_NODE_CLASS, VALIDATE_EXTENSION_NODE)
 from .utils import abbreviate_node_id as abv_node, filter_tasks, is_iri, is_url, task_result, URN_REGEX
 from .validation import OBClasses
@@ -40,7 +41,6 @@ def fetch_http_node(state, task_meta, **options):
     result = session.get(
         url, headers={'Accept': 'application/ld+json, application/json, image/png, image/svg+xml'}
     )
-
     try:
         json_body = result.json()
         response_text_with_proper_encoding = json.dumps(json_body)
@@ -76,6 +76,12 @@ def fetch_http_node(state, task_meta, **options):
                  depth=depth
                  )
     ]
+
+    if result.status_code == 410:
+        actions += [add_task(
+            PROCESS_410_GONE, node_id=url, prerequisites=[generate_task_signature(JSONLD_COMPACT_DATA, url)]
+        )]
+
     return task_result(message="Successfully fetched JSON data from {}".format(url), actions=actions)
 
 
@@ -113,6 +119,7 @@ def intake_json(state, task_meta, **options):
     if openbadges_version in ['1.1', '2.0']:
         compact_action = add_task(
             JSONLD_COMPACT_DATA,
+            task_key=generate_task_signature(JSONLD_COMPACT_DATA, node_id),
             node_id=node_id,
             openbadges_version=openbadges_version,
             expected_class=expected_class,
@@ -307,3 +314,27 @@ def flatten_refetch_embedded_resource(state, task_meta, **options):
                 actions.append(add_task(FETCH_HTTP_NODE, url=embedded_node_id, depth=depth))
 
     return task_result(True, "Embedded {} node in {} queued for storage and/or refetching as needed", actions)
+
+
+def process_410_gone(state, task_meta, **options):
+    try:
+        node_id = task_meta['node_id']
+        node = get_node_by_id(state, node_id)
+    except (IndexError, KeyError):
+        raise TaskPrerequisitesError()
+
+    node_type = node.get('type')
+    if 'Assertion' not in list_of(node_type):
+        return task_result(
+            True, "Fetched resource returned 410 Gone status, but was not an Assertion, so not counted as revoked."
+        )
+
+    validation_subject = state['report'].get('validationSubject')
+    if validation_subject != node_id:
+        return task_result(True, "Fetched resource returned 410 Gone status, but was not the validation subject.")
+
+    return task_result(
+        False,
+        "Hosted Assertion is revoked, as hosted response status was 410 Gone. {}".format(abv_node(node_id=node_id))
+    )
+

@@ -15,13 +15,13 @@ from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from openbadges.verifier.utils import MESSAGE_LEVEL_WARNING
 from openbadges.verifier.verifier import verify
 
-from .utils import set_up_context_mock, set_up_image_mock
-
 
 try:
+    from .utils import set_up_context_mock, set_up_image_mock
     from .testfiles.test_components import test_components
 except (ImportError, SystemError):
-    from .testfiles.test_components import test_components
+    from tests.utils import set_up_context_mock, set_up_image_mock
+    from tests.testfiles.test_components import test_components
 
 
 class HttpFetchingTests(unittest.TestCase):
@@ -95,7 +95,7 @@ class NodeStorageTests(unittest.TestCase):
     def test_store_node_inaccurate_id_value(self):
         """
         Due to redirects, we may not have the canonical id for a node.
-        If there's a conflict due to the id and the node[id] in add_node(id, node), 
+        If there's a conflict due to the id and the node[id] in add_node(id, node),
         what should we do?
         """
         pass

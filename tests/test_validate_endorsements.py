@@ -8,8 +8,10 @@ from openbadges.verifier.tasks.validation import OBClasses
 from openbadges import verify
 from openbadges.verifier.tasks import task_named
 
-
-from .utils import set_up_context_mock, set_up_image_mock
+try:
+    from tests.utils import set_up_context_mock, set_up_image_mock
+except (ImportError, SystemError):
+    from .utils import set_up_context_mock, set_up_image_mock
 
 
 class EndorsementTests(unittest.TestCase):
