@@ -61,7 +61,7 @@ Note that a detailed technical description of the result objects and properties 
 
 ### What versions of Open Badges does this validator support?
 
-This is primarily a validator for Open Badges 2.0 and later. You can submit badges that were created under earlier versions of the Open Badges specification as well; note however that Open Badges 2.0 rules will be applied to such badges, and as a consequence of this, the validator may flag a badge as invalid that was flagged as valid by earlier validators.
+This is primarily a validator for Open Badges 2.0. You can submit badges that were created under earlier versions of the Open Badges specification as well; note however that Open Badges 2.0 rules will be applied to such badges, and as a consequence of this, the validator may flag a badge as invalid that was flagged as valid by earlier validators.
 
 If the version of your submitted badge is lower than 2.0, the validator will  (as represented in the report’s graph object) attempt to upgrade the badge to 2.0 syntax. The graph object can consequently be used as a part in the tool chain for forward migration of badges to the current version of the Open Badges standard.
 
