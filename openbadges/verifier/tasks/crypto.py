@@ -26,10 +26,11 @@ def process_jws_input(state, task_meta, **options):
     node_json = jws.get_unverified_claims(data).decode('utf-8')
     node_data = json.loads(node_json)
     node_id = task_meta.get('node_id', node_data.get('id'))
+    depth = task_meta.get('depth')
 
     actions = [
-        add_task(INTAKE_JSON, data=node_json, node_id=node_id),
-        add_task(VERIFY_JWS, node_id=node_id, data=data, prerequisites=SIGNING_KEY_FETCHED)
+        add_task(INTAKE_JSON, data=node_json, node_id=node_id, depth=depth),
+        add_task(VERIFY_JWS, node_id=node_id, data=data, prerequisites=SIGNING_KEY_FETCHED, depth=depth)
     ]
     if node_id:
         actions.append(set_validation_subject(node_id))
@@ -42,15 +43,16 @@ def verify_jws_signature(state, task_meta, **options):
         node_id = task_meta['node_id']
         key_node = get_node_by_path(state, [node_id, 'verification', 'creator'])
         public_pem = key_node['publicKeyPem']
+        depth = task_meta['depth']
     except (KeyError, IndexError,):
         raise TaskPrerequisitesError()
 
     actions = [
-        add_task(VERIFY_KEY_OWNERSHIP, node_id=node_id),
+        add_task(VERIFY_KEY_OWNERSHIP, node_id=node_id, depth=depth),
         add_task(
             VALIDATE_PROPERTY, node_path=[node_id, 'badge', 'issuer'], prop_name='revocationList',
             prop_type=ValueTypes.ID, expected_class=OBClasses.RevocationList, fetch=True, required=False,
-            prerequisites=[ISSUER_PROPERTY_DEPENDENCIES]
+            prerequisites=[ISSUER_PROPERTY_DEPENDENCIES], depth=depth
         ),
     ]
 
@@ -73,13 +75,17 @@ def verify_key_ownership(state, task_meta, **options):
         issuer_node = get_node_by_path(state, [node_id, 'badge', 'issuer'])
         key_node = get_node_by_path(state, [node_id, 'verification', 'creator'])
         key_id = key_node['id']
+        depth = task_meta['depth']
     except (KeyError, IndexError,):
         raise TaskPrerequisitesError()
 
     actions = []
     if issuer_node.get('revocationList'):
         actions.append(add_task(
-            VERIFY_SIGNED_ASSERTION_NOT_REVOKED, node_id=node_id, prerequisites=[VALIDATE_REVOCATIONLIST_ENTRIES]
+            VERIFY_SIGNED_ASSERTION_NOT_REVOKED,
+            node_id=node_id,
+            prerequisites=[VALIDATE_REVOCATIONLIST_ENTRIES],
+            depth=depth
         ))
 
     issuer_keys = list_of(issuer_node.get('publicKey'))

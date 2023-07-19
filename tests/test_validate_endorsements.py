@@ -3,13 +3,15 @@ import unittest
 
 from openbadges.verifier.actions.tasks import add_task
 from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_URI
-from openbadges.verifier.tasks import run_task
 from openbadges.verifier.tasks.task_types import VALIDATE_EXPECTED_NODE_CLASS
 from openbadges.verifier.tasks.validation import OBClasses
 from openbadges import verify
+from openbadges.verifier.tasks import task_named
 
-
-from .utils import set_up_context_mock, set_up_image_mock
+try:
+    from tests.utils import set_up_context_mock, set_up_image_mock
+except (ImportError, SystemError):
+    from .utils import set_up_context_mock, set_up_image_mock
 
 
 class EndorsementTests(unittest.TestCase):
@@ -30,7 +32,20 @@ class EndorsementTests(unittest.TestCase):
             'id': 'http://example.com/badgeclass',
             'type': 'BadgeClass',
             'issuer': 'http://example.com/issuer',
-            'endorsement': ['http://example.org/endorsement'],
+            'endorsement': {
+                '@context': OPENBADGES_CONTEXT_V2_URI,
+                'id': 'http://example.org/endorsement',
+                'type': 'Endorsement',
+                'claim': {
+                    'id': 'http://example.com/badgeclass',
+                    'endorsementComment': 'Pretty good'
+                },
+                'issuedOn': '2017-10-01T00:00Z',
+                'issuer': 'http://example.org/issuer',
+                'verification': {
+                    'type': "HostedBadge"
+                }
+            },
             'name': 'Best Badge',
             'description': 'An achievement that is good.',
             'image': 'http://example.com/badgeimage',
@@ -91,7 +106,7 @@ class EndorsementTests(unittest.TestCase):
 
         results = verify(self.assertion['id'])
         self.assertTrue(results['report']['valid'])
-        self.assertEqual(len(results['graph']), 5, "The graph now contains all five resources.")
+        self.assertEqual(5, len(results['graph']), "The graph now contains all five resources.")
 
     @responses.activate
     def test_validate_linked_endorsement_array(self):
@@ -104,7 +119,7 @@ class EndorsementTests(unittest.TestCase):
 
         results = verify(self.assertion['id'])
         self.assertTrue(results['report']['valid'])
-        self.assertEqual(len(results['graph']), 6, "The graph now contains all six resources including both endorsements.")
+        self.assertEqual(6, len(results['graph']), "The graph now contains all six resources including both endorsements.")
 
     @responses.activate
     def test_validate_endorsement_as_input(self):
@@ -117,25 +132,28 @@ class EndorsementTests(unittest.TestCase):
 
         results = verify(self.endorsement['id'])
         self.assertTrue(results['report']['valid'])
-        self.assertTrue(len(results['graph']), 2)
+        self.assertEqual(2, len(results['graph']))
 
     def test_claim_property_validation(self):
         self.set_up_resources()
 
+        options = {'max_validation_depth': 3}
+
         state = {'graph': [self.endorsement]}
         task_meta = add_task(
             VALIDATE_EXPECTED_NODE_CLASS, node_id=self.endorsement['id'], prop_name='claim',
-            expected_class=OBClasses.Endorsement
+            expected_class=OBClasses.Endorsement,
+            depth=0
         )
 
-        result, message, actions = run_task(state, task_meta)
+        result, message, actions = task_named(VALIDATE_EXPECTED_NODE_CLASS)(state, task_meta, **options)
         self.assertTrue(result)
         claim_action = [a for a in actions if a.get('prop_name') == 'claim'][0]
 
-        result, message, actions = run_task(state, claim_action)
+        result, message, actions = task_named(claim_action['name'])(state, claim_action, **options)
         self.assertTrue(result)
-        self.assertEqual(len(actions), 1)
+        self.assertEqual(1, len(actions))
 
-        result, message, actions = run_task(state, actions[0])
+        result, message, actions = task_named(actions[0]['name'])(state, actions[0], **options)
         self.assertTrue(result)
-        self.assertEqual(len(actions), 3)
+        self.assertEqual(3, len(actions))

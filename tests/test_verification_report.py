@@ -10,11 +10,11 @@ from openbadges.verifier.state import INITIAL_STATE
 from openbadges.verifier.verifier import generate_report, verification_store
 
 try:
-    from .testfiles.test_components import test_components
+    from tests.testfiles.test_components import test_components
     from tests.utils import set_up_context_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
-    from .testutils import set_up_context_mock
+    from .utils import set_up_context_mock
 
 
 class VerificationReportTests(unittest.TestCase):
@@ -86,6 +86,6 @@ class VerificationReportTests(unittest.TestCase):
     def test_messages_warnings_counts(self):
         """
         The validationReport contains the properties of messages, warningCount, errorCount, valid
-        :return: 
+        :return:
         """
         pass

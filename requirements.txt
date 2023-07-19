@@ -1,17 +1,18 @@
 # Duplicates from setup.py
 aniso8601>=1.2.0
-future==0.16.0
+future>=0.16.0
 jsonschema==2.6.0
 language-tags==0.4.3
-openbadges_bakery==1.1.0
+openbadges_bakery>=1.1.0
+puremagic==1.6
 pycryptodome==3.6.6
 pydux==0.2.2
 PyLD==0.7.1
 python-jose==3.0.1
 python-mimeparse==1.6.0
 pytz==2017.2
-requests >= 2.13
-requests_cache >= 0.4.13
+requests>=2.13
+requests_cache>=0.4.13
 rfc3986==0.4.1
 validators==0.11.2
 
@@ -21,5 +22,5 @@ pytest
 responses==0.5.1
 
 # Server dependencies
-Flask==0.12.1
+Flask==1.0
 gunicorn==19.7.1

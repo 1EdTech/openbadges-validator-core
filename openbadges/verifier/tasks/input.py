@@ -55,6 +55,7 @@ def detect_input_type(state, task_meta, **options):
     Detects what data format user has provided and saves to the store.
     """
     input_value = state.get('input').get('value')
+    depth = task_meta.get('depth')
     detected_type = None
     new_actions = []
 
@@ -62,7 +63,7 @@ def detect_input_type(state, task_meta, **options):
         detected_type = 'url'
         new_actions.append(set_input_type(detected_type))
         new_actions.append(add_task(
-            FETCH_HTTP_NODE, url=input_value, is_potential_baked_input=task_meta.get('is_potential_baked_input', True)
+            FETCH_HTTP_NODE, url=input_value, is_potential_baked_input=task_meta.get('is_potential_baked_input', True), depth=depth
         ))
         new_actions.append(set_validation_subject(input_value))
     elif input_is_json(input_value):
@@ -82,12 +83,12 @@ def detect_input_type(state, task_meta, **options):
                 message_level=MESSAGE_LEVEL_ERROR
             ))
         elif detected_type == 'url':
-            new_actions.append(add_task(FETCH_HTTP_NODE, url=id_url, is_potential_baked_input=False))
+            new_actions.append(add_task(FETCH_HTTP_NODE, url=id_url, is_potential_baked_input=False, depth=depth))
             new_actions.append(set_validation_subject(id_url))
     elif input_is_jws(input_value):
         detected_type = 'jws'
         new_actions.append(set_input_type(detected_type))
-        new_actions.append(add_task(PROCESS_JWS_INPUT, data=input_value))
+        new_actions.append(add_task(PROCESS_JWS_INPUT, data=input_value, depth=depth))
     else:
         raise NotImplementedError("only URL, JSON, or JWS input implemented so far")
 
@@ -101,6 +102,7 @@ def process_baked_resource(state, task_meta, **options):
     try:
         node_id = task_meta['node_id']
         resource_b64 = state['input']['original_json'][node_id]
+        depth = task_meta['depth']
     except KeyError:
         raise TaskPrerequisitesError()
     try:
@@ -121,7 +123,7 @@ def process_baked_resource(state, task_meta, **options):
     if assertion_data:
         actions = [
             store_input(assertion_data),
-            add_task(DETECT_INPUT_TYPE, is_potential_baked_input=False)
+            add_task(DETECT_INPUT_TYPE, is_potential_baked_input=False, depth=depth)
         ]
         return task_result(True, "Retrieved baked data from image resource {}".format(abv(node_id)), actions)
     else:

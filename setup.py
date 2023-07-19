@@ -23,7 +23,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 
 setup(
-    name='openbadges',
+    name='badgecheck',
     version=".".join(map(str, VERSION)),
     packages=find_packages(exclude=['tests', 'tests.*']),
     include_package_data=True,
@@ -40,10 +40,9 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Education',
         'Topic :: Utilities',
@@ -52,10 +51,11 @@ setup(
     install_requires=[
         'aniso8601>=1.2.0',
         'Click == 6.7',
-        'future==0.16.0',
+        'future>=0.16.0',
         'jsonschema==2.6.0',
         'language-tags==0.4.3',
-        'openbadges-bakery>=1.1.0',
+        'openbadges-bakery>=2.0.0',
+        'puremagic==1.6',
         'pycryptodome==3.6.6',
         'pydux==0.2.2',
         'PyLD==0.7.1',
@@ -63,12 +63,12 @@ setup(
         'python-mimeparse==1.6.0',
         'pytz==2017.2',
         'requests >= 2.13',
-        'requests_cache==0.4.13',
+        'requests_cache>=0.4.13',
         'rfc3986==0.4.1',
         'validators==0.11.2',
     ],
     extras_require={
-        'server':  ["Flask==0.12.1", 'gunicorn==19.7.1'],
+        'server':  ["Flask==1.0", 'gunicorn==19.7.1'],
     },
     entry_points="""
         [console_scripts]

@@ -19,7 +19,7 @@ from openbadges.verifier.verifier import verify
 from openbadges.verifier.utils import make_string_from_bytes
 
 try:
-    from .testfiles.test_components import test_components
+    from tests.testfiles.test_components import test_components
     from tests.utils import set_up_context_mock, set_up_image_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
@@ -68,7 +68,7 @@ class JwsVerificationTests(unittest.TestCase):
         }
 
     def test_can_process_jws_input(self):
-        task_meta = add_task(PROCESS_JWS_INPUT, data=self.signature)
+        task_meta = add_task(PROCESS_JWS_INPUT, data=self.signature, depth=0)
         state = {}
 
         success, message, actions = process_jws_input(state, task_meta)
@@ -77,7 +77,7 @@ class JwsVerificationTests(unittest.TestCase):
 
     def test_can_verify_jws(self):
         task_meta = add_task(VERIFY_JWS, data=self.signature,
-                             node_id=self.assertion_data['id'])
+                             node_id=self.assertion_data['id'], depth=0)
 
         success, message, actions = verify_jws_signature(self.state, task_meta)
         self.assertTrue(success)
@@ -99,7 +99,7 @@ class JwsVerificationTests(unittest.TestCase):
         self.signed_assertion = encoded_separator.join((original_header, encoded_payload, original_signature))
 
         task_meta = add_task(VERIFY_JWS, data=self.signed_assertion,
-                             node_id=self.assertion_data['id'])
+                             node_id=self.assertion_data['id'], depth=0)
 
         success, message, actions = verify_jws_signature(self.state, task_meta)
         self.assertFalse(success)
@@ -107,7 +107,7 @@ class JwsVerificationTests(unittest.TestCase):
 
     def test_can_verify_key_ownership(self):
         state = self.state
-        task_meta = add_task(VERIFY_KEY_OWNERSHIP, node_id=self.assertion_data['id'])
+        task_meta = add_task(VERIFY_KEY_OWNERSHIP, node_id=self.assertion_data['id'], depth=0)
 
         result, message, actions = verify_key_ownership(state, task_meta)
         self.assertTrue(result)

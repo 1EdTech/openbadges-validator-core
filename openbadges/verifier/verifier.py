@@ -23,7 +23,8 @@ DEFAULT_OPTIONS = {
     'use_cache': True,
     'cache_backend': 'memory',
     'cache_expire_after': 300,
-    'jsonld_options': jsonld_use_cache
+    'jsonld_options': jsonld_use_cache,
+    'max_validation_depth': 3
 }
 
 
@@ -106,7 +107,7 @@ def verification_store(badge_input, recipient_profile=None, store=None, options=
         store.dispatch(resolve_task(task.get('task_id'), success=False, result=e.message))
     else:
         store.dispatch(store_input(badge_data))
-        store.dispatch(add_task(tasks.DETECT_INPUT_TYPE))
+        store.dispatch(add_task(tasks.DETECT_INPUT_TYPE, depth=0))
 
     if recipient_profile:
         profile_id = recipient_profile.get('id')
@@ -114,7 +115,9 @@ def verification_store(badge_input, recipient_profile=None, store=None, options=
         task = add_task(
             JSONLD_COMPACT_DATA,
             data=json.dumps(recipient_profile),
-            expected_class=OBClasses.ExpectedRecipientProfile)
+            expected_class=OBClasses.ExpectedRecipientProfile,
+            depth=0
+        )
         if profile_id:
             task['node_id'] = profile_id
         store.dispatch(task)

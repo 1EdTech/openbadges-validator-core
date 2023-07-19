@@ -16,8 +16,10 @@ from openbadges.verifier.state import INITIAL_STATE
 from openbadges.verifier.tasks.validation import OBClasses
 from openbadges.verifier.verifier import generate_report, verification_store, verify
 
-from .testfiles.test_components import test_components
-
+try:
+    from .testfiles.test_components import test_components
+except (ImportError, SystemError):
+    from tests.testfiles.test_components import test_components
 
 def setUpContextCache():
     v2_data = test_components['openbadges_context']

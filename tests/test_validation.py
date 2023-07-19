@@ -10,7 +10,7 @@ import unittest
 from openbadges.verifier.actions.action_types import ADD_TASK, PATCH_NODE
 from openbadges.verifier.actions.graph import add_node, patch_node
 from openbadges.verifier.actions.tasks import add_task
-from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_DICT
+from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_DICT, OPENBADGES_CONTEXT_V2_URI
 from openbadges.verifier.reducers import main_reducer
 from openbadges.verifier.state import filter_active_tasks, INITIAL_STATE
 from openbadges.verifier.tasks import task_named, run_task
@@ -26,11 +26,11 @@ from openbadges.verifier.utils import MESSAGE_LEVEL_WARNING
 from openbadges.verifier.verifier import call_task, verify
 
 try:
-    from .testfiles.test_components import test_components
+    from tests.testfiles.test_components import test_components
     from tests.utils import set_up_context_mock, set_up_image_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
-    from tests.utils import set_up_context_mock, set_up_image_mock
+    from .utils import set_up_context_mock, set_up_image_mock
 
 
 class PropertyValidationTests(unittest.TestCase):
@@ -757,18 +757,19 @@ class IDPropertyValidationTests(unittest.TestCase):
             ]
         }
         state = {'graph': [first_node]}
+        options = {'max_validation_depth': 3}
         required = True
 
         task = add_task(
             VALIDATE_PROPERTY, node_id=first_node['id'], node_class=OBClasses.BadgeClass,
             prop_name='alignment', prop_type=ValueTypes.ID, required=required, many=True, fetch=False,
-            expected_class=OBClasses.AlignmentObject, allow_remote_url=False
+            expected_class=OBClasses.AlignmentObject, allow_remote_url=False, depth=0
         )
         result, message, actions = validate_property(state, task)
         self.assertTrue(result, "Task the queues up individual class validators is successful")
         self.assertEqual(len(actions), 1)
 
-        result, message, actions = task_named(actions[0]['name'])(state, actions[0])
+        result, message, actions = task_named(actions[0]['name'])(state, actions[0], **options)
         self.assertTrue(result)
         for a in actions:
             self.assertEqual(a['node_path'], [first_node['id'], 'alignment', 0])
@@ -803,6 +804,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             }
         }
         state = {'graph': [first_node]}
+        options = {'max_validation_depth': 3}
 
         task = add_task(
             VALIDATE_PROPERTY,
@@ -810,7 +812,8 @@ class ClassValidationTaskTests(unittest.TestCase):
             prop_name="recipient",
             required=True,
             prop_type=ValueTypes.ID,
-            expected_class=OBClasses.IdentityObject
+            expected_class=OBClasses.IdentityObject,
+            depth=0
         )
 
         def run(cur_state, cur_task, expected_result, msg=''):
@@ -820,7 +823,7 @@ class ClassValidationTaskTests(unittest.TestCase):
             self.assertEqual(actions[0]['expected_class'], OBClasses.IdentityObject)
 
             cur_task = actions[0]
-            result, message, actions = task_named(cur_task['name'])(cur_state, cur_task)
+            result, message, actions = task_named(cur_task['name'])(cur_state, cur_task, **options)
             self.assertTrue(result, "IdentityObject validation task discovery should succeed.")
 
             for cur_task in [a for a in actions if a.get('type') == ADD_TASK]:
@@ -889,20 +892,22 @@ class ClassValidationTaskTests(unittest.TestCase):
                 {'id': 'http://example.com/b', 'name': 'Another property outside of Criteria class scope'},
             ]
         }
+        options = {'max_validation_depth': 3}
         actions = [add_task(
             VALIDATE_PROPERTY,
             node_id=badgeclass_node['id'],
             prop_name="criteria",
             required=False,
             prop_type=ValueTypes.ID,
-            expected_class=OBClasses.Criteria
+            expected_class=OBClasses.Criteria,
+            depth=0
         )]
         badgeclass_node['criteria'] = 'http://example.com/a'
 
         for task in actions:
             if not task.get('type') == 'ADD_TASK':
                 continue
-            result, message, new_actions = task_named(task['name'])(state, task)
+            result, message, new_actions = task_named(task['name'])(state, task, **options)
             if new_actions:
                 actions.extend(new_actions)
             self.assertTrue(result)
@@ -914,13 +919,15 @@ class ClassValidationTaskTests(unittest.TestCase):
         state = {
             'graph': [badgeclass_node]
         }
+        options = {'max_validation_depth': 3}
         actions = [add_task(
             VALIDATE_PROPERTY,
             node_id=badgeclass_node['id'],
             prop_name="criteria",
             required=False,
             prop_type=ValueTypes.ID,
-            expected_class=OBClasses.Criteria
+            expected_class=OBClasses.Criteria,
+            depth=0
         )]
         badgeclass_node['criteria'] = {
             'narrative': 'Do the important things.'
@@ -929,7 +936,7 @@ class ClassValidationTaskTests(unittest.TestCase):
         for task in actions:
             if not task.get('type') == 'ADD_TASK':
                 continue
-            result, message, new_actions = task_named(task['name'])(state, task)
+            result, message, new_actions = task_named(task['name'])(state, task, **options)
             if new_actions:
                 actions.extend(new_actions)
             self.assertTrue(result)
@@ -939,6 +946,7 @@ class ClassValidationTaskTests(unittest.TestCase):
     def test_many_criteria_disallowed(self):
         badgeclass_node = {'id': 'http://example.com/badgeclass', 'type': 'BadgeClass'}
         state = {'graph': [badgeclass_node]}
+        options = {'max_validation_depth': 3}
         actions = [add_task(
             VALIDATE_PROPERTY,
             node_id=badgeclass_node['id'],
@@ -950,7 +958,7 @@ class ClassValidationTaskTests(unittest.TestCase):
         badgeclass_node['criteria'] = ['http://example.com/a', 'http://example.com/b']
 
         task = actions[0]
-        result, message, new_actions = task_named(task['name'])(state, task)
+        result, message, new_actions = task_named(task['name'])(state, task, **options)
         self.assertFalse(result, "Validation should reject multiple criteria entries")
         self.assertTrue('has more than the single allowed value' in message)
 
@@ -985,16 +993,17 @@ class ClassValidationTaskTests(unittest.TestCase):
         ]}
 
     def _run(self, task_meta, expected_result, msg='', test_task='UNKNOWN'):
+        options = {'max_validation_depth': 3}
         result, message, actions = validate_property(self.state, task_meta)
         self.assertTrue(result, "Property validation task should succeed.")
         self.assertEqual(len(actions), 1)
 
         task_meta = actions[0]
-        result, message, actions = task_named(task_meta['name'])(self.state, task_meta)
+        result, message, actions = task_named(task_meta['name'])(self.state, task_meta, **options)
         self.assertTrue(result, "Class validation task discovery should succeed.")
 
         for task_meta in [a for a in actions if a.get('type') == ADD_TASK]:
-            val_result, val_message, val_actions = task_named(task_meta['name'])(self.state, task_meta)
+            val_result, val_message, val_actions = task_named(task_meta['name'])(self.state, task_meta, **options)
             if not task_meta['name'] == test_task:
                 self.assertTrue(val_result, "Test {} should pass".format(task_meta['name']))
             elif task_meta['name'] == test_task:
@@ -1013,7 +1022,8 @@ class ClassValidationTaskTests(unittest.TestCase):
             prop_name="evidence",
             required=False,
             prop_type=ValueTypes.ID,
-            expected_class=OBClasses.Evidence
+            expected_class=OBClasses.Evidence,
+            depth=0
         )
 
         self._run(task, True, 'Single embedded complete evidence node passes')
@@ -1073,7 +1083,8 @@ class ClassValidationTaskTests(unittest.TestCase):
             prop_name="alignment",
             required=False,
             prop_type=ValueTypes.ID,
-            expected_class=OBClasses.AlignmentObject
+            expected_class=OBClasses.AlignmentObject,
+            depth=0
         )
 
         self._run(task, True, 'Single embedded complete alignment node passes', test_task=None)
@@ -1095,7 +1106,7 @@ class ClassValidationTaskTests(unittest.TestCase):
         second_node = {'id': '_:b0', 'narrative': 'Do the important learning.'}
         state = {'graph': [first_node, second_node]}
 
-        actions = _get_validation_actions(OBClasses.BadgeClass, first_node['id'])
+        actions = _get_validation_actions(OBClasses.BadgeClass, 0, first_node['id'])
         results = []
         for action in actions:
             if action['type'] == 'ADD_TASK':
@@ -1393,15 +1404,16 @@ class IssuerClassValidationTests(unittest.TestCase):
         }
 
         state = {'graph': [issuer]}
+        options = {'max_validation_depth': 3}
 
         task_meta = add_task(VALIDATE_EXPECTED_NODE_CLASS, node_id=issuer['id'],
-                             expected_class=issuer['type'])
+                             expected_class=issuer['type'], depth=0)
 
-        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        result, message, actions = task_named(task_meta['name'])(state, task_meta, **options)
         self.assertTrue(result)
 
-        task_meta = add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=issuer['id'])
-        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        task_meta = add_task(DETECT_AND_VALIDATE_NODE_CLASS, node_id=issuer['id'], depth=0)
+        result, message, actions = task_named(task_meta['name'])(state, task_meta, **options)
         self.assertTrue(result)
 
     def test_issuer_warn_on_non_https_id(self):
@@ -1412,10 +1424,11 @@ class IssuerClassValidationTests(unittest.TestCase):
             'url': 'http://example.com'
         }
         state = {'graph': [issuer]}
+        options = {'max_validation_depth': 3}
         task_meta = add_task(ISSUER_PROPERTY_DEPENDENCIES, node_id=issuer['id'],
                              messageLevel=MESSAGE_LEVEL_WARNING)
 
-        result, message, actions = task_named(task_meta['name'])(state, task_meta)
+        result, message, actions = task_named(task_meta['name'])(state, task_meta, **options)
         self.assertFalse(result)
         self.assertIn('HTTP', message)
 
@@ -1423,3 +1436,110 @@ class IssuerClassValidationTests(unittest.TestCase):
         task_meta['node_id'] = issuer['id']
         result, message, actions = task_named(task_meta['name'])(state, task_meta)
         self.assertTrue(result)
+
+class ValidationDepthTests(unittest.TestCase):
+    assertion = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'type': 'Assertion',
+        'id': 'http://example.com/assertion',
+        'badge': 'http://example.com/badgeclass',
+        'recipient': {
+            'id': '_:b0',
+            'identity': 'two@example.com',
+            'type': 'email',
+            'hashed': False
+        },
+        "verification": {
+            "type": "HostedBadge"
+        },
+        'issuedOn': (datetime.now(utc) - timedelta(hours=1)).isoformat()
+    }
+    badgeclass = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example.com/badgeclass',
+        'type': 'BadgeClass',
+        'name': 'Example Badge',
+        'description': 'An example',
+        'criteria': 'http://example.com/criteria',
+        'issuer': 'http://example.com/issuer',
+        'image': 'http://example.com/image1',
+    }
+    endorsement = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example2.com/endorsement',
+        'type': 'Endorsement',
+        'claim': {
+            'id': 'http://example.com/issuer',
+            'endorsementComment': 'Pretty good issuer'
+        },
+        'issuedOn': '2017-10-01T00:00Z',
+        'issuer': 'http://example2.com/issuer',
+        'verification': {
+            'type': "hosted"
+        }
+    }
+    issuer = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example.com/issuer',
+        'type': 'Issuer',
+        'name': 'Example Issuer',
+        'email': 'me@example.com',
+        'url': 'http://example.com',
+        'endorsement': endorsement['id']
+    }
+    endorsement_issuer_endorsement = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example3.com/endorsement',
+        'type': 'Endorsement',
+        'claim': {
+            'id': 'http://example2.com/issuer',
+            'endorsementComment': 'Pretty good endorsement issuer'
+        },
+        'issuedOn': '2017-10-01T00:00Z',
+        'issuer': 'http://example3.com/issuer',
+        'verification': {
+            'type': "hosted"
+        }
+    }
+    endorsement_issuer = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example2.com/issuer',
+        'type': 'Issuer',
+        'name': 'Example Issuer 2',
+        'email': 'me@example2.com',
+        'url': 'http://example2.com',
+        'endorsement': endorsement_issuer_endorsement['id']
+    }
+    endorsement_issuer_endorsement_issuer = {
+        '@context': OPENBADGES_CONTEXT_V2_URI,
+        'id': 'http://example3.com/issuer',
+        'type': 'Issuer',
+        'name': 'Example Issuer 3',
+        'email': 'me@example3.com',
+        'url': 'http://example3.com'
+    }
+
+    @responses.activate
+    def test_validation_depth(self):
+        set_up_context_mock()
+
+        for resource in [self.assertion, self.badgeclass, self.issuer, self.endorsement, self.endorsement_issuer]:
+            responses.add(responses.GET, resource['id'], json=resource)
+        set_up_image_mock(self.badgeclass['image'])
+
+        results = verify(self.assertion['id'])
+        self.assertTrue(results['report']['valid'])
+        self.assertEqual(5, len(results['graph']), "The graph does not contain endorsement of issuer of endorsement.")
+
+    @responses.activate
+    def test_validation_depth_5(self):
+        options = {'max_validation_depth': 5}
+        set_up_context_mock()
+
+        for resource in [self.assertion, self.badgeclass, self.issuer, self.endorsement, self.endorsement_issuer, self.endorsement_issuer_endorsement, self.endorsement_issuer_endorsement_issuer]:
+            responses.add(responses.GET, resource['id'], json=resource)
+        set_up_image_mock(self.badgeclass['image'])
+
+        results = verify(self.assertion['id'], **options)
+        self.assertTrue(results['report']['valid'])
+        self.assertEqual(7, len(results['graph']), "The graph now contains all objects.")

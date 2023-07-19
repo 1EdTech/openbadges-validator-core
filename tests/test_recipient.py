@@ -14,11 +14,11 @@ from openbadges.verifier.tasks.verification import verify_recipient_against_trus
 from openbadges.verifier.verifier import verification_store
 
 try:
-    from .testfiles.test_components import test_components
+    from tests.testfiles.test_components import test_components
     from tests.utils import set_up_image_mock
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
-    from tests.utils import set_up_image_mock
+    from .utils import set_up_image_mock
 
 
 class RecipientProfileVerificationTests(unittest.TestCase):

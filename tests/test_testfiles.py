@@ -2,7 +2,7 @@ import json
 import unittest
 
 try:
-    from .testfiles.test_components import test_components
+    from tests.testfiles.test_components import test_components
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
 

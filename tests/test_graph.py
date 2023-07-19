@@ -15,13 +15,13 @@ from openbadges.verifier.openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from openbadges.verifier.utils import MESSAGE_LEVEL_WARNING
 from openbadges.verifier.verifier import verify
 
-from .utils import set_up_context_mock, set_up_image_mock
-
 
 try:
+    from .utils import set_up_context_mock, set_up_image_mock
     from .testfiles.test_components import test_components
 except (ImportError, SystemError):
-    from .testfiles.test_components import test_components
+    from tests.utils import set_up_context_mock, set_up_image_mock
+    from tests.testfiles.test_components import test_components
 
 
 class HttpFetchingTests(unittest.TestCase):
@@ -34,7 +34,7 @@ class HttpFetchingTests(unittest.TestCase):
             body=test_components['2_0_basic_assertion'],
             status=200, content_type='application/ld+json'
         )
-        task = add_task(FETCH_HTTP_NODE, url=url)
+        task = add_task(FETCH_HTTP_NODE, url=url, depth=0)
 
         success, message, actions = fetch_http_node({}, task)
 
@@ -53,7 +53,7 @@ class HttpFetchingTests(unittest.TestCase):
             body=svg_circle,
             status=200, content_type='image/svg+xml; charset=utf-8'
         )
-        task = add_task(FETCH_HTTP_NODE, url=url)
+        task = add_task(FETCH_HTTP_NODE, url=url, depth=0)
 
         success, message, actions = fetch_http_node({}, task)
 
@@ -95,7 +95,7 @@ class NodeStorageTests(unittest.TestCase):
     def test_store_node_inaccurate_id_value(self):
         """
         Due to redirects, we may not have the canonical id for a node.
-        If there's a conflict due to the id and the node[id] in add_node(id, node), 
+        If there's a conflict due to the id and the node[id] in add_node(id, node),
         what should we do?
         """
         pass
@@ -229,7 +229,7 @@ class ObjectRedirectionTests(unittest.TestCase):
         responses.add(responses.GET, first_url, json=node_data)
         responses.add(responses.GET, second_url, json=node_data)
 
-        task = add_task(FETCH_HTTP_NODE, url=second_url)
+        task = add_task(FETCH_HTTP_NODE, url=second_url, depth=0)
         state = {'graph': []}
 
         result, message, actions = run_task(state, task)

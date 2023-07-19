@@ -4,6 +4,7 @@ from pydux import create_store
 
 from openbadges.verifier.reducers import main_reducer
 from openbadges.verifier.actions.tasks import add_task, resolve_task
+from openbadges.verifier.actions.utils import generate_task_signature
 from openbadges.verifier.reducers.tasks import _new_state_with_updated_item
 from openbadges.verifier.tasks.utils import abbreviate_value
 from openbadges.verifier.state import INITIAL_STATE, filter_active_tasks
@@ -61,3 +62,13 @@ class TaskUtilsTests(unittest.TestCase):
         self.assertEqual(abbreviate_value(['interesting']), 'interesting')
         self.assertEqual(abbreviate_value(['interesting', 1]), 'interesting, 1')
         self.assertEqual(abbreviate_value([{'a': 'b'}, 'interesting']), "{'a': 'b'}, interesting")
+
+    def test_generate_task_signature(self):
+        task_key = generate_task_signature('DETECT_INPUT_TYPE', 123)
+        self.assertEqual(task_key, 'DETECT_INPUT_TYPE__202cb962ac59075b964b07152d234b70')
+
+        task_key = generate_task_signature('JSONLD_COMPACT_DATA', 'https://example.com/123')
+        self.assertEqual(task_key, 'JSONLD_COMPACT_DATA__d974a4cbd98f9538d3210974dc8a7972')
+
+        task_key = generate_task_signature('UNKNOWN_SOLDIER', 'important key info!')
+        self.assertEqual(task_key, 'UNKNOWN_SOLDIER__e9729d01fa8a2b37aed4a4dceeea464c')

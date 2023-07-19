@@ -9,7 +9,7 @@ from openbadges.verifier.state import (filter_active_tasks, INITIAL_STATE, get_n
                               get_node_by_path,)
 
 try:
-    from .testfiles.test_components import test_components
+    from tests.testfiles.test_components import test_components
 except (ImportError, SystemError):
     from .testfiles.test_components import test_components
 
