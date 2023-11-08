@@ -55,7 +55,7 @@ setup(
         'future==0.16.0',
         'jsonschema==2.6.0',
         'language-tags==0.4.3',
-        'openbadges-bakery>=1.1.0',
+        'openbadges-bakery>=2.2.0',
         'pycryptodome==3.6.6',
         'pydux==0.2.2',
         'PyLD==0.7.1',
@@ -64,7 +64,7 @@ setup(
         'pytz==2017.2',
         'requests >= 2.13',
         'requests_cache==0.4.13',
-        'rfc3986==0.4.1',
+        'rfc3986==1.5.0',
         'validators==0.11.2',
     ],
     extras_require={
