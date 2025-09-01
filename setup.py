@@ -30,7 +30,7 @@ setup(
     license='Apache 2',
     description=short_description,
     long_description=README,
-    url='https://github.com/IMSGlobal/openbadges-validator-core',
+    url='https://github.com/1EdTech/openbadges-validator-core',
     author='IMS Global',
     author_email='openbadgesinfo@imsglobal.org',
     classifiers=[
