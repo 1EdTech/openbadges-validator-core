@@ -1,25 +1,31 @@
-# Duplicates from setup.py
+# Core dependencies - updated for compatibility
 aniso8601>=1.2.0
 future==0.16.0
 jsonschema==2.6.0
 language-tags==0.4.3
 openbadges_bakery==1.2.4
-pycryptodome==3.6.6
+pycryptodome>=3.6.6
 pydux==0.2.2
 PyLD==0.7.1
-python-jose==3.0.1
+python-jose>=3.0.1
 python-mimeparse==1.6.0
-pytz==2017.2
-requests >= 2.13
-requests_cache >= 0.4.13
-rfc3986==0.4.1
-validators==0.11.2
+pytz>=2017.2
+requests>=2.13
+requests_cache>=0.4.13
+rfc3986>=0.4.1
+validators>=0.11.2
+six>=1.10.0
 
 # Development dependencies
-pypandoc==1.4
+pypandoc>=1.4
 pytest
-responses==0.5.1
+responses>=0.5.1
 
-# Server dependencies
-Flask==0.12.1
-gunicorn==19.7.1
+# Server dependencies - updated for compatibility
+Flask>=1.1.4,<2.3.0
+Jinja2>=2.10.1,<3.1.0
+MarkupSafe>=1.1.0,<2.1.0
+Werkzeug>=1.0.0,<2.1.0
+gunicorn>=20.0.0
+itsdangerous>=1.1.0,<2.1.0
+click>=7.0.0,<8.1.0
