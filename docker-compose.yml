@@ -1,6 +1,7 @@
 services:
   openbadges-validator:
     build: .
+    image: us-central1-docker.pkg.dev/digitalcredentials/openbadges20-cert/verifier:latest
     ports:
       - "8000:8000"
     environment:
