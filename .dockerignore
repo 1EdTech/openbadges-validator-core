@@ -58,6 +58,7 @@ docs/
 .travis.yml
 .circleci/
 .github/
+.devcontainer/
 
 # Docker
 Dockerfile*
