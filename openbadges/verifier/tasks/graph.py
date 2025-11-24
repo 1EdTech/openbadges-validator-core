@@ -37,7 +37,7 @@ def fetch_http_node(state, task_meta, **options):
         session = requests.Session()
 
     result = session.get(
-        url, headers={'Accept': 'application/ld+json, application/json, image/png, image/svg+xml'}
+        url, headers={'User-Agent': 'Open Badges Validator Core', 'Accept': 'application/ld+json, application/json, image/png, image/svg+xml'}
     )
 
     try:
