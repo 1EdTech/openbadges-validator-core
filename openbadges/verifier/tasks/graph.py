@@ -18,7 +18,7 @@ from ..exceptions import TaskPrerequisitesError
 from ..openbadges_context import OPENBADGES_CONTEXT_V2_URI
 from ..reducers.graph import get_next_blank_node_id
 from ..state import get_node_by_id, node_match_exists
-from ..utils import list_of, jsonld_use_cache,make_string_from_bytes, MESSAGE_LEVEL_WARNING
+from ..utils import list_of, jsonld_use_cache,make_string_from_bytes, MESSAGE_LEVEL_WARNING,make_utf8
 
 from .task_types import (DETECT_AND_VALIDATE_NODE_CLASS, FETCH_HTTP_NODE, INTAKE_JSON, JSONLD_COMPACT_DATA,
                          PROCESS_BAKED_RESOURCE, UPGRADE_0_5_NODE, UPGRADE_1_0_NODE, UPGRADE_1_1_NODE,
@@ -29,6 +29,8 @@ from .validation import OBClasses
 
 def fetch_http_node(state, task_meta, **options):
     url = task_meta['url']
+
+    url = make_utf8(url)
 
     if options.get('cache_backend'):
         session = requests_cache.CachedSession(
