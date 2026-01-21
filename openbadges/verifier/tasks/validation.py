@@ -481,7 +481,7 @@ class ClassValidators(OBClasses):
                 {'prop_name': 'url', 'prop_type': ValueTypes.URL, 'required': True},
                 {'prop_name': 'email', 'prop_type': ValueTypes.EMAIL, 'required': True},
                 {'prop_name': 'telephone', 'prop_type': ValueTypes.TELEPHONE, 'required': False},
-                {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID,
+                {'prop_name': 'publicKey', 'prop_type': ValueTypes.ID, 'many': True,
                     'expected_class': OBClasses.CryptographicKey, 'fetch': True, 'required': False},
                 {'prop_name': 'verification', 'prop_type': ValueTypes.ID,
                  'expected_class': OBClasses.VerificationObjectIssuer, 'fetch': False, 'required': False},
